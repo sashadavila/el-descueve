@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Seguimiento de Pedido | El Descuevee - Ropa Corporativa y Bordado</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#aec6ff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-dim": "#cbdbf5",
+                        "on-surface": "#0b1c30",
+                        "on-error": "#ffffff",
+                        "surface-tint": "#3c5d9d",
+                        "on-secondary-container": "#663500",
+                        "background": "#f8f9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#224583",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f8f9ff",
+                        "surface-container-highest": "#d3e4fe",
+                        "secondary": "#914d00",
+                        "secondary-fixed": "#ffdcc3",
+                        "on-primary-fixed": "#001a42",
+                        "surface": "#f8f9ff",
+                        "on-surface-variant": "#434750",
+                        "primary": "#00265b",
+                        "on-tertiary-fixed-variant": "#2c4677",
+                        "on-tertiary-container": "#90a9e0",
+                        "tertiary-container": "#223d6e",
+                        "surface-variant": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#0b1c30",
+                        "on-secondary-fixed": "#2f1500",
+                        "tertiary-fixed": "#d8e2ff",
+                        "surface-container-low": "#eff4ff",
+                        "outline-variant": "#c4c6d2",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "on-primary-container": "#89a9ee",
+                        "primary-container": "#163C7A",
+                        "surface-container": "#e5eeff",
+                        "secondary-container": "#FC9430",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#aec6ff",
+                        "tertiary": "#052756",
+                        "on-tertiary-fixed": "#001a41",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "outline": "#747781",
+                        "surface-container-high": "#dce9ff",
+                        "inverse-surface": "#213145"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "sm": "12px",
+                        "xl": "80px",
+                        "container-max": "1280px",
+                        "md": "24px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "lg": "48px"
+                    },
+                    "fontFamily": {
+                        "h3": ["Public Sans"],
+                        "label-sm": ["Public Sans"],
+                        "h2": ["Public Sans"],
+                        "h1": ["Public Sans"],
+                        "button": ["Public Sans"],
+                        "body-lg": ["Public Sans"],
+                        "body-md": ["Public Sans"]
+                    },
+                    "fontSize": {
+                        "h3": ["24px", {"lineHeight": "1.4", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "h2": ["32px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "h1": ["48px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "button": ["16px", {"lineHeight": "1", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+<!-- TopAppBar - El Descuevee -->
+<header class="bg-[#163C7A] docked full-width top-0 border-b-2 border-[#FC9430] sticky z-50">
+<div class="flex justify-between items-center px-8 h-20 w-full max-w-[1280px] mx-auto">
+<div class="text-2xl font-black text-white font-public-sans font-bold uppercase tracking-wider">
+                EL DESCUVEE
+            </div>
+<nav class="hidden md:flex items-center space-x-8 font-public-sans font-bold uppercase tracking-wider text-sm">
+<a class="text-white hover:text-[#FC9430] transition-colors" href="#">Corporativo</a>
+<a class="text-white hover:text-[#FC9430] transition-colors" href="#">Industrial</a>
+<a class="text-white hover:text-[#FC9430] transition-colors" href="#">Bordados</a>
+<a class="text-white hover:text-[#FC9430] transition-colors" href="#">Cotización</a>
+<a class="text-[#FC9430] border-b-2 border-[#FC9430] pb-1" href="#">Seguir Pedido</a>
+</nav>
+<div class="flex items-center gap-4">
+<a href="https://wa.me/56912345678?text=Hola,%20quisiera%20consultar%20mi%20pedido" target="_blank" class="p-2 text-white hover:bg-white/10 transition-colors rounded flex items-center gap-1">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="hidden md:inline text-xs">WhatsApp</span>
+</a>
+<button class="p-2 text-white hover:bg-white/10 transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-[1280px] mx-auto px-8 py-12">
+<!-- Title Section -->
+<div class="mb-12">
+<h1 class="font-h1 text-h1 text-primary-container mb-2">Seguimiento de tu Pedido #ELD-10254</h1>
+<p class="font-body-lg text-body-lg text-outline">Logística y despacho de tu pedido corporativo en tiempo real.</p>
+<p class="text-sm text-outline mt-2">Atención desde La Serena hasta Calbuco</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Tracking Content -->
+<div class="lg:col-span-8 space-y-gutter">
+<!-- Status Timeline Card -->
+<section class="bg-surface-container-lowest border border-outline-variant p-lg shadow-sm">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
+<!-- Step 1: Recibido -->
+<div class="flex flex-col items-center flex-1 text-center relative w-full">
+<div class="w-12 h-12 rounded-full bg-primary-container text-white flex items-center justify-center mb-4 z-10">
+<span class="material-symbols-outlined" data-icon="task_alt">task_alt</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase text-primary-container">Pedido Recibido</span>
+<div class="hidden md:block absolute top-6 left-[50%] w-full h-1 bg-primary-container -z-0"></div>
+</div>
+<!-- Step 2: Preparación -->
+<div class="flex flex-col items-center flex-1 text-center relative w-full">
+<div class="w-12 h-12 rounded-full bg-primary-container text-white flex items-center justify-center mb-4 z-10">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase text-primary-container">En Preparación</span>
+<div class="hidden md:block absolute top-6 left-[50%] w-full h-1 bg-primary-container -z-0"></div>
+</div>
+<!-- Step 3: En Tránsito (ACTIVE) -->
+<div class="flex flex-col items-center flex-1 text-center relative w-full">
+<div class="w-16 h-16 rounded-full bg-[#FC9430] text-white flex items-center justify-center mb-4 z-10 border-4 border-white shadow-lg scale-110">
+<span class="material-symbols-outlined" data-icon="local_shipping" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase text-[#FC9430] font-black">En Tránsito</span>
+<div class="hidden md:block absolute top-8 left-[50%] w-full h-1 bg-surface-container-highest -z-0"></div>
+</div>
+<!-- Step 4: Entregado -->
+<div class="flex flex-col items-center flex-1 text-center relative w-full">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest text-outline flex items-center justify-center mb-4 z-10">
+<span class="material-symbols-outlined" data-icon="package_2">package_2</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase text-outline">Entregado</span>
+</div>
+</div>
+<!-- Detailed Info Strip -->
+<div class="bg-surface-container p-md grid grid-cols-1 md:grid-cols-3 gap-md border-l-4 border-[#FC9430]">
+<div>
+<span class="font-label-sm text-label-sm text-outline block mb-1">TRANSPORTISTA</span>
+<p class="font-h3 text-h3 text-primary-container uppercase">Chilexpress</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-outline block mb-1">NÚMERO DE SEGUIMIENTO</span>
+<p class="font-h3 text-h3 text-primary-container">987654321</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-outline block mb-1">ENTREGA ESTIMADA</span>
+<p class="font-h3 text-h3 text-[#FC9430] uppercase">24 de Mayo</p>
+</div>
+</div>
+</section>
+<!-- Map / Location Widget -->
+<section class="bg-surface-container-lowest border border-outline-variant overflow-hidden">
+<div class="p-md border-b border-outline-variant flex justify-between items-center flex-wrap gap-2">
+<h2 class="font-h3 text-h3 text-primary-container uppercase flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+                            Ubicación del pedido
+                        </h2>
+<span class="bg-[#FC9430]/10 text-[#FC9430] px-3 py-1 text-xs font-bold uppercase tracking-wider rounded">Centro de Distribución Santiago</span>
+</div>
+<div class="aspect-video w-full bg-surface-dim relative">
+<img alt="Mapa de ubicación del despacho" class="w-full h-full object-cover grayscale opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_C8vMadh4v_gfeF8rYnANPyGB64u23oqv1htdrj7YyTqdgb_ACynVT-KJwkiqM_v8MN8tlT-IJBSwkIONqT00EqNnz1aJjJp03SlkSeoWMzvuwD0jzsPRMfzRByiyOKm9Wtip2Ph8qKou5FzfDE3o6zpq0SkO3-UwsM-0H87DDtd4F2QUdFShHtJCZg4zKIXvUNbUQpP_c4JdOsiVNu4uwKUnru8QPi2hx4OFSyQqmMebD8Zpx75brCCEK-mASAwvcKJ-QIefsX8"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="relative">
+<div class="absolute -inset-4 bg-[#FC9430]/30 rounded-full animate-ping"></div>
+<div class="bg-[#FC9430] p-3 rounded-full shadow-2xl relative z-10 border-2 border-white">
+<span class="material-symbols-outlined text-white" data-icon="local_shipping">local_shipping</span>
+</div>
+</div>
+</div>
+<!-- Location Tooltip -->
+<div class="absolute bottom-6 left-6 bg-white p-4 shadow-xl border border-outline-variant max-w-xs">
+<p class="font-label-sm text-label-sm text-outline uppercase mb-1">Última Actualización</p>
+<p class="font-body-md text-body-md text-primary-container font-bold">Llegada a Planta Santiago Sur</p>
+<p class="text-xs text-outline mt-1 italic">Hace 15 minutos</p>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Sidebar -->
+<aside class="lg:col-span-4 space-y-gutter">
+<!-- Order Summary -->
+<section class="bg-surface-container-lowest border border-outline-variant">
+<div class="p-md border-b border-outline-variant bg-surface-container-low">
+<h2 class="font-h3 text-h3 text-primary-container uppercase">Resumen del Pedido</h2>
+</div>
+<div class="p-md space-y-md">
+<!-- Item 1 - Polera Polo Piqué -->
+<div class="flex gap-4">
+<div class="w-16 h-16 bg-surface-container-high border border-outline-variant flex-shrink-0">
+<img alt="Polera Polo Piqué" class="w-full h-full object-cover" src="https://www.carmelotala.cl/wp-content/uploads/2020/02/polera-pique-hombre-manga-corta.jpg"/>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md font-bold text-primary-container leading-tight uppercase">Polera Polo Piqué c/ Bordado</p>
+<p class="text-sm text-outline uppercase">Cant: 10</p>
+<p class="font-body-md text-body-md text-primary font-bold mt-1">$129.000</p>
+</div>
+</div>
+<!-- Item 2 - Micropolar Térmico -->
+<div class="flex gap-4">
+<div class="w-16 h-16 bg-surface-container-high border border-outline-variant flex-shrink-0">
+<img alt="Micropolar Térmico" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDqIUe156NP-WNtPfCkYSTBKw7oIJLmiH4vEkUYTX5Fk8eA5KX_WsSZ15EMnqf2TgsfLHpPZz89QMVYJ7BW028qo-EcDaDECnxM6jndEuhyVOKIa-yvLfaVqJI9xPhfe-yDUmK3O6N5-dNyDWCExHo93Jhzsu_ayza9WD7KREvaqOeQZ6o9fi7l7xiqxAkTrWhKl_12VaUKy3kfPS9V8AkbJxfdJhFjuVKe3eD8k2-GWKm_XlvKjiAPd3IcyZxOkJZVuPRWyaD7W8"/>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md font-bold text-primary-container leading-tight uppercase">Micropolar Térmico c/ Bordado</p>
+<p class="text-sm text-outline uppercase">Cant: 5</p>
+<p class="font-body-md text-body-md text-primary font-bold mt-1">$114.500</p>
+</div>
+</div>
+<div class="pt-md border-t border-dashed border-outline-variant space-y-2">
+<div class="flex justify-between text-outline uppercase text-xs font-bold">
+<span>Subtotal</span>
+<span>$243.500</span>
+</div>
+<div class="flex justify-between text-outline uppercase text-xs font-bold">
+<span>Envío (La Serena - Calbuco)</span>
+<span>$4.500</span>
+</div>
+<div class="flex justify-between text-primary-container font-black text-h3 pt-2">
+<span>TOTAL</span>
+<span>$248.000</span>
+</div>
+<p class="text-xs text-outline italic pt-2">*Precios incluyen bordado de logo</p>
+</div>
+</div>
+</section>
+<!-- Help Section -->
+<section class="bg-primary-container text-white p-lg">
+<h3 class="font-h3 text-h3 mb-4 uppercase">¿Necesitas Ayuda?</h3>
+<p class="font-body-md text-body-md opacity-90 mb-6 uppercase leading-snug">¿Problemas con tu despacho o dudas sobre tu pedido corporativo?</p>
+<div class="space-y-4">
+<a class="flex items-center gap-3 bg-white/10 hover:bg-white/20 p-4 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="report_problem">report_problem</span>
+<span class="font-button text-button uppercase">Reportar problema</span>
+</a>
+<a href="https://wa.me/56912345678?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20pedido%20ELD-10254" target="_blank" class="flex items-center gap-3 border border-white/30 hover:border-white p-4 transition-colors">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="font-button text-button uppercase">Contactar por WhatsApp</span>
+</a>
+<a href="mailto:contacto@eldescuevee.cl" class="flex items-center gap-3 border border-white/30 hover:border-white p-4 transition-colors">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-button text-button uppercase">Escribir a Soporte</span>
+</a>
+</div>
+</section>
+<!-- Additional Info: Zona de Atención -->
+<section class="bg-surface-container-lowest border border-outline-variant p-md text-center">
+<span class="material-symbols-outlined text-primary-container text-2xl">location_on</span>
+<h4 class="font-bold uppercase text-primary-container text-sm mt-2">Zona de Atención</h4>
+<p class="text-xs text-outline">Desde La Serena hasta Calbuco</p>
+<p class="text-xs text-outline mt-1">Despachos a todo el territorio nacional</p>
+</section>
+</aside>
+</div>
+<!-- Buscador de pedido adicional -->
+<section class="mt-12 pt-8 border-t border-outline-variant">
+<div class="bg-surface-container-low p-lg text-center max-w-2xl mx-auto">
+<h3 class="font-h3 text-h3 text-primary-container uppercase mb-2">¿Otro número de pedido?</h3>
+<p class="text-on-surface-variant mb-6">Ingresa tu número de pedido para ver el estado de tu despacho</p>
+<div class="flex flex-col sm:flex-row gap-4">
+<input class="flex-1 border border-outline-variant px-4 py-3 font-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Ej: ELD-10254" type="text"/>
+<button class="bg-[#FC9430] text-white px-6 py-3 font-button uppercase tracking-widest hover:bg-[#e0852b] transition-all active:scale-95">
+                                    Buscar Pedido
+                                </button>
+</div>
+<p class="text-xs text-outline mt-4">¿No tienes tu número de seguimiento? <a href="https://wa.me/56912345678" class="text-[#FC9430] font-bold hover:underline">Contáctanos por WhatsApp</a></p>
+</div>
+</section>
+</main>
+<!-- Footer - El Descuevee -->
+<footer class="bg-slate-50 border-t-4 border-[#163C7A] w-full">
+<div class="max-w-[1280px] mx-auto py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="text-lg font-bold text-[#163C7A] font-public-sans uppercase">
+                EL DESCUVEE
+            </div>
+<div class="flex flex-wrap justify-center gap-6">
+<a class="font-public-sans text-sm font-semibold uppercase text-slate-600 hover:text-[#FC9430] transition-colors" href="#">Políticas de Privacidad</a>
+<a class="font-public-sans text-sm font-semibold uppercase text-slate-600 hover:text-[#FC9430] transition-colors" href="#">Términos de Venta</a>
+<a class="font-public-sans text-sm font-semibold uppercase text-slate-600 hover:text-[#FC9430] transition-colors" href="#">Garantía y Calidad</a>
+<a class="font-public-sans text-sm font-semibold uppercase text-slate-600 hover:text-[#FC9430] transition-colors" href="mailto:contacto@eldescuevee.cl">Contacto</a>
+</div>
+<div class="text-slate-600 font-public-sans text-sm font-semibold uppercase text-center md:text-right">
+                © 2025 El Descuevee - Ropa Corporativa y Bordado Profesional
+            </div>
+</div>
+<div class="max-w-[1280px] mx-auto px-8 pb-6 text-center text-xs text-slate-400">
+                Atención desde La Serena hasta Calbuco | Pedido mínimo 10 unidades combinables
+            </div>
+</footer>
+</body>
+</html>
