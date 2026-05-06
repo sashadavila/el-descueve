@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Carrito de Compras | El Descuevee - Ropa Corporativa y Bordado</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-container": "#FC9430",
+                      "outline": "#747781",
+                      "primary": "#00265b",
+                      "tertiary": "#052756",
+                      "on-primary-fixed": "#001a42",
+                      "error-container": "#ffdad6",
+                      "surface-tint": "#3c5d9d",
+                      "on-tertiary-fixed-variant": "#2c4677",
+                      "on-tertiary-container": "#90a9e0",
+                      "inverse-primary": "#aec6ff",
+                      "outline-variant": "#c4c6d2",
+                      "surface": "#f8f9ff",
+                      "on-error": "#ffffff",
+                      "background": "#f8f9ff",
+                      "on-primary-container": "#89a9ee",
+                      "on-background": "#0b1c30",
+                      "inverse-surface": "#213145",
+                      "tertiary-fixed": "#d8e2ff",
+                      "on-secondary-fixed-variant": "#6e3900",
+                      "surface-container-highest": "#d3e4fe",
+                      "on-surface-variant": "#434750",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed-dim": "#ffb77d",
+                      "secondary": "#914d00",
+                      "primary-fixed": "#d8e2ff",
+                      "tertiary-fixed-dim": "#adc6ff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary-fixed-variant": "#224583",
+                      "tertiary-container": "#223d6e",
+                      "on-tertiary-fixed": "#001a41",
+                      "surface-container": "#e5eeff",
+                      "on-error-container": "#93000a",
+                      "surface-variant": "#d3e4fe",
+                      "secondary-fixed": "#ffdcc3",
+                      "surface-container-high": "#dce9ff",
+                      "on-surface": "#0b1c30",
+                      "surface-bright": "#f8f9ff",
+                      "primary-container": "#163C7A",
+                      "on-primary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "inverse-on-surface": "#eaf1ff",
+                      "surface-dim": "#cbdbf5",
+                      "primary-fixed-dim": "#aec6ff",
+                      "on-secondary-fixed": "#2f1500",
+                      "on-secondary-container": "#663500",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-low": "#eff4ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "80px",
+                      "sm": "12px",
+                      "container-max": "1280px",
+                      "lg": "48px",
+                      "gutter": "24px",
+                      "xs": "4px",
+                      "md": "24px",
+                      "base": "8px"
+              },
+              "fontFamily": {
+                      "h1": ["Public Sans"],
+                      "h3": ["Public Sans"],
+                      "body-md": ["Public Sans"],
+                      "label-sm": ["Public Sans"],
+                      "h2": ["Public Sans"],
+                      "body-lg": ["Public Sans"],
+                      "button": ["Public Sans"]
+              },
+              "fontSize": {
+                      "h1": ["48px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "h3": ["24px", {"lineHeight": "1.4", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "h2": ["32px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "button": ["16px", {"lineHeight": "1", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background font-body-md text-on-background">
+<!-- TopAppBar - El Descuevee -->
+<header class="bg-[#163C7A] dark:bg-slate-900 border-b-2 border-[#FC9430] sticky top-0 z-50">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-[1280px] mx-auto">
+<div class="text-2xl font-black text-white tracking-tighter">EL DESCUVEE</div>
+<nav class="hidden md:flex gap-8">
+<a class="text-white hover:text-[#FC9430] transition-colors font-public-sans font-bold uppercase tracking-wider" href="#">Corporativo</a>
+<a class="text-white hover:text-[#FC9430] transition-colors font-public-sans font-bold uppercase tracking-wider" href="#">Industrial</a>
+<a class="text-white hover:text-[#FC9430] transition-colors font-public-sans font-bold uppercase tracking-wider" href="#">Bordados</a>
+<a class="text-white hover:text-[#FC9430] transition-colors font-public-sans font-bold uppercase tracking-wider" href="#">Cotización</a>
+</nav>
+<div class="flex items-center gap-4 text-white">
+<a href="https://wa.me/56912345678?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20carrito" target="_blank" class="p-2 hover:bg-navy-800 dark:hover:bg-slate-800 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="hidden sm:inline text-xs">WhatsApp</span>
+</a>
+<button class="p-2 hover:bg-navy-800 dark:hover:bg-slate-800 transition-colors relative">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="absolute top-0 right-0 bg-[#FC9430] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">2</span>
+</button>
+<button class="p-2 hover:bg-navy-800 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-[1280px] mx-auto px-6 py-xl">
+<h1 class="font-h1 text-h1 mb-lg text-primary-container">Carrito de Compras</h1>
+<p class="text-on-surface-variant mb-8 -mt-4">Pedido mínimo: 10 unidades combinables (mezcla de tallas y colores)</p>
+<div class="flex flex-col lg:grid lg:grid-cols-12 gap-gutter">
+<!-- Cart Items List -->
+<div class="lg:col-span-8 space-y-md">
+<!-- Item 1 - Polera Polo Piqué -->
+<div class="bg-white border border-outline-variant p-md flex flex-col sm:flex-row gap-md items-center">
+<div class="w-32 h-32 bg-surface-container flex-shrink-0">
+<img alt="Polera Polo Piqué con bordado" class="w-full h-full object-cover" src="https://comerciallamas.cl/wp-content/uploads/2023/04/polera-polo-mc-hombre-60-alg-40-poly-18.jpg"/>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-h3 text-h3 text-primary">Polera Polo Piqué c/ Bordado</h3>
+<p class="text-on-surface-variant font-label-sm uppercase mt-1">Ref: POL-001 | Algodón Piqué 210 gr</p>
+<span class="text-xs text-[#FC9430] font-bold mt-1 inline-block">Incluye bordado de logo</span>
+</div>
+<button class="text-outline hover:text-error transition-colors">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="mt-md flex flex-wrap justify-between items-end gap-md">
+<div class="flex items-center border border-outline rounded-lg">
+<button class="px-3 py-1 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="px-4 font-button">10</span>
+<button class="px-3 py-1 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+<div class="text-right">
+<p class="text-on-surface-variant text-sm">Unitario: $12.900</p>
+<p class="font-h3 text-h3 text-primary-container">$129.000</p>
+</div>
+</div>
+<div class="mt-2 text-xs text-outline">
+                                    Tallas: M(4), L(4), XL(2) | Color: Azul marino
+                                </div>
+</div>
+</div>
+<!-- Item 2 - Micropolar Térmico -->
+<div class="bg-white border border-outline-variant p-md flex flex-col sm:flex-row gap-md items-center">
+<div class="w-32 h-32 bg-surface-container flex-shrink-0">
+<img alt="Micropolar Térmico con bordado" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzRdK-CGmuG68DnEb-704xMBHb2BQzEFeOus4lkmapkP9AoxzGC2i0zqvpPvbM_R-nURf3cWrrjV2Fk-pv61zciinZapxaAKbCdTvIPzexazE-s84Lefuqp0N0tXX0C9abd2xHqMCzNZfwcpu3Emp4WIEivwYL5Dmzm8KKj5Ea9GsYpZdr6yS3hAmY4kzibpenfSdidLXgs5ubRWlFehSDueUmJloji8sVL7Rp5bbQXaotiva2CXD76knaVr-5L_IDVsZW4PX-lHI"/>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-h3 text-h3 text-primary">Micropolar Térmico c/ Bordado</h3>
+<p class="text-on-surface-variant font-label-sm uppercase mt-1">Ref: MIC-045 | Polar 280 gr</p>
+<span class="text-xs text-[#FC9430] font-bold mt-1 inline-block">Incluye bordado de logo</span>
+</div>
+<button class="text-outline hover:text-error transition-colors">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+<div class="mt-md flex flex-wrap justify-between items-end gap-md">
+<div class="flex items-center border border-outline rounded-lg">
+<button class="px-3 py-1 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="px-4 font-button">5</span>
+<button class="px-3 py-1 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+<div class="text-right">
+<p class="text-on-surface-variant text-sm">Unitario: $22.900</p>
+<p class="font-h3 text-h3 text-primary-container">$114.500</p>
+</div>
+</div>
+<div class="mt-2 text-xs text-outline">
+                                    Tallas: M(2), L(2), XL(1) | Color: Gris antracita
+                                </div>
+</div>
+</div>
+<!-- Mensaje de pedido mínimo -->
+<div class="bg-primary-container/10 border-l-4 border-[#FC9430] p-md mt-4">
+<div class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-[#FC9430]">info</span>
+<div>
+<p class="text-sm font-bold text-primary uppercase">Pedido mínimo cumplido</p>
+<p class="text-xs text-on-surface-variant">Tu pedido supera las 10 unidades mínimas requeridas. Puedes seguir combinando prendas, tallas y colores.</p>
+</div>
+</div>
+</div>
+<div class="pt-sm">
+<a href="#" class="flex items-center gap-xs font-button text-primary hover:underline">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+                        SEGUIR COMPRANDO
+                    </a>
+</div>
+</div>
+<!-- Order Summary -->
+<div class="lg:col-span-4">
+<div class="bg-surface-container-low border border-outline-variant p-md sticky top-32">
+<h2 class="font-h2 text-h2 text-primary-container mb-md">Resumen del Pedido</h2>
+<div class="space-y-sm border-b border-outline-variant pb-md mb-md">
+<div class="flex justify-between text-body-md text-on-surface">
+<span>Subtotal</span>
+<span class="font-bold">$243.500</span>
+</div>
+<div class="flex justify-between text-body-md text-on-surface">
+<span>Envío (La Serena - Calbuco)</span>
+<span class="font-bold">$4.500</span>
+</div>
+<div class="flex justify-between text-body-md text-on-surface-variant">
+<span>Bordado de logo</span>
+<span class="font-bold">Incluido</span>
+</div>
+</div>
+<div class="flex justify-between items-center mb-lg">
+<span class="font-h3 text-h3 text-primary-container uppercase">Total</span>
+<span class="font-h2 text-h2 text-primary-container">$248.000</span>
+</div>
+<div class="space-y-sm">
+<a href="#" class="w-full h-[56px] bg-[#FC9430] text-white font-button uppercase tracking-widest hover:bg-[#e0852b] transition-all rounded-sm shadow-sm flex items-center justify-center gap-2">
+                            PAGAR
+                            <span class="material-symbols-outlined" data-icon="payments">payments</span>
+</a>
+<a href="https://wa.me/56912345678?text=Hola,%20quisiera%20confirmar%20mi%20pedido%20por%20$248.000%20-%20Poleras%20Polo%20y%20Micropolar" target="_blank" class="w-full h-[48px] border-2 border-[#25D366] text-[#25D366] font-button uppercase tracking-widest hover:bg-[#25D366] hover:text-white transition-all flex items-center justify-center gap-2 mt-2">
+                            <span class="material-symbols-outlined" data-icon="chat">chat</span>
+                            COTIZAR POR WHATSAPP
+                        </a>
+<p class="text-center font-label-sm text-outline uppercase mt-sm">Cotización sujeta a disponibilidad de stock</p>
+</div>
+<div class="mt-xl pt-md border-t border-outline-variant space-y-md">
+<div class="flex gap-md items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[#FC9430]" data-icon="verified_user">verified_user</span>
+<span class="text-xs font-bold uppercase">Calidad Garantizada - Prendas que duran</span>
+</div>
+<div class="flex gap-md items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[#FC9430]" data-icon="local_laundry_service">local_laundry_service</span>
+<span class="text-xs font-bold uppercase">Bordado profesional incluido</span>
+</div>
+<div class="flex gap-md items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[#FC9430]" data-icon="local_shipping">local_shipping</span>
+<span class="text-xs font-bold uppercase">Despacho desde La Serena hasta Calbuco</span>
+</div>
+<div class="flex gap-md items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[#FC9430]" data-icon="groups">groups</span>
+<span class="text-xs font-bold uppercase">Atención directa y personalizada</span>
+</div>
+</div>
+<!-- Código de descuento corporativo -->
+<div class="mt-xl pt-md border-t border-outline-variant">
+<p class="text-xs font-bold uppercase text-primary mb-3">¿Tienes un código corporativo?</p>
+<div class="flex gap-2">
+<input class="flex-1 border border-outline-variant px-3 py-2 text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="Ingresa tu código" type="text"/>
+<button class="bg-primary text-white px-4 py-2 text-xs font-bold uppercase hover:bg-primary/80 transition-colors">Aplicar</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sección de información adicional -->
+<div class="mt-12 pt-8 border-t border-outline-variant">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="text-center">
+<span class="material-symbols-outlined text-[#FC9430] text-3xl">check_circle</span>
+<h4 class="font-bold text-primary uppercase text-sm mt-2">Pedido mínimo 10 unidades</h4>
+<p class="text-xs text-on-surface-variant">Puedes combinar diferentes prendas, tallas y colores</p>
+</div>
+<div class="text-center">
+<span class="material-symbols-outlined text-[#FC9430] text-3xl">bolt</span>
+<h4 class="font-bold text-primary uppercase text-sm mt-2">Respuesta Ágil</h4>
+<p class="text-xs text-on-surface-variant">Cotización en menos de 24 horas hábiles</p>
+</div>
+<div class="text-center">
+<span class="material-symbols-outlined text-[#FC9430] text-3xl">handshake</span>
+<h4 class="font-bold text-primary uppercase text-sm mt-2">Trato Directo</h4>
+<p class="text-xs text-on-surface-variant">Hablamos contigo de forma cercana para orientarte mejor</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer - El Descuevee -->
+<footer class="bg-slate-100 dark:bg-slate-900 border-t-2 border-[#163C7A] mt-xl">
+<div class="w-full py-8 px-6 mt-auto flex flex-col md:flex-row justify-between items-center max-w-[1280px] mx-auto">
+<div class="mb-md md:mb-0">
+<div class="text-sm font-black text-[#163C7A] uppercase tracking-wider mb-xs">EL DESCUVEE</div>
+<div class="font-public-sans text-xs font-bold uppercase text-slate-500">
+                    © 2025 El Descuevee - Ropa Corporativa y Bordado Profesional
+                </div>
+</div>
+<div class="flex flex-wrap gap-md justify-center">
+<a class="font-public-sans text-xs font-bold uppercase text-slate-500 hover:text-[#163C7A] underline decoration-[#FC9430] decoration-2 transition-all" href="#">Políticas de Privacidad</a>
+<a class="font-public-sans text-xs font-bold uppercase text-slate-500 hover:text-[#163C7A] underline decoration-[#FC9430] decoration-2 transition-all" href="#">Términos de Venta</a>
+<a class="font-public-sans text-xs font-bold uppercase text-slate-500 hover:text-[#163C7A] underline decoration-[#FC9430] decoration-2 transition-all" href="#">Garantía y Calidad</a>
+<a class="font-public-sans text-xs font-bold uppercase text-slate-500 hover:text-[#163C7A] underline decoration-[#FC9430] decoration-2 transition-all" href="mailto:contacto@eldescuevee.cl">Contacto</a>
+</div>
+</div>
+<div class="max-w-[1280px] mx-auto px-6 pb-6 text-center text-xs text-slate-400">
+                Atención desde La Serena hasta Calbuco | Pedido mínimo 10 unidades combinables | Transferencia bancaria
+            </div>
+</footer>
+</body>
+</html>
