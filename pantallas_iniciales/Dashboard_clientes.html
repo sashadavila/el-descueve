@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Panel de Clientes | El Descuevee - Directorio Corporativo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed-dim": "#adc6ff",
+                    "primary-container": "#163C7A",
+                    "on-secondary-container": "#663500",
+                    "on-tertiary-fixed-variant": "#2c4677",
+                    "primary-fixed": "#d8e2ff",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-primary-fixed-variant": "#224583",
+                    "error": "#ba1a1a",
+                    "tertiary": "#052756",
+                    "on-tertiary": "#ffffff",
+                    "inverse-surface": "#213145",
+                    "on-error-container": "#93000a",
+                    "surface-dim": "#cbdbf5",
+                    "surface-tint": "#3c5d9d",
+                    "outline-variant": "#c4c6d2",
+                    "secondary-fixed": "#ffdcc3",
+                    "on-error": "#ffffff",
+                    "background": "#f8f9ff",
+                    "surface-container": "#e5eeff",
+                    "surface": "#f8f9ff",
+                    "tertiary-fixed": "#d8e2ff",
+                    "surface-container-high": "#dce9ff",
+                    "primary-fixed-dim": "#aec6ff",
+                    "surface-container-low": "#eff4ff",
+                    "surface-bright": "#f8f9ff",
+                    "on-surface-variant": "#434750",
+                    "on-tertiary-fixed": "#001a41",
+                    "tertiary-container": "#223d6e",
+                    "surface-variant": "#d3e4fe",
+                    "secondary-fixed-dim": "#ffb77d",
+                    "on-surface": "#0b1c30",
+                    "inverse-primary": "#aec6ff",
+                    "on-primary-fixed": "#001a42",
+                    "on-secondary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "primary": "#00265b",
+                    "on-tertiary-container": "#90a9e0",
+                    "secondary": "#914d00",
+                    "on-primary": "#ffffff",
+                    "inverse-on-surface": "#eaf1ff",
+                    "outline": "#747781",
+                    "on-secondary-fixed": "#2f1500",
+                    "on-background": "#0b1c30",
+                    "on-primary-container": "#89a9ee",
+                    "secondary-container": "#FC9430",
+                    "on-secondary-fixed-variant": "#6e3900"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "lg": "48px",
+                    "sm": "12px",
+                    "xl": "80px",
+                    "xs": "4px",
+                    "md": "24px",
+                    "gutter": "24px",
+                    "container-max": "1280px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Public Sans"],
+                    "h3": ["Public Sans"],
+                    "h1": ["Public Sans"],
+                    "body-lg": ["Public Sans"],
+                    "body-md": ["Public Sans"],
+                    "h2": ["Public Sans"],
+                    "button": ["Public Sans"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "h3": ["24px", {"lineHeight": "1.4", "fontWeight": "700"}],
+                    "h1": ["48px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "h2": ["32px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "button": ["16px", {"lineHeight": "1", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Public Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden">
+<!-- SideNavBar Shell - El Descuevee Admin -->
+<aside class="fixed left-0 top-0 h-full w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col py-6 z-40 transition-colors duration-200 ease-in-out">
+<div class="px-6 mb-10">
+<h1 class="text-xl font-black text-[#163C7A] dark:text-white tracking-tighter">EL DESCUVEE</h1>
+<p class="font-['Public_Sans'] antialiased uppercase tracking-wider text-xs font-bold text-slate-500">Panel de Control</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active Tab: Resumen de Pedidos -->
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#163C7A] dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center px-6 py-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="groups">groups</span>
+<span class="font-['Public_Sans'] antialiased uppercase tracking-wider text-xs font-bold">Resumen de Pedidos</span>
+</a>
+<a class="bg-slate-100 dark:bg-slate-800 text-[#163C7A] dark:text-[#FC9430] border-l-4 border-[#163C7A] dark:border-[#FC9430] flex items-center px-6 py-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="receipt_long">receipt_long</span>
+<span class="font-['Public_Sans'] antialiased uppercase tracking-wider text-xs font-bold">Clientes</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#163C7A] dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center px-6 py-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="payments">payments</span>
+<span class="font-['Public_Sans'] antialiased uppercase tracking-wider text-xs font-bold">Pagos</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#163C7A] dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center px-6 py-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="bar_chart">bar_chart</span>
+<span class="font-['Public_Sans'] antialiased uppercase tracking-wider text-xs font-bold">Estadísticas</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#163C7A] dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex items-center px-6 py-3 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="local_laundry_service">local_laundry_service</span>
+<span class="font-['Public_Sans'] antialiased uppercase tracking-wider text-xs font-bold">Bordados</span>
+</a>
+</nav>
+<div class="mt-auto px-6">
+<div class="bg-slate-800/50 p-4 border border-slate-700 rounded-lg">
+<p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Estado del Sistema</p>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-green-500"></div>
+<span class="text-xs text-slate-300 font-medium">Todos los sistemas operativos</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Top App Bar Shell -->
+<header class="h-20 w-full fixed top-0 left-0 pl-64 border-b-2 border-slate-200 bg-white flex items-center justify-between px-8 z-10">
+<div class="flex items-center gap-8">
+<h2 class="text-lg font-black text-slate-900 font-public-sans uppercase">Directorio de Clientes</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded text-sm w-80 focus:ring-2 focus:ring-primary-container outline-none" placeholder="Buscar por RUT o Nombre..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="relative text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-secondary rounded-full"></span>
+</button>
+<button class="text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-10 w-10 overflow-hidden border-2 border-slate-200 bg-slate-100 rounded-full">
+<img alt="Perfil Administrador" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRZxWShch_lRyUq7I3pLCPxZmb_vIf8Q00dJ1t7jUUeXxGeDtuLcZLwbY9TMcgSJsnq2Zd_7CVlenk_1IW0R33XbdQcwDOTbsriF0ZPwfsG4l5DdP50S2XTUIFk8sss_XHguyTKGbJA-d4MP7MmxkvPWk5Oe9cXD-TGtyk7qQcD1IAY9iFBkb--e2BwxTDFzQ_I77Hben8yn44ER6jI-8qcQKv0O5gh31XMYED5dHf1JaXSU83zeGDdMSD6LcgMmV2-C_7t1Nw93o"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-20 p-8 min-h-screen">
+<!-- Action Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<p class="text-slate-500 font-label-sm text-label-sm uppercase mb-1">Panel de Administración</p>
+<h3 class="text-h2 font-h2 text-primary">Directorio de Clientes</h3>
+</div>
+<div class="flex gap-4">
+<button class="flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary font-button text-button hover:bg-slate-50 transition-all uppercase">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                    Exportar CSV
+                </button>
+<button class="flex items-center gap-2 px-6 py-3 bg-secondary-container text-white font-button text-button hover:bg-[#e0852b] transition-all uppercase shadow-[4px_4px_0px_0px_rgba(102,53,0,0.3)]">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    Nuevo Cliente
+                </button>
+</div>
+</div>
+<!-- Summary Cards (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-white p-6 border-2 border-slate-200 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-6xl" data-icon="group">group</span>
+</div>
+<p class="text-slate-500 font-label-sm text-label-sm uppercase mb-2">Total Clientes</p>
+<h4 class="text-h1 font-h1 text-primary">1,284</h4>
+<div class="mt-4 flex items-center text-green-600 gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span>
+<span class="text-xs font-bold">+8.2% vs mes anterior</span>
+</div>
+</div>
+<div class="bg-white p-6 border-2 border-slate-200 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-6xl" data-icon="description">description</span>
+</div>
+<p class="text-slate-500 font-label-sm text-label-sm uppercase mb-2">Contratos B2B Activos</p>
+<h4 class="text-h1 font-h1 text-primary">87</h4>
+<div class="mt-4 flex items-center text-primary-container gap-1">
+<span class="text-xs font-bold">Cuentas Corporativas</span>
+</div>
+</div>
+<div class="bg-white p-6 border-2 border-slate-200 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10 text-secondary">
+<span class="material-symbols-outlined text-6xl" data-icon="new_releases">new_releases</span>
+</div>
+<p class="text-slate-500 font-label-sm text-label-sm uppercase mb-2">Nuevos este Mes</p>
+<h4 class="text-h1 font-h1 text-secondary">23</h4>
+<div class="mt-4 flex items-center text-secondary gap-1">
+<span class="text-xs font-bold">En fase de onboarding</span>
+</div>
+</div>
+</div>
+<!-- Filter & Search Controls -->
+<div class="bg-surface-container-low p-6 border-2 border-slate-200 mb-6 flex flex-wrap gap-6 items-end">
+<div class="flex-1 min-w-[200px]">
+<label class="block font-label-sm text-label-sm text-slate-700 mb-2 uppercase">Tipo de Cliente</label>
+<select class="w-full bg-white border-2 border-slate-200 p-2 rounded focus:border-primary outline-none text-sm font-medium">
+<option>Todos los tipos</option>
+<option>Empresa</option>
+<option>Persona Natural</option>
+</select>
+</div>
+<div class="flex-1 min-w-[200px]">
+<label class="block font-label-sm text-label-sm text-slate-700 mb-2 uppercase">Filtro por Estado</label>
+<select class="w-full bg-white border-2 border-slate-200 p-2 rounded focus:border-primary outline-none text-sm font-medium">
+<option>Todos los estados</option>
+<option>Premium</option>
+<option>Estándar</option>
+<option>Contrato Pendiente</option>
+</select>
+</div>
+<div class="flex-1 min-w-[200px]">
+<label class="block font-label-sm text-label-sm text-slate-700 mb-2 uppercase">Región</label>
+<select class="w-full bg-white border-2 border-slate-200 p-2 rounded focus:border-primary outline-none text-sm font-medium">
+<option>Nacional</option>
+<option>Norte (La Serena - Antofagasta)</option>
+<option>Centro (Metropolitana - Valparaíso)</option>
+<option>Sur (Concepción - Calbuco)</option>
+</select>
+</div>
+<button class="bg-primary text-white px-8 py-2 font-button text-button h-[42px] hover:bg-primary-container transition-all uppercase">Aplicar Filtros</button>
+<button class="text-slate-500 font-button text-button h-[42px] px-4 hover:text-primary underline">Limpiar</button>
+</div>
+<!-- Data Table Container -->
+<div class="bg-white border-2 border-slate-200 shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 border-b-2 border-slate-200">
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase">ID</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase">Nombre / Empresa</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase">Contacto</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase">Ubicación</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase">Pedidos</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase">Valor Total</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase text-center">Estado</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-slate-600 uppercase text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<!-- Row 1 - Minera Las Ánimas -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-xs font-mono font-bold text-slate-400">#ELD-9021</td>
+<td class="px-6 py-4">
+<div class="font-bold text-primary">Minera Las Ánimas</div>
+<div class="text-xs text-slate-500">RUT: 76.452.122-K</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">contacto@mineralasanimas.cl</td>
+<td class="px-6 py-4 text-sm text-slate-600">Antofagasta, CL</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900">28</td>
+<td class="px-6 py-4 text-sm font-black text-primary">$428,000</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-block px-3 py-1 bg-primary text-white text-[10px] font-bold uppercase rounded">Premium</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 - Constructora Titán -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-xs font-mono font-bold text-slate-400">#ELD-8854</td>
+<td class="px-6 py-4">
+<div class="font-bold text-primary">Constructora Titán</div>
+<div class="text-xs text-slate-500">RUT: 71.833.409-2</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">ventas@titan.cl</td>
+<td class="px-6 py-4 text-sm text-slate-600">Santiago, CL</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900">15</td>
+<td class="px-6 py-4 text-sm font-black text-primary">$156,000</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-block px-3 py-1 bg-slate-200 text-slate-800 text-[10px] font-bold uppercase rounded">Estándar</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 - Renta Servicios Ltda. -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-xs font-mono font-bold text-slate-400">#ELD-7721</td>
+<td class="px-6 py-4">
+<div class="font-bold text-primary">Renta Servicios Ltda.</div>
+<div class="text-xs text-slate-500">RUT: 99.231.000-4</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">operaciones@rentaservicios.cl</td>
+<td class="px-6 py-4 text-sm text-slate-600">Valparaíso, CL</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900">0</td>
+<td class="px-6 py-4 text-sm font-black text-primary">$0</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-block px-3 py-1 bg-secondary text-white text-[10px] font-bold uppercase rounded">Contrato Pendiente</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 - Industrias López -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-xs font-mono font-bold text-slate-400">#ELD-6512</td>
+<td class="px-6 py-4">
+<div class="font-bold text-primary">Industrias López</div>
+<div class="text-xs text-slate-500">RUT: 88.122.990-1</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">compras@industriaslopez.cl</td>
+<td class="px-6 py-4 text-sm text-slate-600">Concepción, CL</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900">52</td>
+<td class="px-6 py-4 text-sm font-black text-primary">$345,000</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-block px-3 py-1 bg-primary text-white text-[10px] font-bold uppercase rounded">Premium</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 5 - Logística Global -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-xs font-mono font-bold text-slate-400">#ELD-4432</td>
+<td class="px-6 py-4">
+<div class="font-bold text-primary">Logística Global</div>
+<div class="text-xs text-slate-500">RUT: 76.002.441-3</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">despachos@logisticaglobal.cl</td>
+<td class="px-6 py-4 text-sm text-slate-600">Coquimbo (La Serena), CL</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900">18</td>
+<td class="px-6 py-4 text-sm font-black text-primary">$124,000</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-block px-3 py-1 bg-slate-200 text-slate-800 text-[10px] font-bold uppercase rounded">Estándar</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 6 - Servicios Industriales del Sur -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-xs font-mono font-bold text-slate-400">#ELD-3821</td>
+<td class="px-6 py-4">
+<div class="font-bold text-primary">Servicios Industriales del Sur</div>
+<div class="text-xs text-slate-500">RUT: 77.123.456-7</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">administracion@sis.cl</td>
+<td class="px-6 py-4 text-sm text-slate-600">Calbuco, CL</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900">9</td>
+<td class="px-6 py-4 text-sm font-black text-primary">$89,500</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-block px-3 py-1 bg-slate-200 text-slate-800 text-[10px] font-bold uppercase rounded">Estándar</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="px-6 py-4 bg-slate-50 flex items-center justify-between border-t border-slate-200 flex-wrap gap-4">
+<span class="text-sm text-slate-500 font-medium">Mostrando 1 a 6 de 1,284 entradas</span>
+<div class="flex gap-2">
+<button class="px-3 py-1 border border-slate-300 text-slate-500 hover:bg-white disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="px-3 py-1 border border-primary bg-primary text-white font-bold text-sm">1</button>
+<button class="px-3 py-1 border border-slate-300 text-slate-600 hover:bg-white font-bold text-sm">2</button>
+<button class="px-3 py-1 border border-slate-300 text-slate-600 hover:bg-white font-bold text-sm">3</button>
+<button class="px-3 py-1 border border-slate-300 text-slate-600 hover:bg-white font-bold text-sm">4</button>
+<button class="px-3 py-1 border border-slate-300 text-slate-600 hover:bg-white">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Información adicional de la empresa -->
+<div class="mt-8 bg-surface-container-low p-6 border border-outline-variant rounded-lg">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+<div>
+<span class="material-symbols-outlined text-[#FC9430] text-2xl">local_laundry_service</span>
+<p class="text-xs font-bold text-primary mt-2">Bordado Profesional</p>
+<p class="text-[10px] text-on-surface-variant">Incluido en todos los pedidos</p>
+</div>
+<div>
+<span class="material-symbols-outlined text-[#FC9430] text-2xl">groups</span>
+<p class="text-xs font-bold text-primary mt-2">Pedido Mínimo</p>
+<p class="text-[10px] text-on-surface-variant">10 unidades combinables</p>
+</div>
+<div>
+<span class="material-symbols-outlined text-[#FC9430] text-2xl">local_shipping</span>
+<p class="text-xs font-bold text-primary mt-2">Zona de Atención</p>
+<p class="text-[10px] text-on-surface-variant">La Serena - Calbuco</p>
+</div>
+<div>
+<span class="material-symbols-outlined text-[#FC9430] text-2xl">verified</span>
+<p class="text-xs font-bold text-primary mt-2">Calidad Garantizada</p>
+<p class="text-[10px] text-on-surface-variant">Prendas que duran en el tiempo</p>
+</div>
+</div>
+</div>
+</main>
+</body>
+</html>
