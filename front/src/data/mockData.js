@@ -82,3 +82,42 @@ export const orders = [
         }
     }
 ]
+
+export const solutions = [
+    {
+        id: 1,
+        title: 'Línea Corporativa',
+        description: 'Poleras polo, camisas y prendas para imagen profesional',
+        icon: 'work',
+        image: 'https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=600&h=450&fit=crop',
+        link: '/catalogo?categoria=corporativo',
+        features: ['Poleras Piqué', 'Camisas formales', 'Chaquetas ejecutivas']
+    },
+    {
+        id: 2,
+        title: 'Línea Industrial',
+        description: 'Pantalones cargo, chalecos geólogo y prendas resistentes',
+        icon: 'construction',
+        image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=600&h=450&fit=crop',
+        link: '/catalogo?categoria=industrial',
+        features: ['Pantalones Cargo', 'Chalecos Geólogo', 'Jeans reforzados']
+    },
+    {
+        id: 3,
+        title: 'Bordado Profesional',
+        description: 'Bordado de logos de alta calidad en todas tus prendas',
+        icon: 'brush',
+        image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=600&h=450&fit=crop',
+        link: '/catalogo?categoria=bordados',
+        features: ['Hasta 15,000 puntadas', 'Alta definición', 'Colores personalizados']
+    },
+    {
+        id: 4,
+        title: 'Equipos Pequeños',
+        description: 'Soluciones flexibles desde 10 unidades combinables',
+        icon: 'groups',
+        image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=450&fit=crop',
+        link: '/catalogo',
+        features: ['10 unidades mínimo', 'Combinación de tallas', 'Mezcla de colores']
+    }
+]
