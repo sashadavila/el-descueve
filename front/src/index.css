@@ -7,12 +7,40 @@
     --color-secondary-container: #FC9430;
     --color-background: #f8f9ff;
     --color-surface: #f8f9ff;
-    --color-error: #ba1a1a;
+    --color-surface-container-low: #eff4ff;
+    --color-surface-container: #e5eeff;
+    --color-surface-container-high: #dce9ff;
+    --color-surface-container-highest: #d3e4fe;
     --color-outline: #747781;
+    --color-outline-variant: #c4c6d2;
+    --color-error: #ba1a1a;
+    --color-on-surface: #0b1c30;
+    --color-on-surface-variant: #434750;
+
     --font-sans: 'Public Sans', system-ui, sans-serif;
 }
 
-body {
-    background-color: var(--color-background);
-    color: #0b1c30;
+@layer base {
+    body {
+        font-family: 'Public Sans', system-ui, sans-serif;
+        background-color: var(--color-background);
+        color: var(--color-on-surface);
+    }
+
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* Utilidades adicionales */
+@layer utilities {
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
 }
