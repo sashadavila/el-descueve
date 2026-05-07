@@ -1,18 +1,48 @@
+import { Routes, Route } from 'react-router-dom'
+import Layout from './components/common/Layout'
+import AdminLayout from './components/layout/AdminLayout'
+
+// Públicas
+import HomePage from './pages/public/HomePage'
+import CatalogoPage from './pages/public/CatalogoPage'
+import ProductDetailPage from './pages/public/ProductDetailPage'
+import CartPage from './pages/public/CartPage'
+import CheckoutPage from './pages/public/CheckoutPage'
+import OrderConfirmationPage from './pages/public/ConfirmacionCompraPage'
+import OrderTrackingPage from './pages/public/OrderTrackingPage'
+import LoginPage from './pages/public/LoginPage'
+import SignupPage from './pages/public/SignupPage'
+
+// Admin
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminClients from './pages/admin/AdminClients'
+import AdminEditClient from './pages/admin/AdminEditClient'
+import AdminStatistics from './pages/admin/AdminStatistics'
+
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-xl shadow-2xl">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          🎉 React + Tailwind CSS v4
-        </h1>
-        <p className="text-gray-600">
-          Configuración exitosa
-        </p>
-        <button className="mt-6 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-          ¡Funciona!
-        </button>
-      </div>
-    </div>
+    <Routes>
+      {/* Rutas públicas con Layout normal */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/catalogo" element={<CatalogoPage />} />
+        <Route path="/producto/:id" element={<ProductDetailPage />} />
+        <Route path="/carrito" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/seguimiento/:orderId" element={<OrderTrackingPage />} />
+        <Route path="/confirmacion" element={<OrderConfirmationPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+      </Route>
+
+      {/* Rutas admin con Layout admin - Usar rutas relativas */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="clientes" element={<AdminClients />} />
+        <Route path="clientes/editar/:id" element={<AdminEditClient />} />
+        <Route path="estadisticas" element={<AdminStatistics />} />
+      </Route>
+    </Routes>
   )
 }
 
