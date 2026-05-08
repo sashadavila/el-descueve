@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import ScrollToTop from './components/common/ScrollToTop'
 import Layout from './components/common/Layout'
 import AdminLayout from './components/layout/AdminLayout'
 
@@ -21,28 +22,31 @@ import AdminStatistics from './pages/admin/AdminStatistics'
 
 function App() {
   return (
-    <Routes>
-      {/* Rutas públicas con Layout normal */}
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/catalogo" element={<CatalogoPage />} />
-        <Route path="/producto/:id" element={<ProductDetailPage />} />
-        <Route path="/carrito" element={<CartPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/seguimiento/:orderId" element={<OrderTrackingPage />} />
-        <Route path="/confirmacion" element={<OrderConfirmationPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-      </Route>
+    <>
+      <ScrollToTop />
+      <Routes>
+        {/* Rutas públicas con Layout normal */}
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/catalogo" element={<CatalogoPage />} />
+          <Route path="/producto/:id" element={<ProductDetailPage />} />
+          <Route path="/carrito" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/seguimiento/:orderId" element={<OrderTrackingPage />} />
+          <Route path="/confirmacion" element={<OrderConfirmationPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Route>
 
-      {/* Rutas admin con Layout admin - Usar rutas relativas */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="clientes" element={<AdminClients />} />
-        <Route path="clientes/editar/:id" element={<AdminEditClient />} />
-        <Route path="estadisticas" element={<AdminStatistics />} />
-      </Route>
-    </Routes>
+        {/* Rutas admin con Layout admin */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="clientes" element={<AdminClients />} />
+          <Route path="clientes/editar/:id" element={<AdminEditClient />} />
+          <Route path="estadisticas" element={<AdminStatistics />} />
+        </Route>
+      </Routes>
+    </>
   )
 }
 
