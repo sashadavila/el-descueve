@@ -1,8 +1,30 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
+import SolutionDetailModal from '../../components/ui/SolutionDetailModal'
 import { featuredProducts } from '../../data/mockData'
 
 export default function HomePage() {
+    const [selectedSolution, setSelectedSolution] = useState(null)
+    const [modalOpen, setModalOpen] = useState(false)
+
+    const solutions = [
+        { id: 'corporativo', title: 'Poleras y Camisas', category: 'LÍNEA CORPORATIVA', badge: 'MÁS VENDIDO', badgeColor: 'bg-secondary-container', price: 'Desde $12.900 CLP', description: 'Prendas profesionales para imagen corporativa. Bordado personalizado incluido.', image: 'https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=400&h=400&fit=crop' },
+        { id: 'industrial', title: 'Ropa de Trabajo', category: 'LÍNEA INDUSTRIAL', badge: 'DURADERO', badgeColor: 'bg-primary', price: 'Desde $28.900 CLP', description: 'Pantalones cargo, chalecos geólogo y prendas resistentes para terreno.', image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop' },
+        { id: 'bordado', title: 'Bordado de Logo', category: 'PERSONALIZACIÓN', badge: 'BORDADO INCLUIDO', badgeColor: 'bg-secondary-container', price: 'Desde $10.000 CLP', description: 'Bordado profesional de alta calidad en todas tus prendas corporativas.', image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=400&h=400&fit=crop' },
+        { id: 'equipos', title: 'Desde 10 Prendas', category: 'EQUIPOS PEQUEÑOS', badge: 'FLEXIBLE', badgeColor: 'bg-primary', price: 'Precios B2B', description: 'Soluciones flexibles combinando diferentes prendas, tallas y colores.', image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop' }
+    ]
+
+    const handleViewDetails = (solution) => {
+        setSelectedSolution(solution)
+        setModalOpen(true)
+    }
+
+    const handleCloseModal = () => {
+        setModalOpen(false)
+        setSelectedSolution(null)
+    }
+
     return (
         <div>
             {/* Hero Section */}
@@ -79,173 +101,51 @@ export default function HomePage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* Solución 1 - Corporativo */}
-                    <div className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
-                        <div className="absolute top-4 left-4 z-10">
-                            <span className="bg-secondary-container text-on-secondary-container px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
-                                MÁS VENDIDO
-                            </span>
-                        </div>
-                        <div className="aspect-square overflow-hidden bg-surface-container-low p-8">
-                            <img
-                                alt="Línea Corporativa"
-                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                src="https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=400&h=400&fit=crop"
-                            />
-                        </div>
-                        <div className="p-6 flex flex-col flex-1">
-                            <p className="text-label-sm text-on-surface-variant mb-1 uppercase">LÍNEA CORPORATIVA</p>
-                            <h3 className="font-h3 text-lg text-primary mb-2 group-hover:text-secondary transition-colors uppercase">
-                                Poleras y Camisas
-                            </h3>
-                            <p className="text-xs text-on-surface-variant mb-4">
-                                Prendas profesionales para imagen corporativa. Bordado personalizado incluido.
-                            </p>
-                            <div className="mt-auto flex justify-between items-end">
-                                <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Desde $12.900 CLP</span>
-                                    <span className="text-[10px] text-on-surface-variant">Pedido mínimo 10 unidades</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
-                                    VER MÁS
+                    {solutions.map((solution) => (
+                        <div key={solution.id} className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
+                            <div className="absolute top-4 left-4 z-10">
+                                <span className={`${solution.badgeColor} text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter`}>
+                                    {solution.badge}
                                 </span>
                             </div>
-                        </div>
-                        <div className="p-4 pt-0 grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="bg-white border-2 border-primary text-primary py-2 text-xs font-bold uppercase hover:bg-surface-container transition-colors">
-                                Ver Detalles
-                            </button>
-                            <button className="bg-secondary-container text-on-secondary-container py-2 text-xs font-bold uppercase hover:bg-[#e0852b] transition-colors">
-                                Cotizar
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Solución 2 - Industrial */}
-                    <div className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
-                        <div className="absolute top-4 left-4 z-10">
-                            <span className="bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
-                                DURADERO
-                            </span>
-                        </div>
-                        <div className="aspect-square overflow-hidden bg-surface-container-low p-8">
-                            <img
-                                alt="Línea Industrial"
-                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop"
-                            />
-                        </div>
-                        <div className="p-6 flex flex-col flex-1">
-                            <p className="text-label-sm text-on-surface-variant mb-1 uppercase">LÍNEA INDUSTRIAL</p>
-                            <h3 className="font-h3 text-lg text-primary mb-2 group-hover:text-secondary transition-colors uppercase">
-                                Ropa de Trabajo
-                            </h3>
-                            <p className="text-xs text-on-surface-variant mb-4">
-                                Pantalones cargo, chalecos geólogo y prendas resistentes para terreno.
-                            </p>
-                            <div className="mt-auto flex justify-between items-end">
-                                <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Desde $28.900 CLP</span>
-                                    <span className="text-[10px] text-on-surface-variant">Reforzado y resistente</span>
+                            <div className="aspect-square overflow-hidden bg-surface-container-low p-8">
+                                <img
+                                    alt={solution.title}
+                                    className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                                    src={solution.image}
+                                />
+                            </div>
+                            <div className="p-6 flex flex-col flex-1">
+                                <p className="text-label-sm text-on-surface-variant mb-1 uppercase">{solution.category}</p>
+                                <h3 className="font-h3 text-lg text-primary mb-2 group-hover:text-secondary transition-colors uppercase">
+                                    {solution.title}
+                                </h3>
+                                <p className="text-xs text-on-surface-variant mb-4">
+                                    {solution.description}
+                                </p>
+                                <div className="mt-auto flex justify-between items-end">
+                                    <div className="flex flex-col">
+                                        <span className="text-h3 text-[#FC9430] font-black">{solution.price}</span>
+                                        <span className="text-[10px] text-on-surface-variant">Pedido mínimo 10 unidades</span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
+                                        VER MÁS
+                                    </span>
                                 </div>
-                                <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
-                                    VER MÁS
-                                </span>
+                            </div>
+                            <div className="p-4 pt-0 grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    onClick={() => handleViewDetails(solution)}
+                                    className="bg-white border-2 border-primary text-primary py-2 text-xs font-bold uppercase hover:bg-surface-container transition-colors rounded"
+                                >
+                                    Ver Detalles
+                                </button>
+                                <button className="bg-secondary-container text-on-secondary-container py-2 text-xs font-bold uppercase hover:bg-[#e0852b] transition-colors rounded">
+                                    Cotizar
+                                </button>
                             </div>
                         </div>
-                        <div className="p-4 pt-0 grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="bg-white border-2 border-primary text-primary py-2 text-xs font-bold uppercase hover:bg-surface-container transition-colors">
-                                Ver Detalles
-                            </button>
-                            <button className="bg-secondary-container text-on-secondary-container py-2 text-xs font-bold uppercase hover:bg-[#e0852b] transition-colors">
-                                Cotizar
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Solución 3 - Bordado Profesional */}
-                    <div className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
-                        <div className="absolute top-4 left-4 z-10">
-                            <span className="bg-secondary-container text-on-secondary-container px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
-                                BORDADO INCLUIDO
-                            </span>
-                        </div>
-                        <div className="aspect-square overflow-hidden bg-surface-container-low p-8">
-                            <img
-                                alt="Bordado Profesional"
-                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=400&h=400&fit=crop"
-                            />
-                        </div>
-                        <div className="p-6 flex flex-col flex-1">
-                            <p className="text-label-sm text-on-surface-variant mb-1 uppercase">PERSONALIZACIÓN</p>
-                            <h3 className="font-h3 text-lg text-primary mb-2 group-hover:text-secondary transition-colors uppercase">
-                                Bordado de Logo
-                            </h3>
-                            <p className="text-xs text-on-surface-variant mb-4">
-                                Bordado profesional de alta calidad en todas tus prendas corporativas.
-                            </p>
-                            <div className="mt-auto flex justify-between items-end">
-                                <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Desde $10.000 CLP</span>
-                                    <span className="text-[10px] text-on-surface-variant">Hasta 15,000 puntadas</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
-                                    VER MÁS
-                                </span>
-                            </div>
-                        </div>
-                        <div className="p-4 pt-0 grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="bg-white border-2 border-primary text-primary py-2 text-xs font-bold uppercase hover:bg-surface-container transition-colors">
-                                Ver Detalles
-                            </button>
-                            <button className="bg-secondary-container text-on-secondary-container py-2 text-xs font-bold uppercase hover:bg-[#e0852b] transition-colors">
-                                Cotizar
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Solución 4 - Equipos Pequeños */}
-                    <div className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
-                        <div className="absolute top-4 left-4 z-10">
-                            <span className="bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
-                                FLEXIBLE
-                            </span>
-                        </div>
-                        <div className="aspect-square overflow-hidden bg-surface-container-low p-8">
-                            <img
-                                alt="Equipos Pequeños"
-                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop"
-                            />
-                        </div>
-                        <div className="p-6 flex flex-col flex-1">
-                            <p className="text-label-sm text-on-surface-variant mb-1 uppercase">EQUIPOS PEQUEÑOS</p>
-                            <h3 className="font-h3 text-lg text-primary mb-2 group-hover:text-secondary transition-colors uppercase">
-                                Desde 10 Prendas
-                            </h3>
-                            <p className="text-xs text-on-surface-variant mb-4">
-                                Soluciones flexibles combinando diferentes prendas, tallas y colores.
-                            </p>
-                            <div className="mt-auto flex justify-between items-end">
-                                <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Precios $30.000 CLP</span>
-                                    <span className="text-[10px] text-on-surface-variant">Cotización ágil</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
-                                    VER MÁS
-                                </span>
-                            </div>
-                        </div>
-                        <div className="p-4 pt-0 grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="bg-white border-2 border-primary text-primary py-2 text-xs font-bold uppercase hover:bg-surface-container transition-colors">
-                                Ver Detalles
-                            </button>
-                            <button className="bg-secondary-container text-on-secondary-container py-2 text-xs font-bold uppercase hover:bg-[#e0852b] transition-colors">
-                                Cotizar
-                            </button>
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
 
@@ -297,6 +197,13 @@ export default function HomePage() {
                     ))}
                 </div>
             </div>
+
+            {/* Modal de detalles */}
+            <SolutionDetailModal
+                isOpen={modalOpen}
+                onClose={handleCloseModal}
+                solution={selectedSolution}
+            />
         </div>
     )
 }
