@@ -26,7 +26,7 @@ export default function Header() {
                         to="/catalogo?categoria=corporativo"
                         className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
-                        Corporativo
+                        Corporativa
                     </Link>
                     <Link
                         to="/catalogo?categoria=industrial"
@@ -44,11 +44,11 @@ export default function Header() {
                         to="/catalogo"
                         className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
-                        Cotización
+                        Equipos
                     </Link>
                     <Link
                         to="/seguimiento/ELD-10254"
-                        className="text-[#FC9430] border-b-2 border-[#FC9430] font-bold uppercase tracking-wider text-sm"
+                        className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
                         Seguir Pedido
                     </Link>
@@ -64,7 +64,6 @@ export default function Header() {
                         className="text-white hover:text-[#FC9430] transition-colors flex items-center gap-1"
                     >
                         <span className="material-symbols-outlined text-xl sm:text-2xl">chat</span>
-                        <span className="hidden sm:inline text-xs font-bold">WhatsApp</span>
                     </a>
 
                     {/* Carrito de compras */}
