@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'  // ← Agregar useNavigate
 import Icon from '../../components/ui/Icon'
 import SolutionDetailModal from '../../components/ui/SolutionDetailModal'
 import { featuredProducts } from '../../data/mockData'
 
 export default function HomePage() {
+    const navigate = useNavigate()  // ← Agregar esta línea
     const [selectedSolution, setSelectedSolution] = useState(null)
     const [modalOpen, setModalOpen] = useState(false)
 
@@ -23,6 +24,10 @@ export default function HomePage() {
     const handleCloseModal = () => {
         setModalOpen(false)
         setSelectedSolution(null)
+    }
+
+    const handleCotizar = () => {
+        navigate('/login')
     }
 
     return (
@@ -48,7 +53,7 @@ export default function HomePage() {
                         </p>
                         <div className="flex gap-4 flex-wrap">
                             <Link
-                                to="/catalogo"
+                                to="/login"
                                 className="bg-[#FC9430] text-white px-8 py-4 font-bold uppercase tracking-wider hover:brightness-110 transition-all active:scale-95"
                             >
                                 Cotizar desde 10 prendas
@@ -140,7 +145,10 @@ export default function HomePage() {
                                 >
                                     Ver Detalles
                                 </button>
-                                <button className="bg-secondary-container text-on-secondary-container py-2 text-xs font-bold uppercase hover:bg-[#e0852b] transition-colors rounded">
+                                <button
+                                    onClick={handleCotizar}
+                                    className="bg-secondary-container text-on-secondary-container py-2 text-xs font-bold uppercase hover:bg-[#e0852b] transition-colors rounded"
+                                >
                                     Cotizar
                                 </button>
                             </div>
@@ -188,7 +196,10 @@ export default function HomePage() {
                                     <div className="flex flex-col">
                                         <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
                                     </div>
-                                    <button className="w-10 h-10 bg-[#FC9430] text-white flex items-center justify-center hover:brightness-110 transition-colors rounded-full">
+                                    <button
+                                        onClick={handleCotizar}
+                                        className="w-10 h-10 bg-[#FC9430] text-white flex items-center justify-center hover:brightness-110 transition-colors rounded-full"
+                                    >
                                         <Icon name="shopping_cart" className="text-sm" />
                                     </button>
                                 </div>
