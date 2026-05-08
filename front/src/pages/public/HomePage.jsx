@@ -103,7 +103,7 @@ export default function HomePage() {
                             </p>
                             <div className="mt-auto flex justify-between items-end">
                                 <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Desde $12.900</span>
+                                    <span className="text-h3 text-[#FC9430] font-black">Desde $12.900 CLP</span>
                                     <span className="text-[10px] text-on-surface-variant">Pedido mínimo 10 unidades</span>
                                 </div>
                                 <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
@@ -145,7 +145,7 @@ export default function HomePage() {
                             </p>
                             <div className="mt-auto flex justify-between items-end">
                                 <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Desde $28.900</span>
+                                    <span className="text-h3 text-[#FC9430] font-black">Desde $28.900 CLP</span>
                                     <span className="text-[10px] text-on-surface-variant">Reforzado y resistente</span>
                                 </div>
                                 <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
@@ -187,11 +187,11 @@ export default function HomePage() {
                             </p>
                             <div className="mt-auto flex justify-between items-end">
                                 <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Incluido</span>
+                                    <span className="text-h3 text-[#FC9430] font-black">Desde $10.000 CLP</span>
                                     <span className="text-[10px] text-on-surface-variant">Hasta 15,000 puntadas</span>
                                 </div>
                                 <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
-                                    CALIDAD
+                                    VER MÁS
                                 </span>
                             </div>
                         </div>
@@ -229,11 +229,11 @@ export default function HomePage() {
                             </p>
                             <div className="mt-auto flex justify-between items-end">
                                 <div className="flex flex-col">
-                                    <span className="text-h3 text-[#FC9430] font-black">Precios B2B</span>
+                                    <span className="text-h3 text-[#FC9430] font-black">Precios $30.000 CLP</span>
                                     <span className="text-[10px] text-on-surface-variant">Cotización ágil</span>
                                 </div>
                                 <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
-                                    CERCANÍA
+                                    VER MÁS
                                 </span>
                             </div>
                         </div>
@@ -286,7 +286,7 @@ export default function HomePage() {
                                 </p>
                                 <div className="mt-auto flex justify-between items-end">
                                     <div className="flex flex-col">
-                                        <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()}</span>
+                                        <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
                                     </div>
                                     <button className="w-10 h-10 bg-[#FC9430] text-white flex items-center justify-center hover:brightness-110 transition-colors rounded-full">
                                         <Icon name="shopping_cart" className="text-sm" />
