@@ -1,47 +1,112 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { products } from '../../data/mockData'
+import { useState, useEffect } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { products, getProductById } from '../../data/mockData'
 import { useCart } from '../../hooks/useCart'
+import Icon from '../../components/ui/Icon'
 
 export default function ProductDetailPage() {
     const { id } = useParams()
-    const product = products.find(p => p.id === parseInt(id))
+    const navigate = useNavigate()
     const { addToCart } = useCart()
+    const [product, setProduct] = useState(null)
     const [quantity, setQuantity] = useState(10)
-    const [selectedColor, setSelectedColor] = useState(product?.colors[0])
-    const [selectedSize, setSelectedSize] = useState('M')
+    const [selectedColor, setSelectedColor] = useState('')
+    const [selectedSize, setSelectedSize] = useState('')
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        // Buscar producto por ID
+        const foundProduct = getProductById(id) || products.find(p => p.id === id)
+        setProduct(foundProduct)
+        if (foundProduct) {
+            setSelectedColor(foundProduct.colors?.[0] || '')
+            setSelectedSize(foundProduct.sizes?.[0] || 'M')
+        }
+        setLoading(false)
+
+        // Scroll al inicio de la página
+        window.scrollTo(0, 0)
+    }, [id])
+
+    const handleAddToCart = () => {
+        if (product) {
+            addToCart(product, quantity)
+            navigate('/carrito')
+        }
+    }
+
+    const handleCotizar = () => {
+        navigate('/login')
+    }
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-96">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-4 text-on-surface-variant">Cargando producto...</p>
+                </div>
+            </div>
+        )
+    }
 
     if (!product) {
-        return <div className="text-center py-20">Producto no encontrado</div>
+        return (
+            <div className="max-w-[1280px] mx-auto px-8 py-20 text-center">
+                <Icon name="search_off" className="text-6xl text-slate-300 mx-auto mb-4" />
+                <h1 className="text-2xl font-bold text-primary mb-4">Producto no encontrado</h1>
+                <p className="text-on-surface-variant mb-8">El producto que buscas no existe o ha sido eliminado.</p>
+                <Link to="/catalogo" className="bg-[#FC9430] text-white px-6 py-3 font-bold uppercase inline-block hover:bg-[#e0852b] transition-colors">
+                    Volver al Catálogo
+                </Link>
+            </div>
+        )
     }
 
     return (
         <div className="max-w-[1280px] mx-auto px-8 py-8">
             {/* Breadcrumbs */}
-            <nav className="flex mb-8 items-center gap-2 text-on-surface-variant text-xs uppercase">
+            <nav className="flex mb-8 items-center gap-2 text-on-surface-variant text-xs uppercase flex-wrap">
                 <Link to="/" className="hover:text-primary">Inicio</Link>
-                <span className="material-symbols-outlined text-sm">chevron_right</span>
+                <Icon name="chevron_right" className="text-sm" />
                 <Link to="/catalogo" className="hover:text-primary">Catálogo</Link>
-                <span className="material-symbols-outlined text-sm">chevron_right</span>
+                <Icon name="chevron_right" className="text-sm" />
                 <span className="text-primary font-bold">{product.name}</span>
             </nav>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                 {/* Gallery */}
                 <div className="lg:col-span-7">
-                    <div className="aspect-square bg-white border border-outline-variant overflow-hidden">
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    <div className="aspect-square bg-white border border-outline-variant overflow-hidden rounded-lg">
+                        <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-contain p-8"
+                        />
                     </div>
+                    {product.images && product.images.length > 1 && (
+                        <div className="grid grid-cols-4 gap-4 mt-4">
+                            {product.images.map((img, idx) => (
+                                <div key={idx} className="aspect-square border border-outline-variant overflow-hidden cursor-pointer hover:border-primary transition-colors rounded">
+                                    <img src={img} alt={`${product.name} - vista ${idx + 1}`} className="w-full h-full object-cover" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Product Info */}
                 <div className="lg:col-span-5 flex flex-col gap-6">
                     <div>
-                        <h1 className="text-2xl font-bold text-primary mb-2 uppercase">{product.name}</h1>
+                        <h1 className="text-2xl md:text-3xl font-bold text-primary mb-2 uppercase">{product.name}</h1>
+                        <p className="text-label-sm text-on-surface-variant mb-2 uppercase">Ref: {product.reference}</p>
                         <div className="flex items-center gap-4 mb-4 flex-wrap">
-                            <span className="text-2xl font-bold text-[#FC9430]">${product.price.toLocaleString()}</span>
+                            <span className="text-2xl md:text-3xl font-bold text-[#FC9430]">${product.price.toLocaleString()} CLP</span>
+                            {product.hasDiscount && (
+                                <span className="text-sm text-on-surface-variant line-through">${Math.round(product.price * (1 + product.discount / 100)).toLocaleString()} CLP</span>
+                            )}
                             <div className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full flex items-center gap-1">
-                                <span className="material-symbols-outlined text-sm">local_laundry_service</span>
+                                <Icon name="local_laundry_service" className="text-sm" />
                                 Bordado incluido
                             </div>
                         </div>
@@ -49,144 +114,175 @@ export default function ProductDetailPage() {
                     </div>
 
                     {/* Color selector */}
-                    <div>
-                        <span className="block text-xs uppercase tracking-wider text-outline mb-3">Color</span>
-                        <div className="flex gap-3">
-                            {product.colors.map(color => (
-                                <button
-                                    key={color}
-                                    onClick={() => setSelectedColor(color)}
-                                    className={`w-10 h-10 rounded-full border-2 ${selectedColor === color ? 'border-primary ring-2 ring-offset-2 ring-primary' : 'border-transparent'}`}
-                                    style={{ backgroundColor: color }}
-                                />
-                            ))}
+                    {product.colors && product.colors.length > 0 && (
+                        <div>
+                            <span className="block text-xs uppercase tracking-wider text-outline mb-3">Color</span>
+                            <div className="flex gap-3 flex-wrap">
+                                {product.colors.map(color => (
+                                    <button
+                                        key={color}
+                                        onClick={() => setSelectedColor(color)}
+                                        className={`w-10 h-10 rounded-full border-2 transition-all ${selectedColor === color
+                                                ? 'border-primary ring-2 ring-offset-2 ring-primary'
+                                                : 'border-transparent hover:border-gray-300'
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                        title={color}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Size selector */}
-                    <div>
-                        <span className="block text-xs uppercase tracking-wider text-outline mb-3">Talla</span>
-                        <select
-                            value={selectedSize}
-                            onChange={(e) => setSelectedSize(e.target.value)}
-                            className="w-full h-12 border border-outline-variant px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white"
-                        >
-                            {product.sizes.map(size => (
-                                <option key={size}>{size}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {product.sizes && product.sizes.length > 0 && (
+                        <div>
+                            <span className="block text-xs uppercase tracking-wider text-outline mb-3">Talla</span>
+                            <select
+                                value={selectedSize}
+                                onChange={(e) => setSelectedSize(e.target.value)}
+                                className="w-full h-12 border border-outline-variant px-4 font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white rounded"
+                            >
+                                {product.sizes.map(size => (
+                                    <option key={size}>{size}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Quantity */}
                     <div>
-                        <span className="block text-xs uppercase tracking-wider text-outline mb-3">Cantidad (pedido mínimo: 10)</span>
-                        <div className="flex items-center border border-outline-variant w-max h-12 bg-white">
+                        <span className="block text-xs uppercase tracking-wider text-outline mb-3">
+                            Cantidad (pedido mínimo: {product.minOrder} unidades)
+                        </span>
+                        <div className="flex items-center border border-outline-variant w-max h-12 bg-white rounded">
                             <button
-                                onClick={() => setQuantity(Math.max(10, quantity - 10))}
-                                className="px-4 h-full hover:bg-surface-container-low transition-colors"
+                                onClick={() => setQuantity(Math.max(product.minOrder || 10, quantity - (product.minOrder || 10)))}
+                                className="px-4 h-full hover:bg-surface-container-low transition-colors rounded-l"
                             >
-                                -
+                                <Icon name="remove" className="text-sm" />
                             </button>
                             <input
                                 type="number"
                                 value={quantity}
-                                onChange={(e) => setQuantity(Math.max(10, parseInt(e.target.value) || 10))}
-                                className="w-20 h-full text-center border-none focus:ring-0"
-                                min="10"
-                                step="10"
+                                onChange={(e) => setQuantity(Math.max(product.minOrder || 10, parseInt(e.target.value) || (product.minOrder || 10)))}
+                                className="w-20 h-full text-center border-none focus:ring-0 font-bold"
+                                min={product.minOrder || 10}
+                                step={product.minOrder || 10}
                             />
                             <button
-                                onClick={() => setQuantity(quantity + 10)}
-                                className="px-4 h-full hover:bg-surface-container-low transition-colors"
+                                onClick={() => setQuantity(quantity + (product.minOrder || 10))}
+                                className="px-4 h-full hover:bg-surface-container-low transition-colors rounded-r"
                             >
-                                +
+                                <Icon name="add" className="text-sm" />
                             </button>
                         </div>
+                        <p className="text-xs text-on-surface-variant mt-2">
+                            *Pedido mínimo: {product.minOrder} unidades combinables (mezcla de tallas y colores)
+                        </p>
                     </div>
 
                     {/* Actions */}
                     <div className="flex flex-col gap-3 pt-4">
                         <button
-                            onClick={() => addToCart(product, quantity)}
-                            className="h-14 bg-[#FC9430] text-white font-bold uppercase tracking-widest w-full hover:bg-[#e0852b] transition-all flex items-center justify-center gap-2"
+                            onClick={handleAddToCart}
+                            className="h-14 bg-[#FC9430] text-white font-bold uppercase tracking-widest w-full hover:bg-[#e0852b] transition-all flex items-center justify-center gap-2 rounded"
                         >
-                            <span className="material-symbols-outlined">shopping_basket</span>
-                            Solicitar Cotización
+                            <Icon name="shopping_basket" />
+                            Agregar al Carrito
                         </button>
-                        <a
-                            href="https://wa.me/56912345678"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="h-14 border-2 border-[#25D366] text-[#25D366] font-bold uppercase tracking-widest w-full hover:bg-[#25D366] hover:text-white transition-all flex items-center justify-center gap-2"
+                        <button
+                            onClick={handleCotizar}
+                            className="h-14 border-2 border-[#25D366] text-[#25D366] font-bold uppercase tracking-widest w-full hover:bg-[#25D366] hover:text-white transition-all flex items-center justify-center gap-2 rounded"
                         >
-                            <span className="material-symbols-outlined">chat</span>
+                            <Icon name="chat" />
                             Cotizar por WhatsApp
-                        </a>
+                        </button>
                     </div>
 
-                    {/* Bordado info */}
-                    <div className="bg-surface-container-low border border-outline-variant p-6 mt-4">
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="material-symbols-outlined text-[#FC9430]">brush</span>
-                            <h3 className="text-lg font-bold uppercase">Bordado de Logo Profesional</h3>
+                    {/* Embroidery info */}
+                    {product.embroidery?.included && (
+                        <div className="bg-surface-container-low border border-outline-variant p-6 mt-4 rounded-lg">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Icon name="brush" className="text-[#FC9430]" />
+                                <h3 className="text-lg font-bold uppercase">Bordado de Logo Profesional</h3>
+                            </div>
+                            <p className="text-sm text-on-surface-variant mb-4">
+                                Incluye bordado de tu logo en todas las prendas. Calidad de terminación que perdura en el tiempo.
+                            </p>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="font-bold">Puntadas:</span>
+                                    <p>{product.embroidery.maxStitches?.toLocaleString()} puntadas</p>
+                                </div>
+                                <div>
+                                    <span className="font-bold">Colores:</span>
+                                    <p>Hasta {product.embroidery.colors} colores</p>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="font-bold">Posiciones disponibles:</span>
+                                    <p>{product.embroidery.positions?.join(', ')}</p>
+                                </div>
+                            </div>
+                            <div className="mt-4 border-2 border-dashed border-outline-variant p-4 text-center bg-white hover:border-primary transition-colors cursor-pointer rounded">
+                                <Icon name="upload_file" className="text-3xl text-outline mb-2" />
+                                <p className="text-xs uppercase font-bold">Sube tu logo (SVG, PNG, AI, PDF)</p>
+                                <p className="text-[10px] text-on-surface-variant mt-1">Formatos permitidos: PNG, JPG, JPEG, PDF, AI o SVG</p>
+                            </div>
                         </div>
-                        <p className="text-sm text-on-surface-variant mb-4">Incluye bordado de tu logo en todas las prendas.</p>
-                        <div className="border-2 border-dashed border-outline-variant p-8 text-center bg-white hover:border-primary transition-colors cursor-pointer">
-                            <span className="material-symbols-outlined text-4xl text-outline mb-2">upload_file</span>
-                            <p className="text-xs uppercase">Sube tu logo (SVG, PNG, AI, PDF)</p>
-                        </div>
+                    )}
+
+                    {/* Características del producto */}
+                    <div className="border-t pt-6 mt-2">
+                        <h3 className="font-bold text-primary mb-3">Características</h3>
+                        <ul className="space-y-2">
+                            {product.features?.map((feature, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-sm">
+                                    <Icon name="check_circle" className="text-[#FC9430] text-sm" />
+                                    <span>{feature}</span>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
             </div>
 
-            {/* Specs */}
-            <div className="mt-20 border-t-2 border-surface-container">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 py-12">
-                    <div>
-                        <h3 className="font-bold text-lg mb-4">Descripción</h3>
-                        <p className="text-on-surface-variant">{product.description}</p>
-                        <ul className="mt-6 space-y-3">
-                            <li className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-[#FC9430] text-sm">check_circle</span>
-                                <span className="text-sm font-semibold">{product.material}</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-[#FC9430] text-sm">check_circle</span>
-                                <span className="text-sm font-semibold">Bordado de logo profesional incluido</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-[#FC9430] text-sm">check_circle</span>
-                                <span className="text-sm font-semibold">Pedido mínimo: {product.minOrder} unidades combinables</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-[#FC9430] text-sm">check_circle</span>
-                                <span className="text-sm font-semibold">Atención desde La Serena hasta Calbuco</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg mb-4">Especificaciones</h3>
-                        <table className="w-full border-collapse">
-                            <tbody>
-                                <tr className="border-b border-outline-variant">
-                                    <td className="py-3 text-xs uppercase text-outline w-1/3">Material</td>
-                                    <td className="py-3 text-sm">{product.material}</td>
-                                </tr>
-                                <tr className="border-b border-outline-variant">
-                                    <td className="py-3 text-xs uppercase text-outline">Colores disponibles</td>
-                                    <td className="py-3 text-sm">{product.colors.length} colores</td>
-                                </tr>
-                                <tr className="border-b border-outline-variant">
-                                    <td className="py-3 text-xs uppercase text-outline">Pedido mínimo</td>
-                                    <td className="py-3 text-sm font-bold">{product.minOrder} unidades combinables</td>
-                                </tr>
-                                <tr className="border-b border-outline-variant">
-                                    <td className="py-3 text-xs uppercase text-outline">Zona de atención</td>
-                                    <td className="py-3 text-sm">Desde La Serena hasta Calbuco</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+            {/* Specifications Table */}
+            <div className="mt-12 border-t pt-8">
+                <h3 className="font-bold text-xl text-primary mb-6">Especificaciones Técnicas</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <table className="w-full border-collapse">
+                        <tbody>
+                            <tr className="border-b border-outline-variant">
+                                <td className="py-3 text-xs uppercase text-outline w-1/3 font-bold">Material</td>
+                                <td className="py-3 text-sm">{product.material}</td>
+                            </tr>
+                            <tr className="border-b border-outline-variant">
+                                <td className="py-3 text-xs uppercase text-outline font-bold">Peso</td>
+                                <td className="py-3 text-sm">{product.weight}</td>
+                            </tr>
+                            <tr className="border-b border-outline-variant">
+                                <td className="py-3 text-xs uppercase text-outline font-bold">Colores</td>
+                                <td className="py-3 text-sm">{product.colors?.length || 0} colores disponibles</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <table className="w-full border-collapse">
+                        <tbody>
+                            <tr className="border-b border-outline-variant">
+                                <td className="py-3 text-xs uppercase text-outline w-1/3 font-bold">Pedido mínimo</td>
+                                <td className="py-3 text-sm font-bold">{product.minOrder} unidades combinables</td>
+                            </tr>
+                            <tr className="border-b border-outline-variant">
+                                <td className="py-3 text-xs uppercase text-outline font-bold">Tallas</td>
+                                <td className="py-3 text-sm">{product.sizes?.join(', ')}</td>
+                            </tr>
+                            <tr className="border-b border-outline-variant">
+                                <td className="py-3 text-xs uppercase text-outline font-bold">Zona de atención</td>
+                                <td className="py-3 text-sm">Desde La Serena hasta Calbuco</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
