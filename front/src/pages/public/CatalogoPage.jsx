@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
+import { useAuth } from '../../hooks/useAuth'
 import { allProducts, getProductsByCategory, categories } from '../../data/mockData'
 
 export default function CatalogoPage() {
+    const { isAuthenticated } = useAuth()
     const [searchParams, setSearchParams] = useSearchParams()
     const [selectedCategory, setSelectedCategory] = useState(searchParams.get('categoria') || 'all')
     const [priceSort, setPriceSort] = useState('default')
@@ -27,15 +29,17 @@ export default function CatalogoPage() {
             )
         }
 
-        // Ordenar por precio
-        if (priceSort === 'asc') {
-            products = [...products].sort((a, b) => (a.price || 0) - (b.price || 0))
-        } else if (priceSort === 'desc') {
-            products = [...products].sort((a, b) => (b.price || 0) - (a.price || 0))
+        // Ordenar por precio (solo si está autenticado)
+        if (isAuthenticated) {
+            if (priceSort === 'asc') {
+                products = [...products].sort((a, b) => (a.price || 0) - (b.price || 0))
+            } else if (priceSort === 'desc') {
+                products = [...products].sort((a, b) => (b.price || 0) - (a.price || 0))
+            }
         }
 
         setFilteredProducts(products)
-    }, [selectedCategory, priceSort, searchTerm])
+    }, [selectedCategory, priceSort, searchTerm, isAuthenticated])
 
     // Actualizar URL cuando cambia la categoría
     useEffect(() => {
@@ -123,6 +127,22 @@ export default function CatalogoPage() {
                     </div>
                 </div>
 
+                {/* Ordenamiento por precio - Solo visible si está autenticado */}
+                {isAuthenticated && (
+                    <div className="mt-6 px-6">
+                        <h3 className="text-xs font-bold text-primary mb-3 uppercase">Ordenar por Precio</h3>
+                        <select
+                            value={priceSort}
+                            onChange={handlePriceSort}
+                            className="w-full border border-outline-variant px-3 py-2 text-sm font-bold text-primary focus:ring-1 focus:ring-primary outline-none rounded bg-white"
+                        >
+                            <option value="default">Por defecto</option>
+                            <option value="asc">Menor a Mayor</option>
+                            <option value="desc">Mayor a Menor</option>
+                        </select>
+                    </div>
+                )}
+
                 {/* Botón limpiar filtros */}
                 <div className="mt-6 px-6">
                     <button
@@ -132,6 +152,22 @@ export default function CatalogoPage() {
                         Limpiar Filtros
                     </button>
                 </div>
+
+                {/* Banner de login si no está autenticado */}
+                {!isAuthenticated && (
+                    <div className="mt-6 px-6">
+                        <div className="bg-primary/10 p-4 rounded-lg text-center border border-primary/20">
+                            <Icon name="lock" className="text-primary text-3xl mx-auto mb-2" />
+                            <p className="text-xs text-primary font-bold mb-2">Inicia sesión para ver precios</p>
+                            <Link
+                                to="/login"
+                                className="inline-block bg-primary text-white px-4 py-2 text-xs font-bold uppercase rounded hover:bg-primary/80 transition-colors"
+                            >
+                                Iniciar Sesión
+                            </Link>
+                        </div>
+                    </div>
+                )}
 
                 {/* Información adicional */}
                 <div className="mt-auto px-6 py-4 border-t border-slate-200">
@@ -158,18 +194,20 @@ export default function CatalogoPage() {
                             {filteredProducts.length} productos encontrados
                         </p>
                     </div>
-                    <div className="flex gap-4 items-center">
-                        <span className="text-xs uppercase text-on-surface-variant hidden sm:inline">Ordenar por:</span>
-                        <select
-                            value={priceSort}
-                            onChange={handlePriceSort}
-                            className="bg-transparent border border-outline-variant px-3 py-2 text-sm font-bold text-primary focus:ring-1 focus:ring-primary outline-none rounded"
-                        >
-                            <option value="default">MÁS RELEVANTES</option>
-                            <option value="asc">PRECIO: MENOR A MAYOR</option>
-                            <option value="desc">PRECIO: MAYOR A MENOR</option>
-                        </select>
-                    </div>
+                    {isAuthenticated && (
+                        <div className="flex gap-4 items-center">
+                            <span className="text-xs uppercase text-on-surface-variant hidden sm:inline">Ordenar por:</span>
+                            <select
+                                value={priceSort}
+                                onChange={handlePriceSort}
+                                className="bg-transparent border border-outline-variant px-3 py-2 text-sm font-bold text-primary focus:ring-1 focus:ring-primary outline-none rounded"
+                            >
+                                <option value="default">MÁS RELEVANTES</option>
+                                <option value="asc">PRECIO: MENOR A MAYOR</option>
+                                <option value="desc">PRECIO: MAYOR A MENOR</option>
+                            </select>
+                        </div>
+                    )}
                 </div>
 
                 {/* Grid de productos */}
@@ -225,6 +263,7 @@ export default function CatalogoPage() {
 
 // Componente ProductCard interno
 function ProductCard({ product }) {
+    const { isAuthenticated } = useAuth()
     const [isHovered, setIsHovered] = useState(false)
 
     if (!product) return null
@@ -255,7 +294,7 @@ function ProductCard({ product }) {
             </div>
 
             {/* Imagen */}
-            <Link to={`/producto/${product.id}`}>
+            <Link to={isAuthenticated ? `/producto/${product.id}` : "/login"}>
                 <div className="aspect-square overflow-hidden bg-surface-container-low p-6">
                     <img
                         alt={product.name}
@@ -268,7 +307,7 @@ function ProductCard({ product }) {
             {/* Información */}
             <div className="p-6 flex flex-col flex-1">
                 <p className="text-label-sm text-on-surface-variant mb-1 uppercase">{product.subcategory || product.category}</p>
-                <Link to={`/producto/${product.id}`}>
+                <Link to={isAuthenticated ? `/producto/${product.id}` : "/login"}>
                     <h3 className="font-h3 text-lg text-primary mb-2 group-hover:text-secondary transition-colors uppercase line-clamp-2">
                         {product.name}
                     </h3>
@@ -301,23 +340,33 @@ function ProductCard({ product }) {
                     )}
                 </div>
 
+                {/* Precio - Solo visible si está autenticado */}
                 <div className="mt-auto flex justify-between items-end">
                     <div className="flex flex-col">
-                        {product.hasDiscount ? (
+                        {isAuthenticated ? (
                             <>
-                                <span className="text-[10px] text-on-surface-variant line-through">${Math.round(product.price * (1 + product.discount / 100)).toLocaleString()} CLP</span>
-                                <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                                {product.hasDiscount ? (
+                                    <>
+                                        <span className="text-[10px] text-on-surface-variant line-through">${Math.round(product.price * (1 + product.discount / 100)).toLocaleString()} CLP</span>
+                                        <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                                    </>
+                                ) : (
+                                    <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                                )}
+                                <span className="text-[10px] text-on-surface-variant">Desde {product.minOrder} unidades</span>
                             </>
                         ) : (
-                            <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                            <>
+                                <span className="text-h3 text-[#FC9430] font-black">Inicia sesión</span>
+                                <span className="text-[10px] text-on-surface-variant">Para ver precios</span>
+                            </>
                         )}
-                        <span className="text-[10px] text-on-surface-variant">Desde {product.minOrder} unidades</span>
                     </div>
                     <Link
-                        to={`/producto/${product.id}`}
+                        to={isAuthenticated ? `/producto/${product.id}` : "/login"}
                         className="text-[10px] font-bold text-on-surface uppercase border-b border-primary hover:text-primary transition-colors"
                     >
-                        VER DETALLES
+                        {isAuthenticated ? "VER DETALLES" : "INICIAR SESIÓN"}
                     </Link>
                 </div>
             </div>
@@ -326,16 +375,18 @@ function ProductCard({ product }) {
             {isHovered && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-all rounded">
                     <Link
-                        to={`/producto/${product.id}`}
+                        to={isAuthenticated ? `/producto/${product.id}` : "/login"}
                         className="bg-white text-primary px-4 py-2 text-xs font-bold uppercase hover:bg-primary hover:text-white transition-colors rounded"
                     >
-                        Ver Detalles
+                        {isAuthenticated ? "Ver Detalles" : "Iniciar Sesión"}
                     </Link>
-                    <button
-                        className="bg-[#FC9430] text-white px-4 py-2 text-xs font-bold uppercase hover:brightness-110 transition-colors rounded"
-                    >
-                        Cotizar
-                    </button>
+                    {isAuthenticated && (
+                        <button
+                            className="bg-[#FC9430] text-white px-4 py-2 text-xs font-bold uppercase hover:brightness-110 transition-colors rounded"
+                        >
+                            Cotizar
+                        </button>
+                    )}
                 </div>
             )}
         </div>
