@@ -18,13 +18,12 @@ export function AuthProvider({ children }) {
     }, [])
 
     const login = async (email, password) => {
-        // Simular login - en producción conectar a API
         return new Promise((resolve, reject) => {
             setTimeout(() => {
                 if (email && password) {
                     const user = {
                         id: 1,
-                        name: 'Usuario Demo',
+                        name: email.split('@')[0],
                         email: email,
                         role: email.includes('admin') ? 'admin' : 'user'
                     }
@@ -40,7 +39,6 @@ export function AuthProvider({ children }) {
     }
 
     const signup = async (userData) => {
-        // Simular registro
         return new Promise((resolve, reject) => {
             setTimeout(() => {
                 if (userData.email && userData.password) {
