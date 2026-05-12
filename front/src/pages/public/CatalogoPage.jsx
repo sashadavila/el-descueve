@@ -8,28 +8,30 @@ export default function CatalogoPage() {
     const [selectedCategory, setSelectedCategory] = useState(searchParams.get('categoria') || 'all')
     const [priceSort, setPriceSort] = useState('default')
     const [searchTerm, setSearchTerm] = useState('')
-    const [filteredProducts, setFilteredProducts] = useState(allProducts)
+    const [filteredProducts, setFilteredProducts] = useState(allProducts || [])
 
     // Filtrar productos cuando cambie la categoría o búsqueda
     useEffect(() => {
         let products = selectedCategory === 'all'
-            ? allProducts
-            : getProductsByCategory(selectedCategory)
+            ? (allProducts || [])
+            : (getProductsByCategory(selectedCategory) || [])
 
         // Filtrar por término de búsqueda
         if (searchTerm) {
             products = products.filter(product =>
-                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.reference.toLowerCase().includes(searchTerm.toLowerCase())
+                product && (
+                    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    product.reference?.toLowerCase().includes(searchTerm.toLowerCase())
+                )
             )
         }
 
         // Ordenar por precio
         if (priceSort === 'asc') {
-            products = [...products].sort((a, b) => a.price - b.price)
+            products = [...products].sort((a, b) => (a.price || 0) - (b.price || 0))
         } else if (priceSort === 'desc') {
-            products = [...products].sort((a, b) => b.price - a.price)
+            products = [...products].sort((a, b) => (b.price || 0) - (a.price || 0))
         }
 
         setFilteredProducts(products)
@@ -43,7 +45,7 @@ export default function CatalogoPage() {
             searchParams.set('categoria', selectedCategory)
         }
         setSearchParams(searchParams)
-    }, [selectedCategory, searchParams, setSearchParams])
+    }, [selectedCategory])
 
     const handleCategoryChange = (categoryId) => {
         setSelectedCategory(categoryId)
@@ -62,7 +64,7 @@ export default function CatalogoPage() {
     // Obtener el nombre de la categoría seleccionada
     const getSelectedCategoryName = () => {
         if (selectedCategory === 'all') return 'Todos los Productos'
-        const category = categories.find(c => c.id === selectedCategory)
+        const category = categories?.find(c => c.id === selectedCategory)
         return category ? category.name : 'Productos'
     }
 
@@ -78,21 +80,21 @@ export default function CatalogoPage() {
                 <nav className="flex flex-col gap-1">
                     <button
                         onClick={() => handleCategoryChange('all')}
-                        className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors ${selectedCategory === 'all'
+                        className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedCategory === 'all'
                                 ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
                                 : 'text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         <span className="material-symbols-outlined">grid_view</span>
                         TODOS LOS PRODUCTOS
-                        <span className="ml-auto text-xs text-slate-400">{allProducts.length}</span>
+                        <span className="ml-auto text-xs text-slate-400">{allProducts?.length || 0}</span>
                     </button>
 
-                    {categories.map(cat => (
+                    {categories?.map(cat => (
                         <button
                             key={cat.id}
                             onClick={() => handleCategoryChange(cat.id)}
-                            className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors ${selectedCategory === cat.id
+                            className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedCategory === cat.id
                                     ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
                                     : 'text-slate-500 hover:bg-slate-100'
                                 }`}
@@ -225,6 +227,8 @@ export default function CatalogoPage() {
 function ProductCard({ product }) {
     const [isHovered, setIsHovered] = useState(false)
 
+    if (!product) return null
+
     return (
         <div
             className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative"
@@ -239,7 +243,7 @@ function ProductCard({ product }) {
                     </span>
                 )}
                 {product.hasDiscount && (
-                    <span className="bg-error text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
+                    <span className="bg-red-600 text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
                         -{product.discount}% DCTO
                     </span>
                 )}
@@ -301,7 +305,7 @@ function ProductCard({ product }) {
                     <div className="flex flex-col">
                         {product.hasDiscount ? (
                             <>
-                                <span className="text-[10px] text-on-surface-variant line-through">${(product.price * (1 + product.discount / 100)).toLocaleString()} CLP</span>
+                                <span className="text-[10px] text-on-surface-variant line-through">${Math.round(product.price * (1 + product.discount / 100)).toLocaleString()} CLP</span>
                                 <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
                             </>
                         ) : (
@@ -320,7 +324,7 @@ function ProductCard({ product }) {
 
             {/* Botones que aparecen al hover */}
             {isHovered && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-all">
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-all rounded">
                     <Link
                         to={`/producto/${product.id}`}
                         className="bg-white text-primary px-4 py-2 text-xs font-bold uppercase hover:bg-primary hover:text-white transition-colors rounded"
