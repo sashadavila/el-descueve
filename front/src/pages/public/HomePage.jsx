@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'  // ← Agregar useNavigate
+import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import SolutionDetailModal from '../../components/ui/SolutionDetailModal'
-import { featuredProducts } from '../../data/mockData'
+import { featuredProductsHome } from '../../data/mockData'
 
 export default function HomePage() {
-    const navigate = useNavigate()  // ← Agregar esta línea
+    const navigate = useNavigate()
     const [selectedSolution, setSelectedSolution] = useState(null)
     const [modalOpen, setModalOpen] = useState(false)
 
@@ -171,7 +171,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {featuredProducts.map(product => (
+                    {featuredProductsHome.map(product => (
                         <div key={product.id} className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
                             <div className="absolute top-4 left-4 z-10">
                                 <span className="bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
