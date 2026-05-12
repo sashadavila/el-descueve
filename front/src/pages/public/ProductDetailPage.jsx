@@ -2,17 +2,19 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { products, getProductById } from '../../data/mockData'
 import { useCart } from '../../hooks/useCart'
+import { useAuth } from '../../hooks/useAuth'
 import Icon from '../../components/ui/Icon'
 
 export default function ProductDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
     const { addToCart } = useCart()
+    const { isAuthenticated, loading: authLoading } = useAuth() // Renombrado a authLoading
     const [product, setProduct] = useState(null)
     const [quantity, setQuantity] = useState(10)
     const [selectedColor, setSelectedColor] = useState('')
     const [selectedSize, setSelectedSize] = useState('')
-    const [loading, setLoading] = useState(true)
+    const [productLoading, setProductLoading] = useState(true) // Renombrado a productLoading
 
     useEffect(() => {
         // Buscar producto por ID
@@ -22,7 +24,7 @@ export default function ProductDetailPage() {
             setSelectedColor(foundProduct.colors?.[0] || '')
             setSelectedSize(foundProduct.sizes?.[0] || 'M')
         }
-        setLoading(false)
+        setProductLoading(false)
 
         // Scroll al inicio de la página
         window.scrollTo(0, 0)
@@ -39,7 +41,8 @@ export default function ProductDetailPage() {
         navigate('/login')
     }
 
-    if (loading) {
+    // Mostrar loading mientras carga la autenticación o el producto
+    if (authLoading || productLoading) {
         return (
             <div className="flex justify-center items-center h-96">
                 <div className="text-center">
@@ -48,6 +51,12 @@ export default function ProductDetailPage() {
                 </div>
             </div>
         )
+    }
+
+    // Redirigir al login si no está autenticado
+    if (!isAuthenticated) {
+        navigate('/login', { state: { from: `/producto/${id}` } })
+        return null
     }
 
     if (!product) {
