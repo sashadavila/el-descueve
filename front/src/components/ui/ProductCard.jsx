@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useCart } from '../../hooks/useCart'
+import { useAuth } from '../../hooks/useAuth'
 import Icon from './Icon'
 import { useState } from 'react'
 
 export default function ProductCard({ product }) {
     const { addToCart } = useCart()
+    const { isAuthenticated } = useAuth()
     const [isHovered, setIsHovered] = useState(false)
 
     return (
@@ -21,7 +23,7 @@ export default function ProductCard({ product }) {
                     </span>
                 )}
                 {product.hasDiscount && (
-                    <span className="bg-error text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
+                    <span className="bg-red-600 text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
                         -{product.discount}% DCTO
                     </span>
                 )}
@@ -84,42 +86,54 @@ export default function ProductCard({ product }) {
                     )}
                 </div>
 
+                {/* Precio - Solo visible si está autenticado */}
                 <div className="mt-auto flex justify-between items-end">
                     <div className="flex flex-col">
-                        {product.hasDiscount ? (
+                        {isAuthenticated ? (
                             <>
-                                <span className="text-[10px] text-on-surface-variant line-through">${(product.price * (1 + product.discount / 100)).toLocaleString()} CLP</span>
-                                <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                                {product.hasDiscount ? (
+                                    <>
+                                        <span className="text-[10px] text-on-surface-variant line-through">${Math.round(product.price * (1 + product.discount / 100)).toLocaleString()} CLP</span>
+                                        <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                                    </>
+                                ) : (
+                                    <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                                )}
+                                <span className="text-[10px] text-on-surface-variant">Desde {product.minOrder} unidades</span>
                             </>
                         ) : (
-                            <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
+                            <>
+                                <span className="text-h3 text-[#FC9430] font-black">Inicia sesión</span>
+                                <span className="text-[10px] text-on-surface-variant">Para ver precios</span>
+                            </>
                         )}
-                        <span className="text-[10px] text-on-surface-variant">Desde {product.minOrder} unidades</span>
                     </div>
-                    <button
-                        onClick={() => addToCart(product, product.minOrder)}
-                        className="w-10 h-10 bg-[#FC9430] text-white flex items-center justify-center hover:brightness-110 transition-colors rounded-full"
+                    <Link
+                        to={isAuthenticated ? `/producto/${product.id}` : "/login"}
+                        className="text-[10px] font-bold text-on-surface uppercase border-b border-primary hover:text-primary transition-colors"
                     >
-                        <Icon name="shopping_cart" className="text-sm" />
-                    </button>
+                        {isAuthenticated ? "VER DETALLES" : "INICIAR SESIÓN"}
+                    </Link>
                 </div>
             </div>
 
-            {/* Botones overlay al hover */}
+            {/* Botones que aparecen al hover */}
             {isHovered && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-all">
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-all rounded">
                     <Link
-                        to={`/producto/${product.id}`}
+                        to={isAuthenticated ? `/producto/${product.id}` : "/login"}
                         className="bg-white text-primary px-4 py-2 text-xs font-bold uppercase hover:bg-primary hover:text-white transition-colors rounded"
                     >
-                        Ver Detalles
+                        {isAuthenticated ? "Ver Detalles" : "Iniciar Sesión"}
                     </Link>
-                    <button
-                        onClick={() => addToCart(product, product.minOrder)}
-                        className="bg-[#FC9430] text-white px-4 py-2 text-xs font-bold uppercase hover:brightness-110 transition-colors rounded"
-                    >
-                        Cotizar
-                    </button>
+                    {isAuthenticated && (
+                        <button
+                            onClick={() => addToCart(product, product.minOrder)}
+                            className="bg-[#FC9430] text-white px-4 py-2 text-xs font-bold uppercase hover:brightness-110 transition-colors rounded"
+                        >
+                            Cotizar
+                        </button>
+                    )}
                 </div>
             )}
         </div>
