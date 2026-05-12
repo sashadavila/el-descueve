@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import SolutionDetailModal from '../../components/ui/SolutionDetailModal'
+import FeaturedProductCard from '../../components/ui/FeaturedProductCard'
 import { featuredProductsHome } from '../../data/mockData'
 
 export default function HomePage() {
@@ -172,39 +173,7 @@ export default function HomePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {featuredProductsHome.map(product => (
-                        <div key={product.id} className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
-                            <div className="absolute top-4 left-4 z-10">
-                                <span className="bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
-                                    DISPONIBLE
-                                </span>
-                            </div>
-                            <div className="aspect-square overflow-hidden bg-surface-container-low p-8">
-                                <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                />
-                            </div>
-                            <div className="p-6 flex flex-col flex-1">
-                                <h3 className="font-h3 text-lg text-primary mb-2 group-hover:text-secondary transition-colors uppercase">
-                                    {product.name}
-                                </h3>
-                                <p className="text-xs text-on-surface-variant mb-4 line-clamp-2">
-                                    {product.description}
-                                </p>
-                                <div className="mt-auto flex justify-between items-end">
-                                    <div className="flex flex-col">
-                                        <span className="text-h3 text-[#FC9430] font-black">${product.price.toLocaleString()} CLP</span>
-                                    </div>
-                                    <button
-                                        onClick={handleCotizar}
-                                        className="w-10 h-10 bg-[#FC9430] text-white flex items-center justify-center hover:brightness-110 transition-colors rounded-full"
-                                    >
-                                        <Icon name="shopping_cart" className="text-sm" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <FeaturedProductCard key={product.id} product={product} />
                     ))}
                 </div>
             </div>
