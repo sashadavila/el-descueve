@@ -23,10 +23,10 @@ export default function Header() {
                 {/* Navegación Desktop */}
                 <nav className="hidden md:flex gap-6 lg:gap-8">
                     <Link
-                        to="/catalogo"
+                        to="/"
                         className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
-                        Catalogo
+                        Inicio
                     </Link>
                     <Link
                         to="/nosotros"
@@ -35,16 +35,16 @@ export default function Header() {
                         Nosotros
                     </Link>
                     <Link
+                        to="/catalogo"
+                        className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
+                    >
+                        Catalogo
+                    </Link>
+                    <Link
                         to="/contacto"
                         className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
                         Contacto
-                    </Link>
-                    <Link
-                        to="/catalogo"
-                        className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
-                    >
-                        Equipos
                     </Link>
                     <Link
                         to="/seguimiento/ELD-10254"
