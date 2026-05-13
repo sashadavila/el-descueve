@@ -13,6 +13,7 @@ import OrderConfirmationPage from './pages/public/ConfirmacionCompraPage'
 import OrderTrackingPage from './pages/public/OrderTrackingPage'
 import LoginPage from './pages/public/LoginPage'
 import SignupPage from './pages/public/SignupPage'
+import ContactPage from './pages/public/ContactPage'
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -36,6 +37,7 @@ function App() {
           <Route path="/confirmacion" element={<OrderConfirmationPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/contacto" element={<ContactPage />} />
         </Route>
 
         {/* Rutas admin con Layout admin */}
