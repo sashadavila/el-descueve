@@ -85,8 +85,8 @@ export default function CatalogoPage() {
                     <button
                         onClick={() => handleCategoryChange('all')}
                         className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedCategory === 'all'
-                                ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
-                                : 'text-slate-500 hover:bg-slate-100'
+                            ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
+                            : 'text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         <span className="material-symbols-outlined">grid_view</span>
@@ -99,8 +99,8 @@ export default function CatalogoPage() {
                             key={cat.id}
                             onClick={() => handleCategoryChange(cat.id)}
                             className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedCategory === cat.id
-                                    ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
-                                    : 'text-slate-500 hover:bg-slate-100'
+                                ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
+                                : 'text-slate-500 hover:bg-slate-100'
                                 }`}
                         >
                             <span className="material-symbols-outlined">{cat.icon}</span>
@@ -126,22 +126,6 @@ export default function CatalogoPage() {
                         />
                     </div>
                 </div>
-
-                {/* Ordenamiento por precio - Solo visible si está autenticado */}
-                {isAuthenticated && (
-                    <div className="mt-6 px-6">
-                        <h3 className="text-xs font-bold text-primary mb-3 uppercase">Ordenar por Precio</h3>
-                        <select
-                            value={priceSort}
-                            onChange={handlePriceSort}
-                            className="w-full border border-outline-variant px-3 py-2 text-sm font-bold text-primary focus:ring-1 focus:ring-primary outline-none rounded bg-white"
-                        >
-                            <option value="default">Por defecto</option>
-                            <option value="asc">Menor a Mayor</option>
-                            <option value="desc">Mayor a Menor</option>
-                        </select>
-                    </div>
-                )}
 
                 {/* Botón limpiar filtros */}
                 <div className="mt-6 px-6">

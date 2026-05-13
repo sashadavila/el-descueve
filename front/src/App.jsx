@@ -14,6 +14,7 @@ import OrderTrackingPage from './pages/public/OrderTrackingPage'
 import LoginPage from './pages/public/LoginPage'
 import SignupPage from './pages/public/SignupPage'
 import ContactPage from './pages/public/ContactPage'
+import AboutPage from './pages/public/AboutPage'
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -38,6 +39,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/contacto" element={<ContactPage />} />
+          <Route path="/nosotros" element={<AboutPage />} />
         </Route>
 
         {/* Rutas admin con Layout admin */}
