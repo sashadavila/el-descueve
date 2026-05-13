@@ -23,16 +23,16 @@ export default function Header() {
                 {/* Navegación Desktop */}
                 <nav className="hidden md:flex gap-6 lg:gap-8">
                     <Link
-                        to="/catalogo?categoria=corporativo"
+                        to="/catalogo"
                         className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
-                        Corporativa
+                        Catalogo
                     </Link>
                     <Link
-                        to="/catalogo?categoria=industrial"
+                        to="/contacto"
                         className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
-                        Industrial
+                        Contacto
                     </Link>
                     <Link
                         to="/catalogo?categoria=bordados"
