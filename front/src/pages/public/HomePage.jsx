@@ -28,7 +28,7 @@ export default function HomePage() {
     }
 
     const handleCotizar = () => {
-        navigate('/login')
+        navigate('/contacto')
     }
 
     return (
@@ -54,20 +54,11 @@ export default function HomePage() {
                         </p>
                         <div className="flex gap-4 flex-wrap">
                             <Link
-                                to="/login"
+                                to="/contacto"
                                 className="bg-[#FC9430] text-white px-8 py-4 font-bold uppercase tracking-wider hover:brightness-110 transition-all active:scale-95"
                             >
                                 Cotizar desde 10 prendas
                             </Link>
-                            <Link
-                                to="/contacto"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="border-2 border-white text-white px-8 py-4 font-bold uppercase tracking-wider hover:bg-white/10 transition-all active:scale-95"
-                            >
-                                Contacto directo
-                            </Link>
-
                         </div>
                     </div>
                 </div>
