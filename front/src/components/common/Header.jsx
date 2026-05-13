@@ -29,16 +29,16 @@ export default function Header() {
                         Catalogo
                     </Link>
                     <Link
+                        to="/nosotros"
+                        className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
+                    >
+                        Nosotros
+                    </Link>
+                    <Link
                         to="/contacto"
                         className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
                     >
                         Contacto
-                    </Link>
-                    <Link
-                        to="/catalogo?categoria=bordados"
-                        className="text-white hover:text-[#FC9430] transition-colors font-bold uppercase tracking-wider text-sm"
-                    >
-                        Bordados
                     </Link>
                     <Link
                         to="/catalogo"
