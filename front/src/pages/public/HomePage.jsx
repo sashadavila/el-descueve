@@ -59,14 +59,15 @@ export default function HomePage() {
                             >
                                 Cotizar desde 10 prendas
                             </Link>
-                            <a
-                                href="https://wa.me/56912345678?text=Hola,%20quisiera%20cotizar%20prendas%20corporativas"
+                            <Link
+                                to="/contacto"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="border-2 border-white text-white px-8 py-4 font-bold uppercase tracking-wider hover:bg-white/10 transition-all active:scale-95"
                             >
                                 Contacto directo
-                            </a>
+                            </Link>
+
                         </div>
                     </div>
                 </div>
