@@ -364,13 +364,6 @@ function ProductCard({ product }) {
                     >
                         {isAuthenticated ? "Ver Detalles" : "Iniciar Sesión"}
                     </Link>
-                    {isAuthenticated && (
-                        <button
-                            className="bg-[#FC9430] text-white px-4 py-2 text-xs font-bold uppercase hover:brightness-110 transition-colors rounded"
-                        >
-                            Cotizar
-                        </button>
-                    )}
                 </div>
             )}
         </div>
