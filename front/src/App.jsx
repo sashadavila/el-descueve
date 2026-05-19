@@ -15,6 +15,8 @@ import LoginPage from './pages/public/LoginPage'
 import SignupPage from './pages/public/SignupPage'
 import ContactPage from './pages/public/ContactPage'
 import AboutPage from './pages/public/AboutPage'
+import ForgotPasswordPage from './pages/public/ForgotPasswordPage'
+import ResetPasswordPage from './pages/public/ResetPasswordPage'
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -40,6 +42,8 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/contacto" element={<ContactPage />} />
           <Route path="/nosotros" element={<AboutPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         {/* Rutas admin con Layout admin */}
