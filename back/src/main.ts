@@ -2,19 +2,30 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { LoggerMiddleware } from './common/middleware/logger.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  //  CORS habilitado
+  // CORS habilitado
   app.enableCors({
     origin: ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true,
   });
 
-  //  Middleware de logging global
-  app.use(new LoggerMiddleware().use);
+  // MIDDLEWARE DE LOGGING DIRECTO (sin archivo externo)
+  app.use((req, res, next) => {
+    const { method, originalUrl, ip } = req;
+    const userAgent = req.get('user-agent') || '';
+    const startTime = Date.now();
+
+    res.on('finish', () => {
+      const { statusCode } = res;
+      const duration = Date.now() - startTime;
+      console.log(`[${new Date().toISOString()}] ${method} ${originalUrl} ${statusCode} ${duration}ms - ${userAgent} ${ip}`);
+    });
+
+    next();
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -50,7 +61,8 @@ async function bootstrap() {
 
   console.log(`\n🚀 Servidor corriendo en: http://localhost:${port}`);
   console.log(`📚 Documentación Swagger: http://localhost:${port}/api/docs`);
-  console.log(`🔐 Rutas protegidas requieren token JWT\n`);
+  console.log(`🔐 Rutas protegidas requieren token JWT`);
+  console.log(`📊 Logging de peticiones activado\n`);
 }
 
 bootstrap();
