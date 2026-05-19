@@ -13,7 +13,6 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
-
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
             return data;
@@ -25,20 +24,22 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData),
             });
-
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
             return data;
         },
 
-        // Nuevos métodos
+        // Redirige a Google (abre nueva ventana o redirige la página)
+        googleLogin: () => {
+            window.location.href = `${API_BASE_URL}/auth/google`;
+        },
+
         forgotPassword: async (email) => {
             const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
             });
-
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
             return data;
@@ -50,7 +51,6 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token, newPassword }),
             });
-
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
             return data;
@@ -60,7 +60,6 @@ export const api = {
             const response = await fetch(`${API_BASE_URL}/auth/profile`, {
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
             });
-
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
             return data;
