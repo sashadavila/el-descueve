@@ -44,6 +44,13 @@ export class User {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
+    // Campos para recuperación de contraseña
+    @Column({ type: 'varchar', nullable: true })
+    resetToken!: string | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    resetTokenExpires!: Date | null;
+
     @CreateDateColumn({ type: 'timestamp' })
     createdAt!: Date;
 
