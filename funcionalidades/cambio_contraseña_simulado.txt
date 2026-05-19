@@ -1,0 +1,13 @@
+Probar la funcionalidad cambio de contraseña:
+
+1. Ir a login → Click en "¿Olvidaste tu contraseña?"
+
+2. Ingresar email de un usuario registrado
+
+3. Ver logs en terminal (simulando envío de email)
+
+4. Copiar token del log y agregar a URL: http://localhost:5173/reset-password?token=TOKEN
+
+5. Ingresar nueva contraseña
+
+6. Iniciar sesión con nueva contraseña
