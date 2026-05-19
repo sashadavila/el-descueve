@@ -19,7 +19,12 @@ export default function LoginPage() {
             await login(email, password)
             navigate('/')
         } catch (err) {
-            setError('Credenciales inválidas. Por favor, intenta nuevamente.')
+            // ✅ Manejar error específico del backend
+            if (err.message === 'Credenciales inválidas') {
+                setError('Correo o contraseña incorrectos')
+            } else {
+                setError(err.message || 'Error al iniciar sesión')
+            }
         } finally {
             setLoading(false)
         }
