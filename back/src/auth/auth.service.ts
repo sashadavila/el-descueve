@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UserRole } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -27,15 +28,15 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    //  Guardar todos los campos
+    // CORREGIDO: Usar undefined en lugar de null
     const user = await this.usersService.create({
       name,
       email,
       password: hashedPassword,
-      phone: phone || null,
-      company: company || null,
-      rut: rut || null,
-      role: role || 'client',
+      phone: phone || undefined,
+      company: company || undefined,
+      rut: rut || undefined,
+      role: role || UserRole.CLIENT,  // Usar el enum correctamente
     });
 
     const { password: _, ...userWithoutPassword } = user;
