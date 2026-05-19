@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react'
+import api from '../config/api'  // ✅ IMPORTAR API
 
 export const AuthContext = createContext()
 
@@ -8,65 +9,69 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Verificar si hay usuario en localStorage
+        // Verificar si hay token y usuario en localStorage
+        const storedToken = localStorage.getItem('access_token')
         const storedUser = localStorage.getItem('user')
-        if (storedUser) {
+
+        if (storedToken && storedUser) {
             setUser(JSON.parse(storedUser))
             setIsAuthenticated(true)
         }
         setLoading(false)
     }, [])
 
+    // ✅ LOGIN CONECTADO AL BACKEND
     const login = async (email, password) => {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                if (email && password) {
-                    const user = {
-                        id: 1,
-                        name: email.split('@')[0],
-                        email: email,
-                        role: email.includes('admin') ? 'admin' : 'user'
-                    }
-                    setUser(user)
-                    setIsAuthenticated(true)
-                    localStorage.setItem('user', JSON.stringify(user))
-                    resolve(user)
-                } else {
-                    reject(new Error('Credenciales inválidas'))
-                }
-            }, 1000)
-        })
+        try {
+            const response = await api.auth.login(email, password)
+
+            // Guardar token y usuario
+            localStorage.setItem('access_token', response.access_token)
+            localStorage.setItem('user', JSON.stringify(response.user))
+
+            setUser(response.user)
+            setIsAuthenticated(true)
+
+            return response
+        } catch (error) {
+            console.error('Login error:', error)
+            throw error
+        }
     }
 
+    // ✅ REGISTER CONECTADO AL BACKEND
     const signup = async (userData) => {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                if (userData.email && userData.password) {
-                    const newUser = {
-                        id: Date.now(),
-                        name: userData.name,
-                        email: userData.email,
-                        phone: userData.phone,
-                        company: userData.company,
-                        rut: userData.rut,
-                        role: 'user'
-                    }
-                    resolve(newUser)
-                } else {
-                    reject(new Error('Error al crear la cuenta'))
-                }
-            }, 1000)
-        })
+        try {
+            const response = await api.auth.register({
+                name: userData.name,
+                email: userData.email,
+                password: userData.password,
+                role: 'client', // Rol por defecto
+            })
+
+            return response
+        } catch (error) {
+            console.error('Signup error:', error)
+            throw error
+        }
     }
 
     const logout = () => {
         setUser(null)
         setIsAuthenticated(false)
+        localStorage.removeItem('access_token')
         localStorage.removeItem('user')
     }
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated, loading, login, signup, logout }}>
+        <AuthContext.Provider value={{
+            user,
+            isAuthenticated,
+            loading,
+            login,
+            signup,
+            logout
+        }}>
             {children}
         </AuthContext.Provider>
     )
