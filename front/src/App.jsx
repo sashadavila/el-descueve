@@ -17,6 +17,8 @@ import ContactPage from './pages/public/ContactPage'
 import AboutPage from './pages/public/AboutPage'
 import ForgotPasswordPage from './pages/public/ForgotPasswordPage'
 import ResetPasswordPage from './pages/public/ResetPasswordPage'
+import GoogleCallback from './pages/public/GoogleCallback'
+import LogoutPage from './pages/public/LogoutPage'
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -44,6 +46,8 @@ function App() {
           <Route path="/nosotros" element={<AboutPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/auth-callback" element={<GoogleCallback />} />
+          <Route path="/logout" element={<LogoutPage />} />
         </Route>
 
         {/* Rutas admin con Layout admin */}
