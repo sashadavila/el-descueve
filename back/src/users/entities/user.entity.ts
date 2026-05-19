@@ -1,5 +1,3 @@
-// src/users/entities/user.entity.ts
-
 import {
     Column,
     CreateDateColumn,
@@ -26,6 +24,16 @@ export class User {
 
     @Column()
     password!: string;
+
+    //  NUEVOS CAMPOS
+    @Column({ length: 20, nullable: true })
+    phone!: string;
+
+    @Column({ length: 100, nullable: true })
+    company!: string;
+
+    @Column({ length: 50, nullable: true })
+    rut!: string;
 
     @Column({
         type: 'enum',
