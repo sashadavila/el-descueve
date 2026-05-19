@@ -22,8 +22,8 @@ export class User {
     @Column({ type: 'varchar', length: 150, unique: true })
     email!: string;
 
-    @Column({ type: 'varchar' })
-    password!: string;
+    @Column({ type: 'varchar', nullable: true })
+    password!: string | null;  // Ahora puede ser null (para usuarios de Google)
 
     @Column({ type: 'varchar', length: 20, nullable: true })
     phone!: string;
@@ -44,7 +44,14 @@ export class User {
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
-    // Campos para recuperación de contraseña
+    // Google OAuth fields
+    @Column({ type: 'varchar', nullable: true, unique: true })
+    googleId!: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    photoUrl!: string | null;
+
+    // Password reset fields
     @Column({ type: 'varchar', nullable: true })
     resetToken!: string | null;
 
