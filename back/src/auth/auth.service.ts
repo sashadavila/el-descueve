@@ -60,6 +60,11 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    // Verificar si user.password existe (puede ser null para usuarios de Google)
+    if (!user.password) {
+      throw new UnauthorizedException('Esta cuenta fue creada con Google. Inicia sesión con Google');
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -78,30 +83,32 @@ export class AuthService {
     };
   }
 
-  // FORGOT PASSWORD - Solicitar recuperación
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     const { email } = forgotPasswordDto;
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
-      // Por seguridad, no revelamos si el email existe o no
       return {
         message: 'Si el email está registrado, recibirás un enlace para recuperar tu contraseña',
       };
     }
 
-    // Generar token único
+    // Verificar si el usuario tiene contraseña (no es de Google)
+    if (!user.password) {
+      return {
+        message: 'Esta cuenta fue creada con Google. Inicia sesión con Google',
+      };
+    }
+
     const resetToken = uuidv4();
     const resetTokenExpires = new Date();
-    resetTokenExpires.setHours(resetTokenExpires.getHours() + 1); // Token válido por 1 hora
+    resetTokenExpires.setHours(resetTokenExpires.getHours() + 1);
 
-    // Guardar token en el usuario
     await this.usersService.update(user.id, {
       resetToken,
       resetTokenExpires,
     });
 
-    // Enviar email con el token
     await this.emailService.sendPasswordResetEmail(email, resetToken);
 
     return {
@@ -109,26 +116,20 @@ export class AuthService {
     };
   }
 
-  // RESET PASSWORD - Restablecer contraseña
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
-
-    // Buscar usuario por token válido
     const user = await this.usersService.findByResetToken(token);
 
     if (!user) {
       throw new BadRequestException('Token inválido o expirado');
     }
 
-    // Verificar si el token no ha expirado
     if (user.resetTokenExpires && user.resetTokenExpires < new Date()) {
       throw new BadRequestException('Token expirado. Solicita un nuevo enlace');
     }
 
-    // Hashear nueva contraseña
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Actualizar contraseña y limpiar token
     await this.usersService.update(user.id, {
       password: hashedPassword,
       resetToken: null,
@@ -149,5 +150,23 @@ export class AuthService {
 
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
+  }
+
+  async googleLogin(user: any) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    const { password, ...userWithoutPassword } = user;
+
+    return {
+      message: 'Login con Google exitoso',
+      access_token: accessToken,
+      user: userWithoutPassword,
+    };
   }
 }
