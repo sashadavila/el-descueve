@@ -1,10 +1,13 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import express from 'express';  // Mantener esta importación
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from '../common/decorators/public.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -29,16 +32,54 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  //  RUTA PROTEGIDA - Requiere token JWT
+  @Public()
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Solicitar recuperación de contraseña' })
+  @ApiResponse({ status: 200, description: 'Email enviado si existe' })
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Restablecer contraseña con token' })
+  @ApiResponse({ status: 200, description: 'Contraseña actualizada' })
+  @ApiResponse({ status: 400, description: 'Token inválido o expirado' })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  // GOOGLE OAUTH ENDPOINTS
+  @Public()
+  @Get('google')
+  @ApiOperation({ summary: 'Iniciar sesión con Google (redirige a Google)' })
+  @UseGuards(AuthGuard('google'))
+  async googleAuth() {
+    // Redirige a Google
+  }
+
+  @Public()
+  @Get('google/callback')
+  @ApiOperation({ summary: 'Callback de Google OAuth' })
+  @UseGuards(AuthGuard('google'))
+  async googleAuthRedirect(@Req() req: any, @Res() res: express.Response) {
+    const result = await this.authService.googleLogin(req.user);
+
+    // Redirigir al frontend con el token en la URL
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // Codificar el usuario como JSON para pasarlo en la URL
+    const userEncoded = encodeURIComponent(JSON.stringify(result.user));
+
+    res.redirect(`${frontendUrl}/auth-callback?token=${result.access_token}&user=${userEncoded}`);
+  }
+
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
   @ApiResponse({ status: 200, description: 'Perfil obtenido correctamente' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  getProfile(@CurrentUser() user: any) {
-    return {
-      message: 'Perfil obtenido correctamente',
-      user,
-    };
+  async getProfile(@Req() req: any) {
+    return this.authService.getProfile(req.user.id);
   }
 }

@@ -9,39 +9,30 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('access_token')
-        const storedUser = localStorage.getItem('user')
+        const checkAuth = async () => {
+            const storedToken = localStorage.getItem('access_token')
+            const storedUser = localStorage.getItem('user')
 
-        if (storedToken && storedUser) {
-            //  Verificar token con backend
-            verifyToken(storedToken)
-        } else {
+            if (storedToken && storedUser) {
+                try {
+                    const parsedUser = JSON.parse(storedUser)
+                    setUser(parsedUser)
+                    setIsAuthenticated(true)
+                } catch (error) {
+                    console.error('Error parsing stored user:', error)
+                    localStorage.removeItem('access_token')
+                    localStorage.removeItem('user')
+                }
+            }
             setLoading(false)
         }
+
+        checkAuth()
     }, [])
 
-    const verifyToken = async (token) => {
-        try {
-            const response = await fetch('http://localhost:3000/auth/profile', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-
-            if (response.ok) {
-                const storedUser = localStorage.getItem('user')
-                setUser(JSON.parse(storedUser))
-                setIsAuthenticated(true)
-            } else {
-                // Token inválido, limpiar
-                localStorage.removeItem('access_token')
-                localStorage.removeItem('user')
-            }
-        } catch (error) {
-            console.error('Token verification error:', error)
-        } finally {
-            setLoading(false)
-        }
+    const setUserFromGoogle = (googleUser) => {
+        setUser(googleUser)
+        setIsAuthenticated(true)
     }
 
     const login = async (email, password) => {
@@ -94,7 +85,8 @@ export function AuthProvider({ children }) {
             loading,
             login,
             signup,
-            logout
+            logout,
+            setUserFromGoogle
         }}>
             {children}
         </AuthContext.Provider>

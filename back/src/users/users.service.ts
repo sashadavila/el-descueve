@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -13,6 +13,18 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email },
+    });
+  }
+
+  async findByGoogleId(googleId: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { googleId },
+    });
+  }
+
+  async findByResetToken(token: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { resetToken: token },
     });
   }
 
@@ -34,5 +46,40 @@ export class UsersService {
   async update(id: string, userData: Partial<User>): Promise<User | null> {
     await this.usersRepository.update(id, userData);
     return this.findById(id);
+  }
+
+  // Usar el enum UserRole
+  async findOrCreateByGoogle(profile: {
+    googleId: string;
+    email: string;
+    name: string;
+    photoUrl: string;
+  }): Promise<User> {
+    let user = await this.findByGoogleId(profile.googleId);
+
+    if (user) {
+      return user;
+    }
+
+    user = await this.findByEmail(profile.email);
+
+    if (user) {
+      await this.update(user.id, {
+        googleId: profile.googleId,
+        photoUrl: profile.photoUrl,
+      });
+      return this.findById(user.id) as Promise<User>;
+    }
+
+    // Usar el enum UserRole.CLIENT
+    return this.create({
+      googleId: profile.googleId,
+      email: profile.email,
+      name: profile.name,
+      photoUrl: profile.photoUrl,
+      password: null,
+      isActive: true,
+      role: UserRole.CLIENT,
+    });
   }
 }
