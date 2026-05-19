@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from 'react'
-import api from '../config/api'  // ✅ IMPORTAR API
+import api from '../config/api'
 
 export const AuthContext = createContext()
 
@@ -9,23 +9,45 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Verificar si hay token y usuario en localStorage
         const storedToken = localStorage.getItem('access_token')
         const storedUser = localStorage.getItem('user')
 
         if (storedToken && storedUser) {
-            setUser(JSON.parse(storedUser))
-            setIsAuthenticated(true)
+            //  Verificar token con backend
+            verifyToken(storedToken)
+        } else {
+            setLoading(false)
         }
-        setLoading(false)
     }, [])
 
-    // ✅ LOGIN CONECTADO AL BACKEND
+    const verifyToken = async (token) => {
+        try {
+            const response = await fetch('http://localhost:3000/auth/profile', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+
+            if (response.ok) {
+                const storedUser = localStorage.getItem('user')
+                setUser(JSON.parse(storedUser))
+                setIsAuthenticated(true)
+            } else {
+                // Token inválido, limpiar
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('user')
+            }
+        } catch (error) {
+            console.error('Token verification error:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const login = async (email, password) => {
         try {
             const response = await api.auth.login(email, password)
 
-            // Guardar token y usuario
             localStorage.setItem('access_token', response.access_token)
             localStorage.setItem('user', JSON.stringify(response.user))
 
@@ -39,14 +61,16 @@ export function AuthProvider({ children }) {
         }
     }
 
-    // ✅ REGISTER CONECTADO AL BACKEND
     const signup = async (userData) => {
         try {
             const response = await api.auth.register({
                 name: userData.name,
                 email: userData.email,
                 password: userData.password,
-                role: 'client', // Rol por defecto
+                phone: userData.phone,
+                company: userData.company,
+                rut: userData.rut,
+                role: 'client',
             })
 
             return response
