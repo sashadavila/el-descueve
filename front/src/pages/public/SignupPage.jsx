@@ -79,14 +79,18 @@ export default function SignupPage() {
             await signup({
                 name: formData.name,
                 email: formData.email,
+                password: formData.password,
                 phone: formData.phone,
                 company: formData.company,
                 rut: formData.rut,
-                password: formData.password
             })
             navigate('/login')
         } catch (err) {
-            setErrors({ submit: 'Error al crear la cuenta. Por favor, intenta nuevamente.' })
+            if (err.message === 'El email ya está registrado') {
+                setErrors({ email: 'Este email ya está registrado' })
+            } else {
+                setErrors({ submit: err.message || 'Error al crear la cuenta' })
+            }
         } finally {
             setLoading(false)
         }
