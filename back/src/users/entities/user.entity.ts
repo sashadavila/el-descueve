@@ -16,23 +16,22 @@ export class User {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
 
-    @Column({ length: 100 })
+    @Column({ type: 'varchar', length: 100 })
     name!: string;
 
-    @Column({ unique: true, length: 150 })
+    @Column({ type: 'varchar', length: 150, unique: true })
     email!: string;
 
-    @Column()
+    @Column({ type: 'varchar' })
     password!: string;
 
-    //  NUEVOS CAMPOS
-    @Column({ length: 20, nullable: true })
+    @Column({ type: 'varchar', length: 20, nullable: true })
     phone!: string;
 
-    @Column({ length: 100, nullable: true })
+    @Column({ type: 'varchar', length: 100, nullable: true })
     company!: string;
 
-    @Column({ length: 50, nullable: true })
+    @Column({ type: 'varchar', length: 50, nullable: true })
     rut!: string;
 
     @Column({
@@ -42,12 +41,12 @@ export class User {
     })
     role!: UserRole;
 
-    @Column({ default: true })
+    @Column({ type: 'boolean', default: true })
     isActive!: boolean;
 
-    @CreateDateColumn()
+    @CreateDateColumn({ type: 'timestamp' })
     createdAt!: Date;
 
-    @UpdateDateColumn()
+    @UpdateDateColumn({ type: 'timestamp' })
     updatedAt!: Date;
 }
