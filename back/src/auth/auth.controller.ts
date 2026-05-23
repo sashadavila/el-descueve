@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import express from 'express';  // Mantener esta importación
+import express from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -19,8 +19,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Registrar un nuevo usuario' })
   @ApiResponse({ status: 201, description: 'Usuario registrado correctamente' })
   @ApiResponse({ status: 400, description: 'El email ya está registrado' })
-  register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  register(@Body() registerDto: RegisterDto, @Req() req: express.Request) {
+    return this.authService.register(registerDto, req);
   }
 
   @Public()
@@ -28,8 +28,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Iniciar sesión' })
   @ApiResponse({ status: 201, description: 'Login exitoso' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  login(@Body() loginDto: LoginDto, @Req() req: express.Request) {
+    return this.authService.login(loginDto, req);
   }
 
   @Public()
@@ -45,11 +45,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Restablecer contraseña con token' })
   @ApiResponse({ status: 200, description: 'Contraseña actualizada' })
   @ApiResponse({ status: 400, description: 'Token inválido o expirado' })
-  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto);
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @Req() req: express.Request) {
+    return this.authService.resetPassword(resetPasswordDto, req);
   }
 
-  // GOOGLE OAUTH ENDPOINTS
   @Public()
   @Get('google')
   @ApiOperation({ summary: 'Iniciar sesión con Google (redirige a Google)' })
@@ -63,12 +62,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Callback de Google OAuth' })
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req: any, @Res() res: express.Response) {
-    const result = await this.authService.googleLogin(req.user);
+    const result = await this.authService.googleLogin(req.user, req);
 
-    // Redirigir al frontend con el token en la URL
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-    // Codificar el usuario como JSON para pasarlo en la URL
     const userEncoded = encodeURIComponent(JSON.stringify(result.user));
 
     res.redirect(`${frontendUrl}/auth-callback?token=${result.access_token}&user=${userEncoded}`);

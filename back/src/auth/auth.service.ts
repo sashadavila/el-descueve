@@ -3,10 +3,12 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { Request } from 'express';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../common/services/email.service';
 import { RegisterDto } from './dto/register.dto';
@@ -17,13 +19,15 @@ import { UserRole } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
   ) { }
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto, req?: Request) {
     const { name, email, password, phone, company, rut, role } = registerDto;
 
     const userExists = await this.usersService.findByEmail(email);
@@ -46,13 +50,22 @@ export class AuthService {
 
     const { password: _, ...userWithoutPassword } = user;
 
+    // 📧 ENVIAR EMAIL DE BIENVENIDA
+    await this.emailService.sendWelcomeEmail({
+      name: user.name,
+      email: user.email,
+      company: user.company || undefined,
+    });
+
+    this.logger.log(`✅ Nuevo usuario registrado: ${user.email} - ${user.company || 'Sin empresa'}`);
+
     return {
-      message: 'Usuario registrado correctamente',
+      message: 'Usuario registrado correctamente. Te hemos enviado un email de bienvenida.',
       user: userWithoutPassword,
     };
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, req?: Request) {
     const { email, password } = loginDto;
     const user = await this.usersService.findByEmail(email);
 
@@ -60,7 +73,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Verificar si user.password existe (puede ser null para usuarios de Google)
     if (!user.password) {
       throw new UnauthorizedException('Esta cuenta fue creada con Google. Inicia sesión con Google');
     }
@@ -76,8 +88,22 @@ export class AuthService {
 
     const { password: _, ...userWithoutPassword } = user;
 
+    // 📧 ENVIAR ALERTA DE INICIO DE SESIÓN
+    const ip = req?.ip || req?.socket?.remoteAddress || 'IP no disponible';
+    const userAgent = req?.headers['user-agent'] || 'Desconocido';
+
+    await this.emailService.sendLoginAlert({
+      name: user.name,
+      email: user.email,
+      ip: ip,
+      userAgent: userAgent,
+      timestamp: new Date(),
+    });
+
+    this.logger.log(`🔐 Usuario autenticado: ${user.email} - IP: ${ip}`);
+
     return {
-      message: 'Login exitoso',
+      message: 'Login exitoso. Te hemos enviado un email de confirmación.',
       access_token: accessToken,
       user: userWithoutPassword,
     };
@@ -93,7 +119,6 @@ export class AuthService {
       };
     }
 
-    // Verificar si el usuario tiene contraseña (no es de Google)
     if (!user.password) {
       return {
         message: 'Esta cuenta fue creada con Google. Inicia sesión con Google',
@@ -109,14 +134,17 @@ export class AuthService {
       resetTokenExpires,
     });
 
-    await this.emailService.sendPasswordResetEmail(email, resetToken);
+    // 📧 ENVIAR EMAIL DE RECUPERACIÓN (mejorado con nombre)
+    await this.emailService.sendPasswordResetEmailWithName(email, user.name, resetToken);
+
+    this.logger.log(`📧 Email de recuperación enviado a: ${email}`);
 
     return {
       message: 'Si el email está registrado, recibirás un enlace para recuperar tu contraseña',
     };
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+  async resetPassword(resetPasswordDto: ResetPasswordDto, req?: Request) {
     const { token, newPassword } = resetPasswordDto;
     const user = await this.usersService.findByResetToken(token);
 
@@ -136,8 +164,22 @@ export class AuthService {
       resetTokenExpires: null,
     });
 
+    // 📧 ENVIAR ALERTA DE CAMBIO DE CONTRASEÑA
+    const ip = req?.ip || req?.socket?.remoteAddress || 'IP no disponible';
+    const userAgent = req?.headers['user-agent'] || 'Desconocido';
+
+    await this.emailService.sendPasswordChangeAlert({
+      name: user.name,
+      email: user.email,
+      ip: ip,
+      userAgent: userAgent,
+      timestamp: new Date(),
+    });
+
+    this.logger.log(`🔐 Contraseña actualizada para: ${user.email} - IP: ${ip}`);
+
     return {
-      message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión',
+      message: 'Contraseña actualizada correctamente. Te hemos enviado un email de confirmación.',
     };
   }
 
@@ -152,7 +194,7 @@ export class AuthService {
     return userWithoutPassword;
   }
 
-  async googleLogin(user: any) {
+  async googleLogin(user: any, req?: Request) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -163,8 +205,22 @@ export class AuthService {
 
     const { password, ...userWithoutPassword } = user;
 
+    // 📧 ENVIAR ALERTA DE INICIO DE SESIÓN (para Google)
+    const ip = req?.ip || req?.socket?.remoteAddress || 'IP no disponible';
+    const userAgent = req?.headers['user-agent'] || 'Desconocido';
+
+    await this.emailService.sendLoginAlert({
+      name: user.name,
+      email: user.email,
+      ip: ip,
+      userAgent: userAgent,
+      timestamp: new Date(),
+    });
+
+    this.logger.log(`🔐 Usuario autenticado con Google: ${user.email} - IP: ${ip}`);
+
     return {
-      message: 'Login con Google exitoso',
+      message: 'Login con Google exitoso. Te hemos enviado un email de confirmación.',
       access_token: accessToken,
       user: userWithoutPassword,
     };
