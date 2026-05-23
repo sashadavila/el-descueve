@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import api from '../../config/api'
 
@@ -7,34 +7,78 @@ export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
+    const [successMessage, setSuccessMessage] = useState('')
     const [loading, setLoading] = useState(false)
+    const [rememberMe, setRememberMe] = useState(false)
     const { login } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
+
+    // Obtener la página de redirección si existe (desde protected routes)
+    const from = location.state?.from?.pathname || '/'
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
+        setSuccessMessage('')
         setLoading(true)
 
         try {
-            await login(email, password)
+            const response = await login(email, password)
 
-            // Esperar 2 segundos adicionales antes de redirigir
+            // Mostrar mensaje del backend (incluye info del email de alerta)
+            if (response?.message) {
+                setSuccessMessage(response.message)
+            } else {
+                setSuccessMessage('✅ Inicio de sesión exitoso. Redirigiendo...')
+            }
+
+            // Guardar email si "Recordarme" está marcado
+            if (rememberMe) {
+                localStorage.setItem('remembered_email', email)
+            } else {
+                localStorage.removeItem('remembered_email')
+            }
+
+            // Esperar 2 segundos para mostrar el mensaje antes de redirigir
             setTimeout(() => {
-                navigate('/')
+                navigate(from, { replace: true })
             }, 2000)
 
         } catch (err) {
-            setError(err.message || 'Error al iniciar sesión')
+            let errorMessage = 'Error al iniciar sesión'
+
+            // Manejar errores específicos del backend
+            if (err.message === 'Credenciales inválidas') {
+                errorMessage = '❌ Email o contraseña incorrectos. Por favor, verifica tus credenciales.'
+            } else if (err.message === 'Esta cuenta fue creada con Google. Inicia sesión con Google') {
+                errorMessage = '🔐 Esta cuenta fue creada con Google. Por favor, inicia sesión usando el botón de Google.'
+            } else if (err.message.includes('email')) {
+                errorMessage = '📧 Por favor, ingresa un email válido.'
+            } else if (err.message) {
+                errorMessage = err.message
+            }
+
+            setError(errorMessage)
             setLoading(false)
         }
     }
 
     const handleGoogleLogin = () => {
         setLoading(true)
+        setError('')
         api.auth.googleLogin()
         // Nota: La redirección la maneja GoogleCallback
     }
+
+    // Cargar email guardado de "Recordarme"
+    useState(() => {
+        const rememberedEmail = localStorage.getItem('remembered_email')
+        if (rememberedEmail) {
+            setEmail(rememberedEmail)
+            setRememberMe(true)
+        }
+    }, [])
 
     // Pantalla de carga mientras se procesa el login
     if (loading) {
@@ -52,7 +96,7 @@ export default function LoginPage() {
                     <div className="mt-4 w-full bg-gray-200 rounded-full h-1.5">
                         <div className="bg-[#FC9430] h-1.5 rounded-full animate-pulse" style={{ width: '75%' }}></div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3">Esto puede tomar unos segundos</p>
+                    <p className="text-xs text-gray-400 mt-3">Verificando credenciales y enviando alerta de seguridad</p>
                 </div>
             </div>
         )
@@ -67,10 +111,21 @@ export default function LoginPage() {
                     <p className="text-sm text-gray-600">Accede a tu cuenta corporativa</p>
                 </div>
 
-                {error && (
-                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                {/* Mensaje de éxito */}
+                {successMessage && (
+                    <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded animate-fade-in-up">
                         <div className="flex items-center">
-                            <span className="material-symbols-outlined text-red-500 mr-2">error</span>
+                            <span className="material-symbols-outlined text-green-500 mr-2">check_circle</span>
+                            <p className="text-sm text-green-700">{successMessage}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Mensaje de error */}
+                {error && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded animate-fade-in-up">
+                        <div className="flex items-start">
+                            <span className="material-symbols-outlined text-red-500 mr-2 mt-0.5">error</span>
                             <p className="text-sm text-red-700">{error}</p>
                         </div>
                     </div>
@@ -82,32 +137,44 @@ export default function LoginPage() {
                             <label htmlFor="email" className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
                                 Correo Electrónico
                             </label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#FC9430] focus:border-transparent"
-                                placeholder="ejecutivo@empresa.cl"
-                            />
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center">
+                                    <span className="material-symbols-outlined text-gray-400 text-xl">mail</span>
+                                </span>
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#FC9430] focus:border-transparent"
+                                    placeholder="ejecutivo@empresa.cl"
+                                />
+                            </div>
                         </div>
 
                         <div>
                             <label htmlFor="password" className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
                                 Contraseña
                             </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#FC9430] focus:border-transparent"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center">
+                                    <span className="material-symbols-outlined text-gray-400 text-xl">lock</span>
+                                </span>
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#FC9430] focus:border-transparent"
+                                    placeholder="••••••••"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -117,15 +184,17 @@ export default function LoginPage() {
                                 id="remember-me"
                                 name="remember-me"
                                 type="checkbox"
-                                className="h-4 w-4 text-[#FC9430] focus:ring-[#FC9430] border-gray-300 rounded"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                className="h-4 w-4 text-[#FC9430] focus:ring-[#FC9430] border-gray-300 rounded cursor-pointer"
                             />
-                            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                                 Recordarme
                             </label>
                         </div>
 
                         <div className="text-sm">
-                            <Link to="/forgot-password" className="font-medium text-[#FC9430] hover:text-[#e0852b]">
+                            <Link to="/forgot-password" className="font-medium text-[#FC9430] hover:text-[#e0852b] transition-colors">
                                 ¿Olvidaste tu contraseña?
                             </Link>
                         </div>
@@ -169,6 +238,20 @@ export default function LoginPage() {
                         Regístrate aquí
                     </Link>
                 </p>
+
+                {/* Información de seguridad */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+                        <div className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">security</span>
+                            <span>Conexión segura</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">mail</span>
+                            <span>Recibirás alerta de seguridad</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     )
