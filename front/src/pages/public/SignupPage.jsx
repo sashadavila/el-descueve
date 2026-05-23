@@ -284,19 +284,16 @@ export default function SignupPage() {
                                     className="h-4 w-4 text-[#FC9430] focus:ring-[#FC9430] border-gray-300 rounded"
                                 />
                             </div>
-                            <div className="ml-3">
-                                <label htmlFor="acceptTerms" className="text-sm text-gray-700">
-                                    Acepto los{' '}
-                                    <a href="#" className="text-[#FC9430] hover:text-[#e0852b] font-medium">
-                                        Términos y Condiciones
-                                    </a>{' '}
-                                    y la{' '}
-                                    <a href="#" className="text-[#FC9430] hover:text-[#e0852b] font-medium">
-                                        Política de Privacidad
-                                    </a>
-                                </label>
-                                {errors.acceptTerms && <p className="mt-1 text-xs text-red-500">{errors.acceptTerms}</p>}
-                            </div>
+                            <label htmlFor="acceptTerms" className="text-sm text-gray-700">
+                                Acepto los{' '}
+                                <Link to="/terminos-y-condiciones" target="_blank" className="text-[#FC9430] hover:text-[#e0852b] font-medium">
+                                    Términos y Condiciones
+                                </Link>{' '}
+                                y la{' '}
+                                <Link to="/politica-de-privacidad" target="_blank" className="text-[#FC9430] hover:text-[#e0852b] font-medium">
+                                    Política de Privacidad
+                                </Link>
+                            </label>
                         </div>
 
                         {/* Botón de registro */}
