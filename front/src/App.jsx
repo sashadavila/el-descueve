@@ -15,6 +15,12 @@ import LoginPage from './pages/public/LoginPage'
 import SignupPage from './pages/public/SignupPage'
 import ContactPage from './pages/public/ContactPage'
 import AboutPage from './pages/public/AboutPage'
+import ForgotPasswordPage from './pages/public/ForgotPasswordPage'
+import ResetPasswordPage from './pages/public/ResetPasswordPage'
+import GoogleCallback from './pages/public/GoogleCallback'
+import LogoutPage from './pages/public/LogoutPage'
+import TermsConditions from './pages/legal/TermsConditions'
+import PrivacyPolicy from './pages/legal/PrivacyPolicy'
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -40,6 +46,12 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/contacto" element={<ContactPage />} />
           <Route path="/nosotros" element={<AboutPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/auth-callback" element={<GoogleCallback />} />
+          <Route path="/logout" element={<LogoutPage />} />
+          <Route path="/terminos-y-condiciones" element={<TermsConditions />} />
+          <Route path="/politica-de-privacidad" element={<PrivacyPolicy />} />
         </Route>
 
         {/* Rutas admin con Layout admin */}
