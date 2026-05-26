@@ -6,6 +6,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { ProductsModule } from './products/products.module';
+import { CategoriesModule } from './categories/categories.module';
+import { OrdersModule } from './orders/orders.module';
+import { OrderItemsModule } from './order-items/order-items.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -23,6 +27,10 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     }),
     UsersModule,
     AuthModule,
+    ProductsModule,
+    CategoriesModule,
+    OrdersModule,
+    OrderItemsModule,
   ],
   controllers: [AppController],
   providers: [
