@@ -10,7 +10,7 @@ import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderItemsModule } from './order-items/order-items.module';
-import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -24,6 +24,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
       database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: true,
+      logging: true,
     }),
     UsersModule,
     AuthModule,
