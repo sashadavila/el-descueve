@@ -3,7 +3,7 @@ import api from '../../config/api'
 import { useAuth } from '../../hooks/useAuth'
 
 export default function AdminDashboard() {
-    const { isAdmin } = useAuth()
+    const { isAdmin, user } = useAuth()
     const [orders, setOrders] = useState([])
     const [userStats, setUserStats] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -11,12 +11,22 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!isAdmin) return
+            if (!isAdmin) {
+                console.log('⚠️ No es admin, no se cargan datos');
+                setLoading(false);
+                return;
+            }
 
             try {
                 setLoading(true)
+                setError(null)
+
+                console.log('📊 [AdminDashboard] Obteniendo estadísticas...');
+                console.log('📊 [AdminDashboard] Token en localStorage:', localStorage.getItem('access_token')?.substring(0, 50));
+
                 // Obtener estadísticas de usuarios
                 const stats = await api.admin.getUserStats()
+                console.log('📊 [AdminDashboard] Estadísticas recibidas:', stats)
                 setUserStats(stats)
 
                 // Aquí cargarías las órdenes desde el backend
@@ -24,7 +34,7 @@ export default function AdminDashboard() {
                 // setOrders(ordersData)
 
             } catch (err) {
-                console.error('Error fetching admin data:', err)
+                console.error('❌ Error fetching admin data:', err)
                 setError(err.message)
             } finally {
                 setLoading(false)
@@ -38,14 +48,27 @@ export default function AdminDashboard() {
         return (
             <div className="flex justify-center items-center h-96">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p className="ml-3 text-gray-500">Cargando datos del dashboard...</p>
             </div>
         )
     }
 
     if (error) {
         return (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
-                <p className="text-red-700">Error al cargar datos: {error}</p>
+            <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded">
+                <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-red-500">error</span>
+                    <div>
+                        <h3 className="font-bold text-red-700 mb-1">Error al cargar datos</h3>
+                        <p className="text-red-600">{error}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="mt-3 bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+                        >
+                            Reintentar
+                        </button>
+                    </div>
+                </div>
             </div>
         )
     }
