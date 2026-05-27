@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
@@ -48,7 +48,12 @@ export class UsersService {
     return this.findById(id);
   }
 
-  // Usar el enum UserRole
+  // ✅ NUEVO MÉTODO: Actualizar rol de usuario
+  async updateRole(id: string, role: UserRole): Promise<User | null> {
+    await this.usersRepository.update(id, { role });
+    return this.findById(id);
+  }
+
   async findOrCreateByGoogle(profile: {
     googleId: string;
     email: string;
@@ -79,7 +84,7 @@ export class UsersService {
       photoUrl: profile.photoUrl,
       password: null,
       isActive: true,
-      role: UserRole.CLIENT,
+      role: UserRole.CLIENT, // Cambiar a CLIENT (no a string)
     });
   }
 }
