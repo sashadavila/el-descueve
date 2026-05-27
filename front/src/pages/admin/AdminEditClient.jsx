@@ -64,7 +64,20 @@ export default function AdminEditClient() {
         setSuccess(false)
 
         try {
-            await api.admin.updateUser(id, formData)
+            // ✅ Enviar solo los campos que queremos actualizar
+            const updateData = {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone || null,
+                company: formData.company || null,
+                rut: formData.rut || null,
+                role: formData.role,
+                isActive: formData.isActive
+            }
+
+            console.log('📤 Enviando datos de actualización:', updateData)
+
+            await api.admin.updateUser(id, updateData)
             setSuccess(true)
             setTimeout(() => {
                 navigate('/admin/clientes')
