@@ -1,7 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import ScrollToTop from './components/common/ScrollToTop'
 import Layout from './components/common/Layout'
 import AdminLayout from './components/layout/AdminLayout'
+import { useAuth } from './hooks/useAuth'
 
 // Públicas
 import HomePage from './pages/public/HomePage'
@@ -27,6 +28,29 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminClients from './pages/admin/AdminClients'
 import AdminEditClient from './pages/admin/AdminEditClient'
 import AdminStatistics from './pages/admin/AdminStatistics'
+
+// Componente para proteger rutas admin
+function AdminRoute({ children }) {
+  const { isAuthenticated, isAdmin, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: '/admin' }} replace />
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
 
 function App() {
   return (
@@ -54,8 +78,12 @@ function App() {
           <Route path="/politica-de-privacidad" element={<PrivacyPolicy />} />
         </Route>
 
-        {/* Rutas admin con Layout admin */}
-        <Route path="/admin" element={<AdminLayout />}>
+        {/* Rutas admin con Layout admin - Protegidas por rol */}
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }>
           <Route index element={<AdminDashboard />} />
           <Route path="clientes" element={<AdminClients />} />
           <Route path="clientes/editar/:id" element={<AdminEditClient />} />
