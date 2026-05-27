@@ -16,12 +16,16 @@ async function bootstrap() {
   app.use((req, res, next) => {
     const { method, originalUrl, ip } = req;
     const userAgent = req.get('user-agent') || '';
+    const authHeader = req.get('authorization') || 'No token';
     const startTime = Date.now();
+
+    console.log(`📥 [${new Date().toISOString()}] ${method} ${originalUrl}`);
+    console.log(`📋 Authorization: ${authHeader.substring(0, 50)}...`);
 
     res.on('finish', () => {
       const { statusCode } = res;
       const duration = Date.now() - startTime;
-      console.log(`[${new Date().toISOString()}] ${method} ${originalUrl} ${statusCode} ${duration}ms - ${userAgent} ${ip}`);
+      console.log(`📤 [${new Date().toISOString()}] ${method} ${originalUrl} ${statusCode} ${duration}ms`);
     });
 
     next();
