@@ -29,7 +29,6 @@ export const api = {
             return data;
         },
 
-        // Redirige a Google (abre nueva ventana o redirige la página)
         googleLogin: () => {
             window.location.href = `${API_BASE_URL}/auth/google`;
         },
@@ -59,6 +58,46 @@ export const api = {
         getProfile: async () => {
             const response = await fetch(`${API_BASE_URL}/auth/profile`, {
                 headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message);
+            return data;
+        },
+    },
+
+    admin: {
+        getAllUsers: async () => {
+            const response = await fetch(`${API_BASE_URL}/users`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message);
+            return data;
+        },
+
+        getUserById: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message);
+            return data;
+        },
+
+        updateUser: async (id, userData) => {
+            const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+                method: 'PUT',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message);
+            return data;
+        },
+
+        getUserStats: async () => {
+            const response = await fetch(`${API_BASE_URL}/users/stats/summary`, {
+                headers: getAuthHeaders(),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message);
