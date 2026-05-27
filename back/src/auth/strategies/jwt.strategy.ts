@@ -24,7 +24,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException('Usuario inactivo');
         }
 
-        // Retornar objeto con los datos del usuario
         return {
             id: user.id,
             email: user.email,
