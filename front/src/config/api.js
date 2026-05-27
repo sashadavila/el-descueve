@@ -2,7 +2,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('access_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    console.log('🔑 [API] getAuthHeaders - Token existe:', !!token);
+    if (token) {
+        console.log('🔑 [API] Token (primeros 50 chars):', token.substring(0, 50) + '...');
+        return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+    }
+    return { 'Content-Type': 'application/json' };
 };
 
 export const api = {
@@ -14,7 +22,7 @@ export const api = {
                 body: JSON.stringify({ email, password }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error en login');
             return data;
         },
 
@@ -25,7 +33,7 @@ export const api = {
                 body: JSON.stringify(userData),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error en registro');
             return data;
         },
 
@@ -40,7 +48,7 @@ export const api = {
                 body: JSON.stringify({ email }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error al enviar email');
             return data;
         },
 
@@ -51,56 +59,75 @@ export const api = {
                 body: JSON.stringify({ token, newPassword }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error al resetear contraseña');
             return data;
         },
 
         getProfile: async () => {
+            const headers = getAuthHeaders();
+            console.log('🔑 [API] getProfile - Headers enviados:', headers);
+
             const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                method: 'GET',
+                headers: headers,
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error al obtener perfil');
             return data;
         },
     },
 
     admin: {
         getAllUsers: async () => {
+            const headers = getAuthHeaders();
+            console.log('🔑 [API] getAllUsers - Headers:', headers);
+
             const response = await fetch(`${API_BASE_URL}/users`, {
-                headers: getAuthHeaders(),
+                method: 'GET',
+                headers: headers,
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error al obtener usuarios');
             return data;
         },
 
         getUserById: async (id) => {
+            const headers = getAuthHeaders();
             const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-                headers: getAuthHeaders(),
+                method: 'GET',
+                headers: headers,
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error al obtener usuario');
             return data;
         },
 
         updateUser: async (id, userData) => {
+            const headers = getAuthHeaders();
             const response = await fetch(`${API_BASE_URL}/users/${id}`, {
                 method: 'PUT',
-                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify(userData),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error al actualizar usuario');
             return data;
         },
 
         getUserStats: async () => {
+            const headers = getAuthHeaders();
+            console.log('🔑 [API] getUserStats - URL:', `${API_BASE_URL}/users/stats/summary`);
+            console.log('🔑 [API] getUserStats - Headers:', headers);
+
             const response = await fetch(`${API_BASE_URL}/users/stats/summary`, {
-                headers: getAuthHeaders(),
+                method: 'GET',
+                headers: headers,
             });
+
+            console.log('🔑 [API] getUserStats - Response status:', response.status);
+
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message);
+            if (!response.ok) throw new Error(data.message || 'Error al obtener estadísticas');
             return data;
         },
     },
