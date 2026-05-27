@@ -69,6 +69,10 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.usersService.findByEmail(email);
 
+    console.log('🔍 [BACKEND] Login attempt for:', email);
+    console.log('🔍 [BACKEND] User found:', user ? 'Yes' : 'No');
+    console.log('🔍 [BACKEND] User role in DB:', user?.role);
+
     if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -83,10 +87,20 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    // ✅ Asegurar que el rol es el correcto y hacer logging
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role  // Esto debe ser 'admin' o 'client'
+    };
+
+    console.log('🔍 [BACKEND] JWT Payload:', payload);
+
     const accessToken = await this.jwtService.signAsync(payload);
 
     const { password: _, ...userWithoutPassword } = user;
+
+    console.log('🔍 [BACKEND] Returning user with role:', userWithoutPassword.role);
 
     // 📧 ENVIAR ALERTA DE INICIO DE SESIÓN
     const ip = req?.ip || req?.socket?.remoteAddress || 'IP no disponible';
@@ -100,7 +114,7 @@ export class AuthService {
       timestamp: new Date(),
     });
 
-    this.logger.log(`🔐 Usuario autenticado: ${user.email} - IP: ${ip}`);
+    this.logger.log(`🔐 Usuario autenticado: ${user.email} - Rol: ${user.role} - IP: ${ip}`);
 
     return {
       message: 'Login exitoso. Te hemos enviado un email de confirmación.',
