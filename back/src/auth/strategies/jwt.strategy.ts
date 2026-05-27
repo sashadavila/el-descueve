@@ -11,20 +11,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             ignoreExpiration: false,
             secretOrKey: process.env.JWT_SECRET || 'superSecretKey',
         });
+        console.log('🔧 [JwtStrategy] Inicializado con secret:', process.env.JWT_SECRET || 'superSecretKey');
     }
 
     async validate(payload: { sub: string; email: string; role: string }) {
+        console.log('🔍 [JwtStrategy] Payload recibido:', payload);
+        console.log('🔍 [JwtStrategy] User ID:', payload.sub);
+
         const user = await this.usersService.findById(payload.sub);
 
         if (!user) {
+            console.log('❌ [JwtStrategy] Usuario no encontrado');
             throw new UnauthorizedException('Usuario no encontrado');
         }
 
         if (!user.isActive) {
+            console.log('❌ [JwtStrategy] Usuario inactivo');
             throw new UnauthorizedException('Usuario inactivo');
         }
 
-        return {
+        const result = {
             id: user.id,
             email: user.email,
             role: user.role,
@@ -33,5 +39,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             company: user.company,
             rut: user.rut,
         };
+
+        console.log('✅ [JwtStrategy] Usuario validado:', result);
+
+        return result;
     }
 }
