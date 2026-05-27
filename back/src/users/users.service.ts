@@ -44,11 +44,22 @@ export class UsersService {
   }
 
   async update(id: string, userData: Partial<User>): Promise<User | null> {
+    console.log('🔄 [UsersService] Actualizando usuario:', id);
+    console.log('📝 Datos a actualizar:', userData);
+
+    // Verificar que el usuario existe
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    // Actualizar solo los campos permitidos
     await this.usersRepository.update(id, userData);
+
+    // Retornar el usuario actualizado
     return this.findById(id);
   }
 
-  // ✅ NUEVO MÉTODO: Actualizar rol de usuario
   async updateRole(id: string, role: UserRole): Promise<User | null> {
     await this.usersRepository.update(id, { role });
     return this.findById(id);
@@ -76,7 +87,6 @@ export class UsersService {
       return this.findById(user.id) as Promise<User>;
     }
 
-    // Usar el enum UserRole.CLIENT
     return this.create({
       googleId: profile.googleId,
       email: profile.email,
@@ -84,7 +94,7 @@ export class UsersService {
       photoUrl: profile.photoUrl,
       password: null,
       isActive: true,
-      role: UserRole.CLIENT, // Cambiar a CLIENT (no a string)
+      role: UserRole.CLIENT,
     });
   }
 }
