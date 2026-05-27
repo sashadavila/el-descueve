@@ -18,6 +18,16 @@ export function AuthProvider({ children }) {
                     const parsedUser = JSON.parse(storedUser)
                     setUser(parsedUser)
                     setIsAuthenticated(true)
+
+                    // Verificar si el token sigue siendo válido
+                    try {
+                        const profile = await api.auth.getProfile()
+                        setUser(profile)
+                        localStorage.setItem('user', JSON.stringify(profile))
+                    } catch (error) {
+                        console.error('Token inválido, cerrando sesión')
+                        logout()
+                    }
                 } catch (error) {
                     console.error('Error parsing stored user:', error)
                     localStorage.removeItem('access_token')
@@ -78,6 +88,11 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('user')
     }
 
+    // Verificar si el usuario es admin
+    const isAdmin = () => {
+        return user?.role === 'admin'
+    }
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -86,7 +101,8 @@ export function AuthProvider({ children }) {
             login,
             signup,
             logout,
-            setUserFromGoogle
+            setUserFromGoogle,
+            isAdmin: isAdmin()
         }}>
             {children}
         </AuthContext.Provider>
