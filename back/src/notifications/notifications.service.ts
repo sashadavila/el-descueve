@@ -1,0 +1,185 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, FindOptionsWhere, Between } from 'typeorm';
+import { Notification, NotificationType, NotificationStatus } from './entities/notification.entity';
+import { CreateNotificationDto } from './dto/create-notification.dto';
+import { UpdateNotificationDto } from './dto/update-notification.dto';
+
+@Injectable()
+export class NotificationsService {
+    constructor(
+        @InjectRepository(Notification)
+        private readonly notificationsRepository: Repository<Notification>,
+    ) { }
+
+    async create(createNotificationDto: CreateNotificationDto): Promise<Notification> {
+        const notification = this.notificationsRepository.create(createNotificationDto);
+        return this.notificationsRepository.save(notification);
+    }
+
+    async findAll(
+        status?: NotificationStatus,
+        page: number = 1,
+        limit: number = 10,
+    ): Promise<{ data: Notification[]; total: number; page: number; totalPages: number }> {
+        const where: FindOptionsWhere<Notification> = {};
+
+        if (status) {
+            where.status = status;
+        }
+
+        const [data, total] = await this.notificationsRepository.findAndCount({
+            where,
+            order: { createdAt: 'DESC' },
+            skip: (page - 1) * limit,
+            take: limit,
+        });
+
+        return {
+            data,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+        };
+    }
+
+    async findOne(id: string): Promise<Notification> {
+        const notification = await this.notificationsRepository.findOne({
+            where: { id },
+        });
+
+        if (!notification) {
+            throw new NotFoundException(`Notificación con ID ${id} no encontrada`);
+        }
+
+        return notification;
+    }
+
+    async update(id: string, updateNotificationDto: UpdateNotificationDto): Promise<Notification> {
+        const notification = await this.findOne(id);
+        Object.assign(notification, updateNotificationDto);
+        return this.notificationsRepository.save(notification);
+    }
+
+    async markAsRead(id: string): Promise<Notification> {
+        const notification = await this.findOne(id);
+        notification.status = NotificationStatus.READ;
+        return this.notificationsRepository.save(notification);
+    }
+
+    async markAllAsRead(): Promise<{ count: number }> {
+        const result = await this.notificationsRepository.update(
+            { status: NotificationStatus.UNREAD },
+            { status: NotificationStatus.READ },
+        );
+        return { count: result.affected || 0 };
+    }
+
+    async remove(id: string): Promise<{ message: string }> {
+        const notification = await this.findOne(id);
+        await this.notificationsRepository.remove(notification);
+        return { message: `Notificación con ID ${id} eliminada correctamente` };
+    }
+
+    async getUnreadCount(): Promise<{ count: number }> {
+        const count = await this.notificationsRepository.count({
+            where: { status: NotificationStatus.UNREAD },
+        });
+        return { count };
+    }
+
+    // Método para generar notificaciones automáticas basadas en actividad de usuarios
+    async generateUserNotifications(users: any[]): Promise<void> {
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+
+        // Notificaciones de nuevos usuarios (últimos 7 días)
+        const recentUsers = users.filter(user => {
+            const createdAt = new Date(user.createdAt);
+            return createdAt >= sevenDaysAgo;
+        });
+
+        for (const user of recentUsers) {
+            const existing = await this.notificationsRepository.findOne({
+                where: {
+                    type: NotificationType.NEW_USER,
+                    metadata: { userId: user.id },
+                },
+            });
+
+            if (!existing) {
+                await this.create({
+                    title: 'Nuevo usuario registrado',
+                    message: `${user.name} se ha registrado en la plataforma`,
+                    type: NotificationType.NEW_USER,
+                    metadata: {
+                        userId: user.id,
+                        userName: user.name,
+                        userEmail: user.email,
+                        userCompany: user.company,
+                    },
+                    icon: 'person_add',
+                    iconColor: 'text-green-500',
+                    bgColor: 'bg-green-50',
+                    status: NotificationStatus.UNREAD,
+                });
+            }
+        }
+
+        // Notificaciones de usuarios inactivos
+        const inactiveUsers = users.filter(user => !user.isActive);
+        for (const user of inactiveUsers) {
+            const existing = await this.notificationsRepository.findOne({
+                where: {
+                    type: NotificationType.INACTIVE_USER,
+                    metadata: { userId: user.id },
+                },
+            });
+
+            if (!existing) {
+                await this.create({
+                    title: 'Cuenta desactivada',
+                    message: `La cuenta de ${user.name} está actualmente desactivada`,
+                    type: NotificationType.INACTIVE_USER,
+                    metadata: {
+                        userId: user.id,
+                        userName: user.name,
+                        userEmail: user.email,
+                    },
+                    icon: 'block',
+                    iconColor: 'text-red-500',
+                    bgColor: 'bg-red-50',
+                    status: NotificationStatus.UNREAD,
+                });
+            }
+        }
+
+        // Notificaciones de administradores
+        const adminUsers = users.filter(user => user.role === 'admin' && user.email !== 'admin@eldescuevee.cl');
+        for (const user of adminUsers) {
+            const existing = await this.notificationsRepository.findOne({
+                where: {
+                    type: NotificationType.ADMIN_USER,
+                    metadata: { userId: user.id },
+                },
+            });
+
+            if (!existing) {
+                await this.create({
+                    title: 'Administrador en el sistema',
+                    message: `${user.name} tiene permisos de administrador`,
+                    type: NotificationType.ADMIN_USER,
+                    metadata: {
+                        userId: user.id,
+                        userName: user.name,
+                        userEmail: user.email,
+                    },
+                    icon: 'admin_panel_settings',
+                    iconColor: 'text-purple-500',
+                    bgColor: 'bg-purple-50',
+                    status: NotificationStatus.UNREAD,
+                });
+            }
+        }
+    }
+}
