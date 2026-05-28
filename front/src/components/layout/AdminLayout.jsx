@@ -17,28 +17,17 @@ export default function AdminLayout() {
     const [currentTime, setCurrentTime] = useState('')
     const [unreadCount, setUnreadCount] = useState(0)
 
-    // Escuchar actualizaciones del contador de notificaciones
+    // Solo la primera carga
     useEffect(() => {
-        const handleUnreadCountUpdate = (event) => {
-            setUnreadCount(event.detail.count)
-        }
-
-        window.addEventListener('unreadCountUpdate', handleUnreadCountUpdate)
-
-        // Actualizar contador periódicamente
-        const interval = setInterval(async () => {
+        const fetchUnreadCount = async () => {
             try {
                 const { count } = await api.notifications.getUnreadCount()
                 setUnreadCount(count)
             } catch (error) {
                 console.error('Error fetching unread count:', error)
             }
-        }, 30000) // Cada 30 segundos
-
-        return () => {
-            window.removeEventListener('unreadCountUpdate', handleUnreadCountUpdate)
-            clearInterval(interval)
         }
+        fetchUnreadCount()
     }, [])
 
     // Verificar permisos de admin
