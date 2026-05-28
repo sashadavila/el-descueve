@@ -1,16 +1,9 @@
+// api.js - Versión corregida
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('access_token');
-    console.log('🔑 [API] getAuthHeaders - Token existe:', !!token);
-    if (token) {
-        console.log('🔑 [API] Token (primeros 50 chars):', token.substring(0, 50) + '...');
-        return {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        };
-    }
-    return { 'Content-Type': 'application/json' };
+    return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 };
 
 export const api = {
@@ -25,7 +18,6 @@ export const api = {
             if (!response.ok) throw new Error(data.message || 'Error en login');
             return data;
         },
-
         register: async (userData) => {
             const response = await fetch(`${API_BASE_URL}/auth/register`, {
                 method: 'POST',
@@ -36,11 +28,14 @@ export const api = {
             if (!response.ok) throw new Error(data.message || 'Error en registro');
             return data;
         },
-
-        googleLogin: () => {
-            window.location.href = `${API_BASE_URL}/auth/google`;
+        getProfile: async () => {
+            const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener perfil');
+            return data;
         },
-
         forgotPassword: async (email) => {
             const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
                 method: 'POST',
@@ -51,7 +46,6 @@ export const api = {
             if (!response.ok) throw new Error(data.message || 'Error al enviar email');
             return data;
         },
-
         resetPassword: async (token, newPassword) => {
             const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
                 method: 'POST',
@@ -59,75 +53,115 @@ export const api = {
                 body: JSON.stringify({ token, newPassword }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Error al resetear contraseña');
+            if (!response.ok) throw new Error(data.message || 'Error al restablecer contraseña');
             return data;
         },
-
-        getProfile: async () => {
-            const headers = getAuthHeaders();
-            console.log('🔑 [API] getProfile - Headers enviados:', headers);
-
-            const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-                method: 'GET',
-                headers: headers,
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Error al obtener perfil');
-            return data;
+        googleLogin: () => {
+            window.location.href = `${API_BASE_URL}/auth/google`;
         },
     },
 
     admin: {
         getAllUsers: async () => {
-            const headers = getAuthHeaders();
-            console.log('🔑 [API] getAllUsers - Headers:', headers);
-
             const response = await fetch(`${API_BASE_URL}/users`, {
-                method: 'GET',
-                headers: headers,
+                headers: getAuthHeaders(),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Error al obtener usuarios');
             return data;
         },
-
         getUserById: async (id) => {
-            const headers = getAuthHeaders();
             const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-                method: 'GET',
-                headers: headers,
+                headers: getAuthHeaders(),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Error al obtener usuario');
             return data;
         },
-
         updateUser: async (id, userData) => {
-            const headers = getAuthHeaders();
             const response = await fetch(`${API_BASE_URL}/users/${id}`, {
                 method: 'PUT',
-                headers: headers,
+                headers: getAuthHeaders(),
                 body: JSON.stringify(userData),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Error al actualizar usuario');
             return data;
         },
-
         getUserStats: async () => {
-            const headers = getAuthHeaders();
-            console.log('🔑 [API] getUserStats - URL:', `${API_BASE_URL}/users/stats/summary`);
-            console.log('🔑 [API] getUserStats - Headers:', headers);
-
             const response = await fetch(`${API_BASE_URL}/users/stats/summary`, {
-                method: 'GET',
-                headers: headers,
+                headers: getAuthHeaders(),
             });
-
-            console.log('🔑 [API] getUserStats - Response status:', response.status);
-
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Error al obtener estadísticas');
+            return data;
+        },
+        getAllOrders: async () => {
+            const response = await fetch(`${API_BASE_URL}/orders`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener órdenes');
+            return data;
+        },
+    },
+
+    notifications: {
+        getAll: async (status = null, page = 1, limit = 10) => {
+            let url = `${API_BASE_URL}/notifications?page=${page}&limit=${limit}`;
+            if (status) {
+                url += `&status=${status}`;
+            }
+            const response = await fetch(url, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener notificaciones');
+            return data;
+        },
+        getUnreadCount: async () => {
+            const response = await fetch(`${API_BASE_URL}/notifications/unread/count`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener contador');
+            return data;
+        },
+        markAsRead: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al marcar como leída');
+            return data;
+        },
+        markAllAsRead: async () => {
+            const response = await fetch(`${API_BASE_URL}/notifications/actions/mark-all-read`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al marcar todas como leídas');
+            return data;
+        },
+        delete: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/notifications/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al eliminar notificación');
+            return data;
+        },
+        generate: async (users) => {
+            const response = await fetch(`${API_BASE_URL}/notifications/actions/generate`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ users }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al generar notificaciones');
             return data;
         },
     },
