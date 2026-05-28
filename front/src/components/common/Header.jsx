@@ -77,13 +77,6 @@ export default function Header() {
                         )}
                     </button>
 
-                    {/* DEBUG: Badge visual para ver el rol (solo en desarrollo) */}
-                    {isAuthenticated && (
-                        <div className={`hidden lg:block text-xs px-2 py-0.5 rounded-full font-bold ${user?.role === 'admin' ? 'bg-green-500 text-white' : 'bg-white/20 text-white'}`}>
-                            {user?.role === 'admin' ? '👑 ADMIN' : `Rol: ${user?.role || '?'}`}
-                        </div>
-                    )}
-
                     {/* BOTÓN DE ADMIN - Solo visible si es admin */}
                     {isAuthenticated && isAdmin === true && (
                         <div className="relative" ref={adminMenuRef}>
@@ -121,16 +114,6 @@ export default function Header() {
                                                 <span className="font-medium">{item.label}</span>
                                             </Link>
                                         ))}
-                                        <div className="border-t border-gray-100 mt-1 pt-1">
-                                            <Link
-                                                to="/"
-                                                onClick={() => setIsAdminMenuOpen(false)}
-                                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/5 hover:text-primary transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">storefront</span>
-                                                <span className="font-medium">Ir a la tienda</span>
-                                            </Link>
-                                        </div>
                                     </div>
                                 </div>
                             )}
