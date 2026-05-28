@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useState, useEffect } from 'react'
+import api from '../../config/api'
 
 const navItems = [
     { path: '/admin', label: 'Dashboard', icon: 'dashboard', description: 'Resumen y métricas' },
@@ -15,6 +16,30 @@ export default function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [currentTime, setCurrentTime] = useState('')
     const [unreadCount, setUnreadCount] = useState(0)
+
+    // Escuchar actualizaciones del contador de notificaciones
+    useEffect(() => {
+        const handleUnreadCountUpdate = (event) => {
+            setUnreadCount(event.detail.count)
+        }
+
+        window.addEventListener('unreadCountUpdate', handleUnreadCountUpdate)
+
+        // Actualizar contador periódicamente
+        const interval = setInterval(async () => {
+            try {
+                const { count } = await api.notifications.getUnreadCount()
+                setUnreadCount(count)
+            } catch (error) {
+                console.error('Error fetching unread count:', error)
+            }
+        }, 30000) // Cada 30 segundos
+
+        return () => {
+            window.removeEventListener('unreadCountUpdate', handleUnreadCountUpdate)
+            clearInterval(interval)
+        }
+    }, [])
 
     // Verificar permisos de admin
     useEffect(() => {
@@ -133,8 +158,8 @@ export default function AdminLayout() {
                                 to={item.path}
                                 onClick={() => setSidebarOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
-                                        ? 'bg-[#FC9430] text-white shadow-lg'
-                                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                    ? 'bg-[#FC9430] text-white shadow-lg'
+                                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                                     }`}
                             >
                                 <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`}>
@@ -161,8 +186,8 @@ export default function AdminLayout() {
                         to="/admin/notificaciones"
                         onClick={() => setSidebarOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === '/admin/notificaciones'
-                                ? 'bg-[#FC9430] text-white shadow-lg'
-                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            ? 'bg-[#FC9430] text-white shadow-lg'
+                            : 'text-white/70 hover:bg-white/10 hover:text-white'
                             }`}
                     >
                         <span className="material-symbols-outlined text-xl">notifications</span>
@@ -182,8 +207,8 @@ export default function AdminLayout() {
                         to="/admin/ayuda"
                         onClick={() => setSidebarOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === '/admin/ayuda'
-                                ? 'bg-[#FC9430] text-white shadow-lg'
-                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            ? 'bg-[#FC9430] text-white shadow-lg'
+                            : 'text-white/70 hover:bg-white/10 hover:text-white'
                             }`}
                     >
                         <span className="material-symbols-outlined text-xl">help_outline</span>
