@@ -149,8 +149,8 @@ export default function AdminHelp() {
                                     key={section.id}
                                     onClick={() => setActiveSection(section.id)}
                                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${activeSection === section.id
-                                            ? 'bg-primary/10 text-primary font-medium'
-                                            : 'text-gray-600 hover:bg-gray-50'
+                                        ? 'bg-primary/10 text-primary font-medium'
+                                        : 'text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     <Icon name={section.icon} className="text-lg" />
@@ -264,15 +264,6 @@ export default function AdminHelp() {
                                 </div>
                             )}
                         </div>
-                    </div>
-
-                    {/* Feedback */}
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center">
-                        <p className="text-sm text-gray-500">
-                            ¿Te fue útil esta información?
-                            <button className="ml-2 text-primary hover:text-[#FC9430] transition-colors">👍 Sí</button>
-                            <button className="ml-3 text-gray-400 hover:text-gray-600 transition-colors">👎 No</button>
-                        </p>
                     </div>
                 </div>
             </div>
