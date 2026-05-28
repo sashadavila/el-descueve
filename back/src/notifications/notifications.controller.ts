@@ -20,7 +20,7 @@ import {
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
-import { Notification, NotificationStatus } from './entities/notification.entity';
+import { Notification, NotificationStatus, NotificationType } from './entities/notification.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -35,8 +35,9 @@ export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Crear una nueva notificación' })
+    @ApiOperation({ summary: 'Crear una nueva notificación (con verificación de duplicados)' })
     @ApiResponse({ status: 201, description: 'Notificación creada correctamente.' })
+    @ApiResponse({ status: 409, description: 'Ya existe una notificación de este tipo para este usuario.' })
     async create(@Body() createNotificationDto: CreateNotificationDto): Promise<Notification> {
         return this.notificationsService.create(createNotificationDto);
     }
@@ -64,6 +65,16 @@ export class NotificationsController {
     @ApiResponse({ status: 200, description: 'Cantidad obtenida correctamente.' })
     async getUnreadCount() {
         return this.notificationsService.getUnreadCount();
+    }
+
+    @Get('check/:type/:userId')
+    @ApiOperation({ summary: 'Verificar si ya existe una notificación para un usuario' })
+    @ApiResponse({ status: 200, description: 'Verificación realizada correctamente.' })
+    async checkExisting(
+        @Param('type') type: NotificationType,
+        @Param('userId') userId: string,
+    ) {
+        return this.notificationsService.checkExistingNotification(type, userId);
     }
 
     @Get(':id')
@@ -99,17 +110,28 @@ export class NotificationsController {
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: 'Eliminar una notificación' })
+    @ApiOperation({ summary: 'Eliminar una notificación (solo si está LEÍDA)' })
     @ApiResponse({ status: 200, description: 'Notificación eliminada correctamente.' })
+    @ApiResponse({ status: 400, description: 'No se puede eliminar notificación no leída.' })
     async remove(@Param('id', ParseUUIDPipe) id: string): Promise<{ message: string }> {
         return this.notificationsService.remove(id);
     }
 
     @Post('actions/generate')
-    @ApiOperation({ summary: 'Generar notificaciones automáticas basadas en usuarios' })
+    @ApiOperation({ summary: 'Generar notificaciones automáticas (limpia antiguas + evita duplicados)' })
     @ApiResponse({ status: 200, description: 'Notificaciones generadas correctamente.' })
-    async generateNotifications(@Body('users') users: any[]): Promise<{ message: string }> {
-        await this.notificationsService.generateUserNotifications(users);
-        return { message: 'Notificaciones generadas correctamente' };
+    async generateNotifications(@Body('users') users: any[]): Promise<{ created: number; skipped: number; cleaned: number; message: string }> {
+        const result = await this.notificationsService.generateUserNotifications(users);
+        return {
+            ...result,
+            message: `✅ Notificaciones actualizadas: ${result.created} nuevas, ${result.skipped} omitidas (ya existían), ${result.cleaned} eliminadas (antiguas >30 días)`
+        };
+    }
+
+    @Delete('actions/clean-old')
+    @ApiOperation({ summary: 'Limpiar notificaciones antiguas (más de 30 días leídas)' })
+    @ApiResponse({ status: 200, description: 'Notificaciones antiguas eliminadas.' })
+    async cleanOldNotifications(@Query('days') days: string = '30'): Promise<{ count: number; message: string }> {
+        return this.notificationsService.cleanOldNotifications(parseInt(days));
     }
 }
