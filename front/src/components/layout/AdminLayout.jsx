@@ -1,17 +1,20 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 
 const navItems = [
-    { path: '/admin', label: 'Dashboard', icon: 'dashboard' },
-    { path: '/admin/clientes', label: 'Clientes', icon: 'groups' },
-    { path: '/admin/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
+    { path: '/admin', label: 'Dashboard', icon: 'dashboard', description: 'Resumen y métricas' },
+    { path: '/admin/clientes', label: 'Clientes', icon: 'groups', description: 'Gestión de clientes' },
+    { path: '/admin/estadisticas', label: 'Estadísticas', icon: 'bar_chart', description: 'Análisis de datos' },
 ]
 
 export default function AdminLayout() {
     const location = useLocation()
     const navigate = useNavigate()
-    const { isAdmin, isAuthenticated, loading } = useAuth()
+    const { isAdmin, isAuthenticated, loading, user } = useAuth()
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [currentTime, setCurrentTime] = useState('')
+    const [unreadCount, setUnreadCount] = useState(0)
 
     // Verificar permisos de admin
     useEffect(() => {
@@ -24,10 +27,44 @@ export default function AdminLayout() {
         }
     }, [isAuthenticated, isAdmin, loading, navigate])
 
+    // Actualizar hora actual
+    useEffect(() => {
+        const updateTime = () => {
+            const now = new Date()
+            const formattedTime = now.toLocaleTimeString('es-CL', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+            setCurrentTime(formattedTime)
+        }
+        updateTime()
+        const interval = setInterval(updateTime, 1000)
+        return () => clearInterval(interval)
+    }, [])
+
+    // Simular notificaciones no leídas (conectar con API real después)
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                // Aquí puedes conectar con un endpoint real
+                // const response = await api.notifications.getUnreadCount()
+                // setUnreadCount(response.count)
+                setUnreadCount(3) // Ejemplo temporal
+            } catch (error) {
+                console.error('Error fetching unread count:', error)
+            }
+        }
+        fetchUnreadCount()
+    }, [])
+
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 to-white">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#FC9430] mx-auto"></div>
+                    <p className="mt-4 text-gray-500 font-medium">Cargando panel de control...</p>
+                </div>
             </div>
         )
     }
@@ -36,103 +73,227 @@ export default function AdminLayout() {
         return null
     }
 
+    // Obtener el nombre del usuario o usar "Administrador"
+    const userName = user?.name?.split(' ')[0] || 'Admin'
+    const userEmail = user?.email || 'admin@eldescuevee.cl'
+
     return (
-        <div className="min-h-screen bg-background">
-            {/* Sidebar - Versión mejorada para mobile/desktop */}
-            <aside className="fixed left-0 top-0 h-full w-64 border-r border-slate-200 bg-white flex flex-col py-6 z-40 transform transition-transform -translate-x-full md:translate-x-0">
-                <div className="px-6 mb-10">
-                    <h1 className="text-xl font-black text-[#163C7A] tracking-tighter">EL DESCUVEE</h1>
-                    <p className="uppercase tracking-wider text-xs font-bold text-slate-500">Panel de Control</p>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            {/* Overlay para mobile cuando el sidebar está abierto */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
+            {/* Sidebar - Versión mejorada */}
+            <aside className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-[#163C7A] to-[#0f2a5c] shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+                {/* Logo y marca */}
+                <div className="px-6 py-8 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#FC9430] rounded-xl flex items-center justify-center shadow-lg">
+                            <span className="material-symbols-outlined text-white text-2xl">token</span>
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-black text-white tracking-tighter">EL DESCUVEE</h1>
+                            <p className="text-[10px] text-[#FC9430] uppercase tracking-wider font-bold">Panel de Control</p>
+                        </div>
+                    </div>
                 </div>
 
-                <nav className="flex-1 space-y-1">
+                {/* Perfil del usuario */}
+                <div className="px-6 py-6 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FC9430] to-[#e0852b] flex items-center justify-center shadow-lg">
+                                <span className="text-white font-bold text-lg">
+                                    {userName.charAt(0).toUpperCase()}
+                                </span>
+                            </div>
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#163C7A]"></div>
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm font-bold text-white">{userName}</p>
+                            <p className="text-[10px] text-white/60 truncate">{userEmail}</p>
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-[#FC9430]/20 text-[#FC9430] text-[8px] font-bold uppercase rounded-full">
+                                Administrador
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Navegación principal */}
+                <nav className="flex-1 px-4 py-6 space-y-1">
                     {navItems.map(item => {
                         const isActive = location.pathname === item.path
                         return (
                             <Link
                                 key={item.path}
                                 to={item.path}
-                                className={`flex items-center px-6 py-3 transition-colors ${isActive
-                                    ? 'bg-slate-100 text-[#163C7A] border-l-4 border-[#163C7A]'
-                                    : 'text-slate-500 hover:text-[#163C7A] hover:bg-slate-50'
+                                onClick={() => setSidebarOpen(false)}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
+                                        ? 'bg-[#FC9430] text-white shadow-lg'
+                                        : 'text-white/70 hover:bg-white/10 hover:text-white'
                                     }`}
                             >
-                                <span className="material-symbols-outlined mr-3">{item.icon}</span>
-                                <span className="uppercase tracking-wider text-xs font-bold">{item.label}</span>
+                                <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`}>
+                                    {item.icon}
+                                </span>
+                                <div className="flex-1">
+                                    <div className="font-semibold text-sm uppercase tracking-wide">{item.label}</div>
+                                    <div className={`text-[10px] ${isActive ? 'text-white/80' : 'text-white/40'}`}>
+                                        {item.description}
+                                    </div>
+                                </div>
+                                {isActive && (
+                                    <span className="w-1.5 h-8 bg-white rounded-full"></span>
+                                )}
                             </Link>
                         )
                     })}
+
+                    {/* Separador */}
+                    <div className="my-4 border-t border-white/10"></div>
+
+                    {/* Notificaciones en sidebar */}
+                    <Link
+                        to="/admin/notificaciones"
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === '/admin/notificaciones'
+                                ? 'bg-[#FC9430] text-white shadow-lg'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-xl">notifications</span>
+                        <div className="flex-1">
+                            <div className="font-semibold text-sm uppercase tracking-wide">Notificaciones</div>
+                            <div className="text-[10px] text-white/40">Actividad reciente</div>
+                        </div>
+                        {unreadCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </Link>
+
+                    {/* Ayuda en sidebar */}
+                    <Link
+                        to="/admin/ayuda"
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === '/admin/ayuda'
+                                ? 'bg-[#FC9430] text-white shadow-lg'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-xl">help_outline</span>
+                        <div className="flex-1">
+                            <div className="font-semibold text-sm uppercase tracking-wide">Ayuda</div>
+                            <div className="text-[10px] text-white/40">Guía y soporte</div>
+                        </div>
+                    </Link>
                 </nav>
 
-                <div className="px-6 pt-6 mt-6 border-t border-slate-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
-                            <img
-                                src="https://ui-avatars.com/api/?background=163C7A&color=fff&name=Admin"
-                                alt="Admin"
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <div>
-                            <p className="text-sm font-bold text-on-background">Administrador</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Admin Principal</p>
-                        </div>
-                    </div>
-
+                {/* Footer del sidebar */}
+                <div className="px-6 py-6 border-t border-white/10">
                     <Link
                         to="/"
-                        className="mt-4 flex items-center gap-2 text-sm text-slate-500 hover:text-[#FC9430] transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200 group"
                     >
-                        <span className="material-symbols-outlined text-sm">arrow_back</span>
-                        Volver al sitio
+                        <span className="material-symbols-outlined text-xl">storefront</span>
+                        <div>
+                            <div className="font-semibold text-sm">Ir a la tienda</div>
+                            <div className="text-[10px] text-white/40">Volver al sitio principal</div>
+                        </div>
                     </Link>
                 </div>
             </aside>
 
-            {/* Top Bar */}
-            <header className="fixed top-0 right-0 left-0 md:left-64 h-16 border-b-2 border-slate-100 bg-white z-30 flex justify-between items-center px-4 md:px-8">
-                <div className="flex items-center gap-4 w-1/3">
-                    <button
-                        className="md:hidden text-slate-600 hover:text-primary"
-                        onClick={() => {
-                            const sidebar = document.querySelector('aside')
-                            sidebar?.classList.toggle('-translate-x-full')
-                        }}
-                    >
-                        <span className="material-symbols-outlined">menu</span>
-                    </button>
-                    <div className="relative w-full max-w-xs hidden md:block">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                            search
-                        </span>
-                        <input
-                            type="text"
-                            placeholder="Buscar pedidos..."
-                            className="w-full bg-slate-50 border border-slate-200 py-1.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary-container outline-none rounded"
-                        />
+            {/* Top Bar - Header mejorado */}
+            <header className="fixed top-0 right-0 left-0 md:left-72 h-16 bg-white border-b border-gray-200 z-30 flex justify-between items-center px-4 md:px-8 shadow-sm">
+                {/* Botón hamburguesa para mobile */}
+                <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                    <span className="material-symbols-outlined">menu</span>
+                </button>
+
+                {/* Título de la página actual */}
+                <div className="flex items-center gap-3">
+                    <div className="hidden md:block">
+                        <h2 className="text-lg font-bold text-[#163C7A]">
+                            {navItems.find(item => item.path === location.pathname)?.label ||
+                                (location.pathname === '/admin/notificaciones' ? 'Notificaciones' :
+                                    location.pathname === '/admin/ayuda' ? 'Ayuda' : 'Dashboard')}
+                        </h2>
+                        <p className="text-xs text-gray-500">
+                            {navItems.find(item => item.path === location.pathname)?.description ||
+                                (location.pathname === '/admin/notificaciones' ? 'Actividad reciente y alertas' :
+                                    location.pathname === '/admin/ayuda' ? 'Guía y soporte técnico' : 'Bienvenido al panel de administración')}
+                        </p>
                     </div>
                 </div>
 
-                <div className="text-lg font-bold text-[#163C7A] hidden lg:block">
-                    El Descuevee - Panel de Administración
-                </div>
-
+                {/* Acciones del header */}
                 <div className="flex items-center gap-4">
-                    <button className="text-slate-600 hover:text-[#FC9430] transition-colors relative">
-                        <span className="material-symbols-outlined">notifications</span>
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </button>
-                    <Link to="/" className="text-slate-600 hover:text-[#FC9430] transition-colors flex items-center gap-2">
-                        <span className="material-symbols-outlined">home</span>
-                        <span className="hidden sm:inline text-sm">Inicio</span>
+                    {/* Reloj */}
+                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg">
+                        <span className="material-symbols-outlined text-sm text-gray-500">schedule</span>
+                        <span className="text-sm font-medium text-gray-700">{currentTime}</span>
+                    </div>
+
+                    {/* Notificaciones en header */}
+                    <Link
+                        to="/admin/notificaciones"
+                        className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <span className="material-symbols-outlined">notifications_none</span>
+                        {unreadCount > 0 && (
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                        )}
+                    </Link>
+
+                    {/* Link a inicio */}
+                    <Link
+                        to="/"
+                        className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-sm">home</span>
+                        <span className="hidden sm:inline text-sm font-medium">Inicio</span>
+                    </Link>
+
+                    {/* Botón de ayuda en header */}
+                    <Link
+                        to="/admin/ayuda"
+                        className="hidden md:flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-sm">help_outline</span>
+                        <span className="text-sm font-medium">Ayuda</span>
                     </Link>
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="md:ml-64 pt-20 px-4 md:px-6 pb-8 min-h-screen">
-                <div className="max-w-[1280px] mx-auto">
-                    <Outlet />
+            <main className="md:ml-72 pt-20 px-4 md:px-8 pb-8 min-h-screen">
+                <div className="max-w-[1400px] mx-auto">
+                    {/* Breadcrumb */}
+                    <div className="mb-6">
+                        <div className="flex items-center gap-2 text-sm">
+                            <Link to="/admin" className="text-gray-500 hover:text-[#163C7A] transition-colors">Admin</Link>
+                            <span className="material-symbols-outlined text-sm text-gray-400">chevron_right</span>
+                            <span className="font-medium text-[#163C7A]">
+                                {navItems.find(item => item.path === location.pathname)?.label ||
+                                    (location.pathname === '/admin/notificaciones' ? 'Notificaciones' :
+                                        location.pathname === '/admin/ayuda' ? 'Ayuda' : 'Dashboard')}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Contenido principal con animación */}
+                    <div className="animate-fade-in-up">
+                        <Outlet />
+                    </div>
                 </div>
             </main>
         </div>
