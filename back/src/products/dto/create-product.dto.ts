@@ -7,81 +7,153 @@ import {
     IsString,
     IsUUID,
     Min,
+    IsArray,
+    IsEnum,
+    IsObject,
 } from 'class-validator';
+import { ProductType, ProductSize } from '../entities/product.entity';
 
 export class CreateProductDto {
-    @ApiProperty({
-        example: 'Camisa de trabajo azul',
-        description: 'Nombre del producto',
-    })
+    @ApiProperty({ example: 'Polera Polo Piqué' })
     @IsString()
     @IsNotEmpty()
     name: string;
 
-    @ApiProperty({
-        example: 'Camisa resistente para uso laboral diario.',
-        description: 'Descripción del producto',
-    })
+    @ApiProperty({ example: 'Polera polo en algodón piqué...' })
     @IsString()
     @IsNotEmpty()
     description: string;
 
-    @ApiProperty({
-        example: 12500,
-        description: 'Precio del producto',
-        minimum: 0,
-    })
+    @ApiProperty({ example: 'POL-001' })
+    @IsString()
+    @IsNotEmpty()
+    reference: string;
+
+    @ApiProperty({ example: 12900 })
     @IsNumber()
     @Min(0)
     price: number;
 
-    @ApiProperty({
-        example: '9f4b67f5-4b72-4f53-bcc2-5d5d7d63a321',
-        description: 'ID de la categoría del producto',
-    })
+    @ApiPropertyOptional({ example: 15900 })
+    @IsOptional()
+    @IsNumber()
+    comparePrice?: number;
+
+    @ApiProperty({ enum: ProductType, example: ProductType.CORPORATIVO })
+    @IsEnum(ProductType)
+    productType: ProductType;
+
+    @ApiProperty({ example: 'uuid-de-categoria' })
     @IsUUID()
     @IsNotEmpty()
     categoryId: string;
 
-    @ApiProperty({
-        example: 'M',
-        description: 'Talle del producto',
-    })
+    @ApiPropertyOptional({ example: 'Poleras' })
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    size: string;
+    subcategory?: string;
 
-    @ApiProperty({
-        example: 'Azul',
-        description: 'Color del producto',
-    })
+    @ApiProperty({ enum: ProductSize, isArray: true, example: [ProductSize.S, ProductSize.M, ProductSize.L] })
+    @IsArray()
+    @IsEnum(ProductSize, { each: true })
+    sizes: ProductSize[];
+
+    @ApiProperty({ example: ['#163C7A', '#FFFFFF', '#B91C1C'] })
+    @IsArray()
+    @IsString({ each: true })
+    colors: string[];
+
+    @ApiPropertyOptional({ example: '100% Algodón Piqué' })
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    color: string;
+    material?: string;
 
-    @ApiProperty({
-        example: 20,
-        description: 'Cantidad disponible en stock',
-        minimum: 0,
-    })
+    @ApiPropertyOptional({ example: '210 gr/m²' })
+    @IsOptional()
+    @IsString()
+    weight?: string;
+
+    @ApiProperty({ example: 250 })
     @IsNumber()
     @Min(0)
     stock: number;
 
-    @ApiPropertyOptional({
-        example: 'https://res.cloudinary.com/demo/product-image.jpg',
-        description: 'URL de la imagen del producto',
-    })
+    @ApiProperty({ example: 10 })
+    @IsNumber()
+    @Min(1)
+    minOrder: number;
+
+    @ApiPropertyOptional({ example: 'https://...' })
     @IsOptional()
     @IsString()
     imageUrl?: string;
 
-    @ApiPropertyOptional({
-        example: true,
-        description: 'Indica si el producto está activo',
-        default: true,
-    })
+    @ApiPropertyOptional({ isArray: true, example: ['https://...', 'https://...'] })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    images?: string[];
+
+    @ApiPropertyOptional({ default: true })
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    isNew?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    isFeatured?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    hasDiscount?: boolean;
+
+    @ApiPropertyOptional({ default: 0 })
+    @IsOptional()
+    @IsNumber()
+    discount?: number;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    reinforcement?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    reflective?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    thermal?: boolean;
+
+    @ApiPropertyOptional({
+        example: {
+            included: true,
+            maxStitches: 15000,
+            colors: 6,
+            positions: ['Pecho izquierdo', 'Manga']
+        }
+    })
+    @IsOptional()
+    @IsObject()
+    embroidery?: {
+        included: boolean;
+        maxStitches: number;
+        colors: number;
+        positions: string[];
+    };
+
+    @ApiPropertyOptional({ example: ['Característica 1', 'Característica 2'] })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    features?: string[];
 }
