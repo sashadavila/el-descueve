@@ -5,6 +5,49 @@ import * as XLSX from 'xlsx';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product, ProductType, ProductSize } from './entities/product.entity';
+import { CategoriesService } from '../categories/categories.service';
+
+// Definir la interfaz para las filas del Excel
+interface ExcelRow {
+  name?: string;
+  Nombre?: string;
+  description?: string;
+  Descripción?: string;
+  reference?: string;
+  Referencia?: string;
+  price?: string | number;
+  Precio?: string | number;
+  comparePrice?: string | number;
+  productType?: string;
+  Tipo?: string;
+  category?: string;
+  Categoria?: string;
+  categoryId?: string;
+  CategoriaId?: string;
+  subcategory?: string;
+  Subcategoria?: string;
+  sizes?: string;
+  colors?: string;
+  material?: string;
+  weight?: string;
+  stock?: string | number;
+  minOrder?: string | number;
+  imageUrl?: string;
+  images?: string;
+  isActive?: string | boolean;
+  isNew?: string | boolean;
+  isFeatured?: string | boolean;
+  hasDiscount?: string | boolean;
+  discount?: string | number;
+  reinforcement?: string | boolean;
+  reflective?: string | boolean;
+  thermal?: string | boolean;
+  embroideryIncluded?: string | boolean;
+  embroideryMaxStitches?: string | number;
+  embroideryColors?: string | number;
+  embroideryPositions?: string;
+  features?: string;
+}
 
 @Injectable()
 export class ProductsService {
@@ -13,6 +56,7 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
+    private readonly categoriesService: CategoriesService,
   ) { }
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
@@ -153,97 +197,256 @@ export class ProductsService {
     return { message: `Producto con ID ${id} eliminado correctamente` };
   }
 
-  async importFromExcel(fileBuffer: Buffer): Promise<{ imported: number; errors: string[] }> {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet);
-
-    let imported = 0;
-    const errors: string[] = [];
-
-    const validSizes = Object.values(ProductSize);
-
-    for (const row of data) {
-      try {
-        const productData = this.mapExcelRowToProductDto(row, validSizes);
-        const existingProduct = await this.findByReference(productData.reference);
-
-        if (existingProduct) {
-          await this.update(existingProduct.id, productData);
-        } else {
-          await this.create(productData);
-        }
-        imported++;
-      } catch (error) {
-        this.logger.error(`Error importing row: ${error.message}`);
-        errors.push(`Error en fila ${data.indexOf(row) + 2}: ${error.message}`);
-      }
+  // Obtener o crear categoría por nombre
+  private async getOrCreateCategory(categoryName: string): Promise<string> {
+    if (!categoryName) {
+      throw new Error('El nombre de la categoría es requerido');
     }
 
-    return { imported, errors };
+    // Buscar categoría por nombre (case insensitive)
+    const existingCategory = await this.categoriesService.findByName(categoryName);
+
+    if (existingCategory) {
+      this.logger.log(`Categoría encontrada: ${categoryName} (ID: ${existingCategory.id})`);
+      return existingCategory.id;
+    }
+
+    // Crear nueva categoría
+    this.logger.log(`Creando nueva categoría: ${categoryName}`);
+    const newCategory = await this.categoriesService.create({
+      name: categoryName,
+      description: `Categoría ${categoryName} creada automáticamente desde importación de productos`,
+      isActive: true,
+    });
+
+    this.logger.log(`Categoría creada: ${categoryName} (ID: ${newCategory.id})`);
+    return newCategory.id;
   }
 
-  private mapExcelRowToProductDto(row: any, validSizes: string[]): CreateProductDto {
-    // Procesar tallas
-    let sizes: ProductSize[] = [ProductSize.S, ProductSize.M, ProductSize.L];
-    if (row.sizes) {
-      const sizeStrings = row.sizes.split(',').map(s => s.trim().toUpperCase());
-      sizes = sizeStrings.filter(s => validSizes.includes(s)) as ProductSize[];
-      if (sizes.length === 0) sizes = [ProductSize.S, ProductSize.M, ProductSize.L];
+  // Helper para obtener valor de string de una fila
+  private getStringValue(row: ExcelRow, keys: string[]): string {
+    for (const key of keys) {
+      const value = row[key as keyof ExcelRow];
+      if (value && typeof value === 'string') return value;
+      if (value && typeof value === 'number') return String(value);
     }
+    return '';
+  }
 
-    // Procesar colores
-    let colors: string[] = [];
-    if (row.colors) {
-      colors = row.colors.split(',').map(c => c.trim());
+  // Helper para obtener valor numérico
+  private getNumberValue(row: ExcelRow, keys: string[]): number {
+    for (const key of keys) {
+      const value = row[key as keyof ExcelRow];
+      if (value !== undefined && value !== null) {
+        const num = typeof value === 'number' ? value : parseFloat(String(value));
+        if (!isNaN(num)) return num;
+      }
     }
+    return 0;
+  }
 
-    // Procesar imágenes
-    let images: string[] = [];
-    if (row.images) {
-      images = row.images.split(',').map(i => i.trim());
+  // Helper para obtener valor booleano
+  private getBooleanValue(row: ExcelRow, keys: string[]): boolean {
+    for (const key of keys) {
+      const value = row[key as keyof ExcelRow];
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') {
+          const lower = value.toLowerCase();
+          if (lower === 'true' || lower === '1' || lower === 'si') return true;
+          if (lower === 'false' || lower === '0' || lower === 'no') return false;
+        }
+        if (typeof value === 'number') return value === 1;
+      }
     }
+    return false;
+  }
 
-    // Procesar características
-    let features: string[] = [];
-    if (row.features) {
-      features = row.features.split('|').map(f => f.trim());
+  // IMPORTAR PRODUCTOS DESDE EXCEL
+  async importFromExcel(fileBuffer: Buffer): Promise<{ imported: number; updated: number; errors: string[]; total: number; categoriesCreated: string[] }> {
+    try {
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
+
+      let imported = 0;
+      let updated = 0;
+      const errors: string[] = [];
+      const categoriesCreated: string[] = [];
+
+      const validSizes = Object.values(ProductSize);
+      const validProductTypes = Object.values(ProductType);
+
+      // Obtener categorías existentes antes de empezar para no crear duplicados
+      const existingCategories = await this.categoriesService.findAll();
+      const existingCategoryNames = new Set(existingCategories.map(c => c.name.toLowerCase()));
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        try {
+          // OBTENER NOMBRE DE CATEGORÍA
+          let categoryName = this.getStringValue(row, ['category', 'Categoria']);
+
+          // Si no hay nombre de categoría, usar el productType
+          if (!categoryName) {
+            const productTypeValue = this.getStringValue(row, ['productType', 'Tipo']).toLowerCase();
+            const categoryMap: Record<string, string> = {
+              corporativo: 'Corporativo',
+              industrial: 'Industrial',
+              bordados: 'Bordados',
+              equipos: 'Equipos Trabajo'
+            };
+            categoryName = categoryMap[productTypeValue] || 'Corporativo';
+          }
+
+          // Limpiar y capitalizar
+          categoryName = categoryName.trim();
+          categoryName = categoryName.charAt(0).toUpperCase() + categoryName.slice(1).toLowerCase();
+
+          // Obtener o crear la categoría
+          let categoryId: string;
+          try {
+            categoryId = await this.getOrCreateCategory(categoryName);
+
+            // Verificar si fue creada ahora
+            if (!existingCategoryNames.has(categoryName.toLowerCase())) {
+              if (!categoriesCreated.includes(categoryName)) {
+                categoriesCreated.push(categoryName);
+              }
+            }
+          } catch (catError) {
+            errors.push(`Fila ${i + 2}: Error con categoría "${categoryName}" - ${catError.message}`);
+            continue;
+          }
+
+          // Validar referencia
+          const reference = this.getStringValue(row, ['reference', 'Referencia']);
+          if (!reference) {
+            errors.push(`Fila ${i + 2}: Se requiere referencia única del producto`);
+            continue;
+          }
+
+          // Validar nombre
+          const name = this.getStringValue(row, ['name', 'Nombre']);
+          if (!name) {
+            errors.push(`Fila ${i + 2}: Se requiere nombre del producto`);
+            continue;
+          }
+
+          // Validar productType
+          let productTypeValue = this.getStringValue(row, ['productType', 'Tipo']).toLowerCase();
+          if (!validProductTypes.includes(productTypeValue as ProductType)) {
+            productTypeValue = ProductType.CORPORATIVO;
+          }
+          const productType = productTypeValue as ProductType;
+
+          // Procesar tallas
+          let sizes: ProductSize[] = [ProductSize.S, ProductSize.M, ProductSize.L];
+          const sizesStr = this.getStringValue(row, ['sizes']);
+          if (sizesStr) {
+            const sizeStrings = sizesStr.split(',').map(s => s.trim().toUpperCase());
+            const validSizeStrings = sizeStrings.filter(s => validSizes.includes(s as ProductSize));
+            if (validSizeStrings.length > 0) {
+              sizes = validSizeStrings as ProductSize[];
+            }
+          }
+
+          // Procesar colores
+          let colors: string[] = [];
+          const colorsStr = this.getStringValue(row, ['colors']);
+          if (colorsStr) {
+            colors = colorsStr.split(',').map(c => c.trim());
+          }
+
+          // Procesar imágenes
+          let images: string[] = [];
+          const imagesStr = this.getStringValue(row, ['images']);
+          if (imagesStr) {
+            images = imagesStr.split(',').map(i => i.trim());
+          }
+
+          // Procesar características
+          let features: string[] = [];
+          const featuresStr = this.getStringValue(row, ['features']);
+          if (featuresStr) {
+            features = featuresStr.split('|').map(f => f.trim());
+          }
+
+          // Procesar embroidery
+          let embroidery: { included: boolean; maxStitches: number; colors: number; positions: string[] } | undefined = undefined;
+          const embroideryIncluded = this.getBooleanValue(row, ['embroideryIncluded']);
+          if (embroideryIncluded) {
+            embroidery = {
+              included: true,
+              maxStitches: this.getNumberValue(row, ['embroideryMaxStitches']) || 15000,
+              colors: this.getNumberValue(row, ['embroideryColors']) || 6,
+              positions: this.getStringValue(row, ['embroideryPositions']) ?
+                this.getStringValue(row, ['embroideryPositions']).split(',').map(p => p.trim()) :
+                ['Pecho izquierdo'],
+            };
+          }
+
+          const productData: CreateProductDto = {
+            name: name,
+            description: this.getStringValue(row, ['description', 'Descripción']),
+            reference: reference,
+            price: this.getNumberValue(row, ['price', 'Precio']),
+            comparePrice: this.getNumberValue(row, ['comparePrice']) || undefined,
+            productType: productType,
+            categoryId: categoryId,
+            subcategory: this.getStringValue(row, ['subcategory', 'Subcategoria']) || undefined,
+            sizes: sizes,
+            colors: colors,
+            material: this.getStringValue(row, ['material']) || undefined,
+            weight: this.getStringValue(row, ['weight']) || undefined,
+            stock: this.getNumberValue(row, ['stock']),
+            minOrder: this.getNumberValue(row, ['minOrder']) || 10,
+            imageUrl: this.getStringValue(row, ['imageUrl']) || undefined,
+            images: images,
+            isActive: this.getBooleanValue(row, ['isActive']) !== false,
+            isNew: this.getBooleanValue(row, ['isNew']),
+            isFeatured: this.getBooleanValue(row, ['isFeatured']),
+            hasDiscount: this.getBooleanValue(row, ['hasDiscount']),
+            discount: this.getNumberValue(row, ['discount']),
+            reinforcement: this.getBooleanValue(row, ['reinforcement']),
+            reflective: this.getBooleanValue(row, ['reflective']),
+            thermal: this.getBooleanValue(row, ['thermal']),
+            embroidery: embroidery,
+            features: features,
+          };
+
+          // Verificar si el producto ya existe
+          const existingProduct = await this.findByReference(reference);
+
+          if (existingProduct) {
+            await this.update(existingProduct.id, productData);
+            updated++;
+            this.logger.log(`Producto actualizado: ${name} (${reference})`);
+          } else {
+            await this.create(productData);
+            imported++;
+            this.logger.log(`Producto importado: ${name} (${reference})`);
+          }
+
+        } catch (error) {
+          this.logger.error(`Error en fila ${i + 2}: ${error.message}`);
+          errors.push(`Fila ${i + 2}: ${error.message}`);
+        }
+      }
+
+      return {
+        imported,
+        updated,
+        errors,
+        total: data.length,
+        categoriesCreated
+      };
+
+    } catch (error) {
+      this.logger.error(`Error al procesar archivo Excel: ${error.message}`);
+      throw new Error(`Error al procesar el archivo: ${error.message}`);
     }
-
-    return {
-      name: row.name || row.Nombre,
-      description: row.description || row.Descripción || '',
-      reference: row.reference || row.Referencia,
-      price: parseFloat(row.price || row.Precio) || 0,
-      comparePrice: row.comparePrice ? parseFloat(row.comparePrice) : undefined,
-      productType: (row.productType || row.Tipo || ProductType.CORPORATIVO) as ProductType,
-      categoryId: row.categoryId || row.CategoriaId,
-      subcategory: row.subcategory || row.Subcategoria,
-      sizes,
-      colors,
-      material: row.material,
-      weight: row.weight,
-      stock: parseInt(row.stock) || 0,
-      minOrder: parseInt(row.minOrder) || 10,
-      imageUrl: row.imageUrl,
-      images,
-      isActive: row.isActive !== undefined ? row.isActive !== 'false' : true,
-      isNew: row.isNew === 'true',
-      isFeatured: row.isFeatured === 'true',
-      hasDiscount: row.hasDiscount === 'true',
-      discount: parseInt(row.discount) || 0,
-      reinforcement: row.reinforcement === 'true',
-      reflective: row.reflective === 'true',
-      thermal: row.thermal === 'true',
-      embroidery: (row.embroideryIncluded === 'true') ? {
-        included: true,
-        maxStitches: parseInt(row.embroideryMaxStitches) || 15000,
-        colors: parseInt(row.embroideryColors) || 6,
-        positions: row.embroideryPositions ? row.embroideryPositions.split(',') : ['Pecho izquierdo'],
-      } : undefined,
-      features,
-    };
   }
 
   async getStats(): Promise<{
