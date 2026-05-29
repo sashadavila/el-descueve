@@ -1,11 +1,6 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
-
+import { Repository, ILike } from 'typeorm';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './entities/category.entity';
@@ -15,13 +10,11 @@ export class CategoriesService {
   constructor(
     @InjectRepository(Category)
     private readonly categoriesRepository: Repository<Category>,
-  ) {}
+  ) { }
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
     const existingCategory = await this.categoriesRepository.findOne({
-      where: {
-        name: ILike(createCategoryDto.name),
-      },
+      where: { name: ILike(createCategoryDto.name) },
     });
 
     if (existingCategory) {
@@ -29,24 +22,19 @@ export class CategoriesService {
     }
 
     const category = this.categoriesRepository.create(createCategoryDto);
-
     return this.categoriesRepository.save(category);
   }
 
   async findAll(): Promise<Category[]> {
     return this.categoriesRepository.find({
-      order: {
-        name: 'ASC',
-      },
+      order: { name: 'ASC' },
     });
   }
 
   async findOne(id: string): Promise<Category> {
     const category = await this.categoriesRepository.findOne({
       where: { id },
-      relations: {
-        products: true,
-      },
+      relations: { products: true },
     });
 
     if (!category) {
@@ -56,17 +44,19 @@ export class CategoriesService {
     return category;
   }
 
-  async update(
-    id: string,
-    updateCategoryDto: UpdateCategoryDto,
-  ): Promise<Category> {
+  // Buscar categoría por nombre (case insensitive)
+  async findByName(name: string): Promise<Category | null> {
+    return this.categoriesRepository.findOne({
+      where: { name: ILike(name) },
+    });
+  }
+
+  async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
     const category = await this.findOne(id);
 
     if (updateCategoryDto.name) {
       const existingCategory = await this.categoriesRepository.findOne({
-        where: {
-          name: ILike(updateCategoryDto.name),
-        },
+        where: { name: ILike(updateCategoryDto.name) },
       });
 
       if (existingCategory && existingCategory.id !== id) {
@@ -75,17 +65,12 @@ export class CategoriesService {
     }
 
     Object.assign(category, updateCategoryDto);
-
     return this.categoriesRepository.save(category);
   }
 
   async remove(id: string): Promise<{ message: string }> {
     const category = await this.findOne(id);
-
     await this.categoriesRepository.remove(category);
-
-    return {
-      message: `Categoría con ID ${id} eliminada correctamente`,
-    };
+    return { message: `Categoría con ID ${id} eliminada correctamente` };
   }
 }
