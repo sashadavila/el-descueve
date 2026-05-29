@@ -26,6 +26,13 @@ export enum ProductSize {
     XXXL = '3XL',
 }
 
+export interface EmbroideryData {
+    included: boolean;
+    maxStitches: number;
+    colors: number;
+    positions: string[];
+}
+
 @Entity('products')
 export class Product {
     @PrimaryGeneratedColumn('uuid')
@@ -44,7 +51,7 @@ export class Product {
     price: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-    comparePrice: number; // Precio anterior (para ofertas)
+    comparePrice: number;
 
     @Column({ type: 'enum', enum: ProductType, default: ProductType.CORPORATIVO })
     productType: ProductType;
@@ -66,7 +73,7 @@ export class Product {
     sizes: ProductSize[];
 
     @Column({ type: 'varchar', array: true, default: [] })
-    colors: string[]; // Colores disponibles (hex o nombre)
+    colors: string[];
 
     @Column({ type: 'varchar', length: 100, nullable: true })
     material: string;
@@ -101,26 +108,20 @@ export class Product {
     @Column({ type: 'int', default: 0 })
     discount: number;
 
-    // Características específicas
     @Column({ type: 'boolean', default: false })
-    reinforcement: boolean; // Reforzado
+    reinforcement: boolean;
 
     @Column({ type: 'boolean', default: false })
-    reflective: boolean; // Reflectante
+    reflective: boolean;
 
     @Column({ type: 'boolean', default: false })
-    thermal: boolean; // Térmico
+    thermal: boolean;
 
     @Column({ type: 'jsonb', nullable: true })
-    embroidery: {
-        included: boolean;
-        maxStitches: number;
-        colors: number;
-        positions: string[];
-    };
+    embroidery: EmbroideryData | null;
 
     @Column({ type: 'jsonb', nullable: true })
-    features: string[]; // Lista de características
+    features: string[] | null;
 
     @CreateDateColumn()
     createdAt: Date;
