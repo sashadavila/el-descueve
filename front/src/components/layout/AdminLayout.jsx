@@ -6,7 +6,10 @@ import api from '../../config/api'
 const navItems = [
     { path: '/admin', label: 'Dashboard', icon: 'dashboard', description: 'Resumen y métricas' },
     { path: '/admin/clientes', label: 'Clientes', icon: 'groups', description: 'Gestión de clientes' },
+    { path: '/admin/productos', label: 'Productos', icon: 'inventory_2', description: 'Gestión de productos' },
     { path: '/admin/estadisticas', label: 'Estadísticas', icon: 'bar_chart', description: 'Análisis de datos' },
+    { path: '/admin/notificaciones', label: 'Notificaciones', icon: 'notifications', description: 'Actividad reciente' },
+    { path: '/admin/ayuda', label: 'Ayuda', icon: 'help_outline', description: 'Guía y soporte' },
 ]
 
 export default function AdminLayout() {
@@ -17,8 +20,15 @@ export default function AdminLayout() {
     const [currentTime, setCurrentTime] = useState('')
     const [unreadCount, setUnreadCount] = useState(0)
 
-    // Solo la primera carga
+    // Escuchar actualizaciones del contador de notificaciones
     useEffect(() => {
+        const handleUnreadCountUpdate = (event) => {
+            setUnreadCount(event.detail.count)
+        }
+
+        window.addEventListener('unreadCountUpdate', handleUnreadCountUpdate)
+
+        // Cargar contador inicial
         const fetchUnreadCount = async () => {
             try {
                 const { count } = await api.notifications.getUnreadCount()
@@ -28,6 +38,10 @@ export default function AdminLayout() {
             }
         }
         fetchUnreadCount()
+
+        return () => {
+            window.removeEventListener('unreadCountUpdate', handleUnreadCountUpdate)
+        }
     }, [])
 
     // Verificar permisos de admin
@@ -57,21 +71,6 @@ export default function AdminLayout() {
         return () => clearInterval(interval)
     }, [])
 
-    // Simular notificaciones no leídas (conectar con API real después)
-    useEffect(() => {
-        const fetchUnreadCount = async () => {
-            try {
-                // Aquí puedes conectar con un endpoint real
-                // const response = await api.notifications.getUnreadCount()
-                // setUnreadCount(response.count)
-                setUnreadCount(3) // Ejemplo temporal
-            } catch (error) {
-                console.error('Error fetching unread count:', error)
-            }
-        }
-        fetchUnreadCount()
-    }, [])
-
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 to-white">
@@ -90,6 +89,27 @@ export default function AdminLayout() {
     // Obtener el nombre del usuario o usar "Administrador"
     const userName = user?.name?.split(' ')[0] || 'Admin'
     const userEmail = user?.email || 'admin@eldescuevee.cl'
+
+    // Obtener el título de la página actual
+    const getCurrentPageTitle = () => {
+        if (location.pathname === '/admin') return 'Dashboard'
+        if (location.pathname === '/admin/clientes') return 'Clientes'
+        if (location.pathname === '/admin/productos') return 'Productos'
+        if (location.pathname === '/admin/estadisticas') return 'Estadísticas'
+        if (location.pathname === '/admin/notificaciones') return 'Notificaciones'
+        if (location.pathname === '/admin/ayuda') return 'Ayuda'
+        return 'Panel de Control'
+    }
+
+    const getCurrentPageDescription = () => {
+        if (location.pathname === '/admin') return 'Resumen y métricas del negocio'
+        if (location.pathname === '/admin/clientes') return 'Gestión de clientes registrados'
+        if (location.pathname === '/admin/productos') return 'Administra tu catálogo de productos'
+        if (location.pathname === '/admin/estadisticas') return 'Análisis de datos y rendimiento'
+        if (location.pathname === '/admin/notificaciones') return 'Actividad reciente y alertas'
+        if (location.pathname === '/admin/ayuda') return 'Guía y soporte técnico'
+        return 'Bienvenido al panel de administración'
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -147,11 +167,12 @@ export default function AdminLayout() {
                                 to={item.path}
                                 onClick={() => setSidebarOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
-                                    ? 'bg-[#FC9430] text-white shadow-lg'
-                                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                        ? 'bg-[#FC9430] text-white shadow-lg'
+                                        : 'text-white/70 hover:bg-white/10 hover:text-white'
                                     }`}
                             >
-                                <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`}>
+                                <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
+                                    }`}>
                                     {item.icon}
                                 </span>
                                 <div className="flex-1">
@@ -166,46 +187,6 @@ export default function AdminLayout() {
                             </Link>
                         )
                     })}
-
-                    {/* Separador */}
-                    <div className="my-4 border-t border-white/10"></div>
-
-                    {/* Notificaciones en sidebar */}
-                    <Link
-                        to="/admin/notificaciones"
-                        onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === '/admin/notificaciones'
-                            ? 'bg-[#FC9430] text-white shadow-lg'
-                            : 'text-white/70 hover:bg-white/10 hover:text-white'
-                            }`}
-                    >
-                        <span className="material-symbols-outlined text-xl">notifications</span>
-                        <div className="flex-1">
-                            <div className="font-semibold text-sm uppercase tracking-wide">Notificaciones</div>
-                            <div className="text-[10px] text-white/40">Actividad reciente</div>
-                        </div>
-                        {unreadCount > 0 && (
-                            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                                {unreadCount}
-                            </span>
-                        )}
-                    </Link>
-
-                    {/* Ayuda en sidebar */}
-                    <Link
-                        to="/admin/ayuda"
-                        onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${location.pathname === '/admin/ayuda'
-                            ? 'bg-[#FC9430] text-white shadow-lg'
-                            : 'text-white/70 hover:bg-white/10 hover:text-white'
-                            }`}
-                    >
-                        <span className="material-symbols-outlined text-xl">help_outline</span>
-                        <div className="flex-1">
-                            <div className="font-semibold text-sm uppercase tracking-wide">Ayuda</div>
-                            <div className="text-[10px] text-white/40">Guía y soporte</div>
-                        </div>
-                    </Link>
                 </nav>
 
                 {/* Footer del sidebar */}
@@ -237,14 +218,10 @@ export default function AdminLayout() {
                 <div className="flex items-center gap-3">
                     <div className="hidden md:block">
                         <h2 className="text-lg font-bold text-[#163C7A]">
-                            {navItems.find(item => item.path === location.pathname)?.label ||
-                                (location.pathname === '/admin/notificaciones' ? 'Notificaciones' :
-                                    location.pathname === '/admin/ayuda' ? 'Ayuda' : 'Dashboard')}
+                            {getCurrentPageTitle()}
                         </h2>
                         <p className="text-xs text-gray-500">
-                            {navItems.find(item => item.path === location.pathname)?.description ||
-                                (location.pathname === '/admin/notificaciones' ? 'Actividad reciente y alertas' :
-                                    location.pathname === '/admin/ayuda' ? 'Guía y soporte técnico' : 'Bienvenido al panel de administración')}
+                            {getCurrentPageDescription()}
                         </p>
                     </div>
                 </div>
@@ -297,9 +274,7 @@ export default function AdminLayout() {
                             <Link to="/admin" className="text-gray-500 hover:text-[#163C7A] transition-colors">Admin</Link>
                             <span className="material-symbols-outlined text-sm text-gray-400">chevron_right</span>
                             <span className="font-medium text-[#163C7A]">
-                                {navItems.find(item => item.path === location.pathname)?.label ||
-                                    (location.pathname === '/admin/notificaciones' ? 'Notificaciones' :
-                                        location.pathname === '/admin/ayuda' ? 'Ayuda' : 'Dashboard')}
+                                {getCurrentPageTitle()}
                             </span>
                         </div>
                     </div>
