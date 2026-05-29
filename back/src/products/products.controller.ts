@@ -34,7 +34,6 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { Public } from '../common/decorators/public.decorator';
 
-// Definir tipo para el archivo
 interface MulterFile {
   fieldname: string;
   originalname: string;
@@ -54,7 +53,6 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Crear un producto' })
-  @ApiResponse({ status: 201, description: 'Producto creado correctamente.' })
   async create(@Body() createProductDto: CreateProductDto): Promise<Product> {
     return this.productsService.create(createProductDto);
   }
@@ -63,7 +61,7 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Importar productos desde Excel' })
+  @ApiOperation({ summary: 'Importar productos desde Excel (crea categorías automáticamente)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -73,9 +71,29 @@ export class ProductsController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
-  async importFromExcel(@UploadedFile() file: MulterFile): Promise<{ imported: number; errors: string[] }> {
-    return this.productsService.importFromExcel(file.buffer);
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  }))
+  async importFromExcel(@UploadedFile() file: MulterFile): Promise<{
+    imported: number;
+    updated: number;
+    errors: string[];
+    total: number;
+    categoriesCreated: string[];
+    message: string;
+  }> {
+    const result = await this.productsService.importFromExcel(file.buffer);
+
+    let message = `📊 Importación completada: ${result.imported} nuevos, ${result.updated} actualizados, ${result.errors.length} errores.`;
+
+    if (result.categoriesCreated.length > 0) {
+      message += ` Categorías creadas automáticamente: ${result.categoriesCreated.join(', ')}.`;
+    }
+
+    return {
+      ...result,
+      message,
+    };
   }
 
   @Get()
@@ -112,8 +130,6 @@ export class ProductsController {
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Obtener un producto por ID' })
-  @ApiResponse({ status: 200, description: 'Producto encontrado correctamente.' })
-  @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Product> {
     return this.productsService.findOne(id);
   }
@@ -123,7 +139,6 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Actualizar un producto' })
-  @ApiResponse({ status: 200, description: 'Producto actualizado correctamente.' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProductDto: UpdateProductDto,
@@ -136,7 +151,6 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Eliminar un producto' })
-  @ApiResponse({ status: 200, description: 'Producto eliminado correctamente.' })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<{ message: string }> {
     return this.productsService.remove(id);
   }
