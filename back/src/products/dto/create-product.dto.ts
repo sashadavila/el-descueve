@@ -13,6 +13,20 @@ import {
 } from 'class-validator';
 import { ProductType, ProductSize } from '../entities/product.entity';
 
+export class EmbroideryDto {
+    @ApiProperty({ example: true })
+    included: boolean;
+
+    @ApiProperty({ example: 15000 })
+    maxStitches: number;
+
+    @ApiProperty({ example: 6 })
+    colors: number;
+
+    @ApiProperty({ example: ['Pecho izquierdo', 'Manga'] })
+    positions: string[];
+}
+
 export class CreateProductDto {
     @ApiProperty({ example: 'Polera Polo Piqué' })
     @IsString()
@@ -58,7 +72,7 @@ export class CreateProductDto {
     @IsEnum(ProductSize, { each: true })
     sizes: ProductSize[];
 
-    @ApiProperty({ example: ['#163C7A', '#FFFFFF', '#B91C1C'] })
+    @ApiProperty({ example: ['#163C7A', '#FFFFFF'] })
     @IsArray()
     @IsString({ each: true })
     colors: string[];
@@ -88,7 +102,7 @@ export class CreateProductDto {
     @IsString()
     imageUrl?: string;
 
-    @ApiPropertyOptional({ isArray: true, example: ['https://...', 'https://...'] })
+    @ApiPropertyOptional({ isArray: true, example: ['https://...'] })
     @IsOptional()
     @IsArray()
     @IsString({ each: true })
@@ -134,22 +148,10 @@ export class CreateProductDto {
     @IsBoolean()
     thermal?: boolean;
 
-    @ApiPropertyOptional({
-        example: {
-            included: true,
-            maxStitches: 15000,
-            colors: 6,
-            positions: ['Pecho izquierdo', 'Manga']
-        }
-    })
+    @ApiPropertyOptional({ type: EmbroideryDto })
     @IsOptional()
     @IsObject()
-    embroidery?: {
-        included: boolean;
-        maxStitches: number;
-        colors: number;
-        positions: string[];
-    };
+    embroidery?: EmbroideryDto;
 
     @ApiPropertyOptional({ example: ['Característica 1', 'Característica 2'] })
     @IsOptional()
