@@ -222,8 +222,8 @@ export const api = {
         },
 
         importExcel: async (file) => {
-            const formData = new FormData();
-            formData.append('file', file);
+            const formData = new FormData()
+            formData.append('file', file)
 
             const response = await fetch(`${API_BASE_URL}/products/import/excel`, {
                 method: 'POST',
@@ -231,10 +231,12 @@ export const api = {
                     'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
                 },
                 body: formData,
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Error al importar productos');
-            return data;
+            })
+            const data = await response.json()
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al importar productos')
+            }
+            return data
         },
 
         getStats: async () => {
