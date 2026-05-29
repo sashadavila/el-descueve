@@ -165,6 +165,87 @@ export const api = {
             return data;
         },
     },
+
+    // Productos:
+    products: {
+        getAll: async (page = 1, limit = 15, filters = {}) => {
+            let url = `${API_BASE_URL}/products?page=${page}&limit=${limit}`;
+            if (filters.productType) url += `&productType=${filters.productType}`;
+            if (filters.categoryId) url += `&categoryId=${filters.categoryId}`;
+            if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
+            if (filters.sortBy) url += `&sortBy=${filters.sortBy}`;
+            if (filters.sortOrder) url += `&sortOrder=${filters.sortOrder}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener productos');
+            return data;
+        },
+
+        getById: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/products/${id}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener producto');
+            return data;
+        },
+
+        create: async (productData) => {
+            const response = await fetch(`${API_BASE_URL}/products`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(productData),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al crear producto');
+            return data;
+        },
+
+        update: async (id, productData) => {
+            const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+                method: 'PATCH',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(productData),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al actualizar producto');
+            return data;
+        },
+
+        delete: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al eliminar producto');
+            return data;
+        },
+
+        importExcel: async (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_BASE_URL}/products/import/excel`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                },
+                body: formData,
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al importar productos');
+            return data;
+        },
+
+        getStats: async () => {
+            const response = await fetch(`${API_BASE_URL}/products/stats`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener estadísticas');
+            return data;
+        },
+    },
 };
 
 export default api;
