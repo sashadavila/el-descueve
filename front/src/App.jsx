@@ -30,6 +30,7 @@ import AdminEditClient from './pages/admin/AdminEditClient'
 import AdminStatistics from './pages/admin/AdminStatistics'
 import AdminHelp from './pages/admin/AdminHelp'
 import AdminNotifications from './pages/admin/AdminNotifications'
+import AdminProducts from './pages/admin/AdminProducts'
 
 // Componente para proteger rutas admin
 function AdminRoute({ children }) {
@@ -92,6 +93,7 @@ function App() {
           <Route path="estadisticas" element={<AdminStatistics />} />
           <Route path="ayuda" element={<AdminHelp />} />
           <Route path="notificaciones" element={<AdminNotifications />} />
+          <Route path="productos" element={<AdminProducts />} />
         </Route>
       </Routes>
     </>
