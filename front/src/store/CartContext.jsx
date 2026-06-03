@@ -1,3 +1,4 @@
+// src/store/CartContext.jsx
 import { createContext, useState, useEffect } from 'react'
 
 export const CartContext = createContext()
@@ -12,18 +13,35 @@ export function CartProvider({ children }) {
         localStorage.setItem('cart', JSON.stringify(cart))
     }, [cart])
 
-    const addToCart = (product, quantity = 1) => {
+    // Agregar al carrito con datos de bordado
+    const addToCart = (product, quantity = 1, embroideryData = null) => {
         setCart(prev => {
-            const existing = prev.find(item => item.id === product.id)
-            if (existing) {
-                return prev.map(item =>
-                    item.id === product.id
-                        ? { ...item, quantity: item.quantity + quantity }
-                        : item
-                )
+            const existingIndex = prev.findIndex(item => item.id === product.id)
+
+            if (existingIndex !== -1) {
+                const updated = [...prev]
+                updated[existingIndex] = {
+                    ...updated[existingIndex],
+                    quantity,
+                    embroidery: embroideryData || updated[existingIndex].embroidery
+                }
+                return updated
             }
-            return [...prev, { ...product, quantity }]
+            return [...prev, {
+                ...product,
+                quantity,
+                embroidery: embroideryData
+            }]
         })
+    }
+
+    // Actualizar solo el bordado de un producto
+    const updateEmbroidery = (productId, embroideryData) => {
+        setCart(prev => prev.map(item =>
+            item.id === productId
+                ? { ...item, embroidery: embroideryData }
+                : item
+        ))
     }
 
     const removeFromCart = (productId) => {
@@ -50,6 +68,7 @@ export function CartProvider({ children }) {
         <CartContext.Provider value={{
             cart,
             addToCart,
+            updateEmbroidery,
             removeFromCart,
             updateQuantity,
             clearCart,
