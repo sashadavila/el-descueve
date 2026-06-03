@@ -1,3 +1,4 @@
+// src/orders/orders.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -13,4 +14,4 @@ import { Product } from '../products/entities/product.entity';
   providers: [OrdersService],
   exports: [OrdersService],
 })
-export class OrdersModule {}
+export class OrdersModule { }
