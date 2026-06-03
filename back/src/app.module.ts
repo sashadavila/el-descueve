@@ -12,6 +12,7 @@ import { OrdersModule } from './orders/orders.module';
 import { OrderItemsModule } from './order-items/order-items.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { EmbroideryModule } from './embroidery/embroidery.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     OrdersModule,
     OrderItemsModule,
     NotificationsModule,
+    EmbroideryModule,
   ],
   controllers: [AppController],
   providers: [
