@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../../hooks/useCart'
 import { useAuth } from '../../hooks/useAuth'
 import Icon from '../../components/ui/Icon'
+import EmbroideryForm from '../../components/ui/EmbroideryForm'
 import api from '../../config/api'
 
 export default function ProductDetailPage() {
@@ -17,8 +18,9 @@ export default function ProductDetailPage() {
     const [selectedSize, setSelectedSize] = useState('')
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [embroideryData, setEmbroideryData] = useState(null)
+    const [showEmbroideryForm, setShowEmbroideryForm] = useState(false)
 
-    // Cargar producto desde el backend
     useEffect(() => {
         const fetchProduct = async () => {
             if (!id) return
@@ -30,14 +32,12 @@ export default function ProductDetailPage() {
                 const data = await api.products.getById(id)
                 setProduct(data)
 
-                // Inicializar selecciones con los primeros valores disponibles
                 if (data.colors && data.colors.length > 0) {
                     setSelectedColor(data.colors[0])
                 }
                 if (data.sizes && data.sizes.length > 0) {
                     setSelectedSize(data.sizes[0])
                 }
-                // Ajustar cantidad mínima según minOrder del producto
                 if (data.minOrder) {
                     setQuantity(data.minOrder)
                 }
@@ -50,14 +50,20 @@ export default function ProductDetailPage() {
         }
 
         fetchProduct()
-
-        // Scroll al inicio de la página
         window.scrollTo(0, 0)
     }, [id])
 
+    const handleSaveEmbroidery = (data) => {
+        setEmbroideryData(data)
+        setShowEmbroideryForm(false)
+    }
+
+    const handleRemoveEmbroidery = () => {
+        setEmbroideryData(null)
+    }
+
     const handleAddToCart = () => {
         if (product) {
-            // Crear objeto producto para el carrito con los datos del backend
             const cartProduct = {
                 id: product.id,
                 name: product.name,
@@ -65,9 +71,9 @@ export default function ProductDetailPage() {
                 price: product.price,
                 image: product.imageUrl || product.images?.[0] || 'https://via.placeholder.com/400',
                 minOrder: product.minOrder,
-                quantity: quantity,
                 selectedColor: selectedColor,
-                selectedSize: selectedSize
+                selectedSize: selectedSize,
+                embroidery: embroideryData
             }
             addToCart(cartProduct, quantity)
             navigate('/carrito')
@@ -75,11 +81,11 @@ export default function ProductDetailPage() {
     }
 
     const handleCotizar = () => {
-        const whatsappMessage = `Hola, quisiera cotizar el producto: ${product?.name} (Ref: ${product?.reference}). Cantidad: ${quantity} unidades. Color: ${selectedColor}, Talla: ${selectedSize}`
+        const whatsappMessage = `Hola, quisiera cotizar el producto: ${product?.name} (Ref: ${product?.reference}). Cantidad: ${quantity} unidades. Color: ${selectedColor}, Talla: ${selectedSize}${embroideryData ? `\n\n*Bordado personalizado:*\n- Posiciones: ${embroideryData.positions.join(', ')}\n- Puntadas: ${embroideryData.maxStitches.toLocaleString()}\n- Colores: ${embroideryData.colors}\n- Archivo: ${embroideryData.logoFilename}` : ''
+            }`
         window.open(`https://wa.me/56987654321?text=${encodeURIComponent(whatsappMessage)}`, '_blank')
     }
 
-    // Mostrar loading mientras carga la autenticación o el producto
     if (authLoading || loading) {
         return (
             <div className="flex justify-center items-center h-96">
@@ -91,13 +97,11 @@ export default function ProductDetailPage() {
         )
     }
 
-    // Redirigir al login si no está autenticado
     if (!isAuthenticated) {
         navigate('/login', { state: { from: `/producto/${id}` } })
         return null
     }
 
-    // Mostrar error si no se encontró el producto
     if (error || !product) {
         return (
             <div className="max-w-[1280px] mx-auto px-8 py-20 text-center">
@@ -115,7 +119,6 @@ export default function ProductDetailPage() {
 
     return (
         <div className="max-w-[1280px] mx-auto px-8 py-8">
-            {/* Breadcrumbs */}
             <nav className="flex mb-8 items-center gap-2 text-on-surface-variant text-xs uppercase flex-wrap">
                 <Link to="/" className="hover:text-primary">Inicio</Link>
                 <Icon name="chevron_right" className="text-sm" />
@@ -125,7 +128,6 @@ export default function ProductDetailPage() {
             </nav>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                {/* Gallery */}
                 <div className="lg:col-span-7">
                     <div className="aspect-square bg-white border border-outline-variant overflow-hidden rounded-lg">
                         <img
@@ -155,7 +157,6 @@ export default function ProductDetailPage() {
                     )}
                 </div>
 
-                {/* Product Info */}
                 <div className="lg:col-span-5 flex flex-col gap-6">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold text-primary mb-2 uppercase">{product.name}</h1>
@@ -175,7 +176,6 @@ export default function ProductDetailPage() {
                         <p className="text-on-surface-variant border-l-4 border-[#FC9430] pl-4">{product.description}</p>
                     </div>
 
-                    {/* Color selector */}
                     {product.colors && product.colors.length > 0 && (
                         <div>
                             <span className="block text-xs uppercase tracking-wider text-outline mb-3">Color</span>
@@ -196,7 +196,6 @@ export default function ProductDetailPage() {
                         </div>
                     )}
 
-                    {/* Size selector */}
                     {product.sizes && product.sizes.length > 0 && (
                         <div>
                             <span className="block text-xs uppercase tracking-wider text-outline mb-3">Talla</span>
@@ -212,7 +211,6 @@ export default function ProductDetailPage() {
                         </div>
                     )}
 
-                    {/* Quantity */}
                     <div>
                         <span className="block text-xs uppercase tracking-wider text-outline mb-3">
                             Cantidad (pedido mínimo: {product.minOrder || 10} unidades)
@@ -244,7 +242,6 @@ export default function ProductDetailPage() {
                         </p>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex flex-col gap-3 pt-4">
                         <button
                             onClick={handleAddToCart}
@@ -262,56 +259,86 @@ export default function ProductDetailPage() {
                         </button>
                     </div>
 
-                    {/* Embroidery info */}
                     {product.embroidery?.included && (
                         <div className="bg-surface-container-low border border-outline-variant p-6 mt-4 rounded-lg">
                             <div className="flex items-center gap-2 mb-4">
                                 <Icon name="brush" className="text-[#FC9430]" />
                                 <h3 className="text-lg font-bold uppercase">Bordado de Logo Profesional</h3>
                             </div>
-                            <p className="text-sm text-on-surface-variant mb-4">
-                                Incluye bordado de tu logo en todas las prendas. Calidad de terminación que perdura en el tiempo.
-                            </p>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span className="font-bold">Puntadas:</span>
-                                    <p>{product.embroidery.maxStitches?.toLocaleString()} puntadas</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold">Colores:</span>
-                                    <p>Hasta {product.embroidery.colors} colores</p>
-                                </div>
-                                <div className="col-span-2">
-                                    <span className="font-bold">Posiciones disponibles:</span>
-                                    <p>{product.embroidery.positions?.join(', ')}</p>
-                                </div>
-                            </div>
-                            <div className="mt-4 border-2 border-dashed border-outline-variant p-4 text-center bg-white hover:border-primary transition-colors cursor-pointer rounded">
-                                <Icon name="upload_file" className="text-3xl text-outline mb-2" />
-                                <p className="text-xs uppercase font-bold">Sube tu logo (SVG, PNG, AI, PDF)</p>
-                                <p className="text-[10px] text-on-surface-variant mt-1">Formatos permitidos: PNG, JPG, JPEG, PDF, AI o SVG</p>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Características del producto */}
-                    {product.features && product.features.length > 0 && (
-                        <div className="border-t pt-6 mt-2">
-                            <h3 className="font-bold text-primary mb-3">Características</h3>
-                            <ul className="space-y-2">
-                                {product.features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-start gap-2 text-sm">
-                                        <Icon name="check_circle" className="text-[#FC9430] text-sm" />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                            {!showEmbroideryForm && !embroideryData ? (
+                                <>
+                                    <p className="text-sm text-on-surface-variant mb-4">
+                                        Incluye bordado de tu logo en todas las prendas. Completa el formulario para personalizar tu pedido.
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                                        <div>
+                                            <span className="font-bold">Puntadas máximas:</span>
+                                            <p>{product.embroidery.maxStitches?.toLocaleString()} puntadas</p>
+                                        </div>
+                                        <div>
+                                            <span className="font-bold">Colores disponibles:</span>
+                                            <p>Hasta {product.embroidery.colors} colores</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <span className="font-bold">Posiciones disponibles:</span>
+                                            <p>{product.embroidery.positions?.join(', ')}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowEmbroideryForm(true)}
+                                        className="w-full bg-primary text-white py-3 font-bold uppercase rounded-lg hover:bg-primary/80 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Icon name="edit_note" />
+                                        Personalizar Bordado
+                                    </button>
+                                </>
+                            ) : embroideryData ? (
+                                <div>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <p className="text-sm font-bold text-green-700 flex items-center gap-1">
+                                                <Icon name="check_circle" className="text-sm" />
+                                                Bordado personalizado agregado
+                                            </p>
+                                            <p className="text-xs text-gray-600 mt-1">
+                                                {embroideryData.positions?.join(', ')} |
+                                                {embroideryData.maxStitches?.toLocaleString()} puntadas |
+                                                {embroideryData.colors} colores
+                                            </p>
+                                            {embroideryData.logoFilename && (
+                                                <p className="text-xs text-gray-400 mt-1">
+                                                    Logo: {embroideryData.logoFilename}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={handleRemoveEmbroidery}
+                                            className="text-xs text-red-500 hover:text-red-700"
+                                        >
+                                            <Icon name="delete" className="text-sm" />
+                                        </button>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowEmbroideryForm(true)}
+                                        className="w-full bg-gray-100 text-primary py-2 font-bold uppercase rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Icon name="edit_note" />
+                                        Modificar Bordado
+                                    </button>
+                                </div>
+                            ) : (
+                                <EmbroideryForm
+                                    product={product}
+                                    onSuccess={handleSaveEmbroidery}
+                                    onCancel={() => setShowEmbroideryForm(false)}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Specifications Table */}
             <div className="mt-12 border-t pt-8">
                 <h3 className="font-bold text-xl text-primary mb-6">Especificaciones Técnicas</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
