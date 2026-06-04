@@ -54,15 +54,25 @@ export default function ProductDetailPage() {
     }, [id])
 
     const handleSaveEmbroidery = (data) => {
+        console.log('🎨 [ProductDetail] Bordado guardado:', data)
         setEmbroideryData(data)
         setShowEmbroideryForm(false)
     }
 
     const handleRemoveEmbroidery = () => {
+        console.log('🎨 [ProductDetail] Bordado eliminado')
         setEmbroideryData(null)
     }
 
     const handleAddToCart = () => {
+        console.log('\n========== AGREGANDO AL CARRITO ==========')
+        console.log('Producto:', product?.name)
+        console.log('Cantidad:', quantity)
+        console.log('Color seleccionado:', selectedColor)
+        console.log('Talla seleccionada:', selectedSize)
+        console.log('Datos de bordado:', embroideryData)
+        console.log('¿Tiene bordado?', embroideryData ? 'SÍ' : 'NO')
+
         if (product) {
             const cartProduct = {
                 id: product.id,
@@ -73,9 +83,16 @@ export default function ProductDetailPage() {
                 minOrder: product.minOrder,
                 selectedColor: selectedColor,
                 selectedSize: selectedSize,
-                embroidery: embroideryData
+                embroidery: embroideryData  // ← Asegurar que esto NO sea null si hay bordado
             }
+
+            console.log('📦 Producto a agregar al carrito:', cartProduct)
+            console.log('📦 embroidery en cartProduct:', cartProduct.embroidery)
+
             addToCart(cartProduct, quantity)
+            console.log('✅ Producto agregado al carrito')
+            console.log('==========================================\n')
+
             navigate('/carrito')
         }
     }
