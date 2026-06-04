@@ -13,7 +13,7 @@ export default function ProductDetailPage() {
     const { addToCart } = useCart()
     const { isAuthenticated, loading: authLoading } = useAuth()
     const [product, setProduct] = useState(null)
-    const [quantity, setQuantity] = useState(10)
+    const [quantity, setQuantity] = useState(1)  // ← Cambiado: cantidad mínima 1
     const [selectedColor, setSelectedColor] = useState('')
     const [selectedSize, setSelectedSize] = useState('')
     const [loading, setLoading] = useState(true)
@@ -38,9 +38,8 @@ export default function ProductDetailPage() {
                 if (data.sizes && data.sizes.length > 0) {
                     setSelectedSize(data.sizes[0])
                 }
-                if (data.minOrder) {
-                    setQuantity(data.minOrder)
-                }
+                // ← Cambiado: cantidad inicial siempre 1
+                setQuantity(1)
             } catch (err) {
                 console.error('Error fetching product:', err)
                 setError(err.message || 'Error al cargar el producto')
@@ -74,17 +73,17 @@ export default function ProductDetailPage() {
         console.log('¿Tiene bordado?', embroideryData ? 'SÍ' : 'NO')
 
         if (product) {
-            // ✅ CORREGIDO: Convertir precio a número y crear copia del bordado
+            // Convertir precio a número y crear copia del bordado
             const cartProduct = {
                 id: product.id,
                 name: product.name,
                 reference: product.reference,
-                price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,  // ← Convertir a número
+                price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
                 image: product.imageUrl || product.images?.[0] || 'https://via.placeholder.com/400',
-                minOrder: product.minOrder || 10,
+                minOrder: 1,  // ← Cambiado: mínimo 1 unidad
                 selectedColor: selectedColor,
                 selectedSize: selectedSize,
-                embroidery: embroideryData ? { ...embroideryData } : null  // ← Crear copia
+                embroidery: embroideryData ? { ...embroideryData } : null
             }
 
             console.log('📦 Producto a agregar al carrito:', cartProduct)
@@ -180,9 +179,9 @@ export default function ProductDetailPage() {
                         <h1 className="text-2xl md:text-3xl font-bold text-primary mb-2 uppercase">{product.name}</h1>
                         <p className="text-label-sm text-on-surface-variant mb-2 uppercase">Ref: {product.reference}</p>
                         <div className="flex items-center gap-4 mb-4 flex-wrap">
-                            <span className="text-2xl md:text-3xl font-bold text-[#FC9430]">${product.price.toLocaleString()} CLP</span>
+                            <span className="text-2xl md:text-3xl font-bold text-[#FC9430]">${(typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0).toLocaleString()} CLP</span>
                             {product.hasDiscount && product.comparePrice && (
-                                <span className="text-sm text-on-surface-variant line-through">${product.comparePrice.toLocaleString()} CLP</span>
+                                <span className="text-sm text-on-surface-variant line-through">${(typeof product.comparePrice === 'number' ? product.comparePrice : parseFloat(product.comparePrice) || 0).toLocaleString()} CLP</span>
                             )}
                             {product.embroidery?.included && (
                                 <div className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full flex items-center gap-1">
@@ -229,13 +228,14 @@ export default function ProductDetailPage() {
                         </div>
                     )}
 
+                    {/* Bloque de cantidad - modificado para step 1 y mínimo 1 */}
                     <div>
                         <span className="block text-xs uppercase tracking-wider text-outline mb-3">
-                            Cantidad (pedido mínimo: {product.minOrder || 10} unidades)
+                            Cantidad (pedido mínimo: 1 unidad)
                         </span>
                         <div className="flex items-center border border-outline-variant w-max h-12 bg-white rounded">
                             <button
-                                onClick={() => setQuantity(Math.max(product.minOrder || 10, quantity - (product.minOrder || 10)))}
+                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                 className="px-4 h-full hover:bg-surface-container-low transition-colors rounded-l"
                             >
                                 <Icon name="remove" className="text-sm" />
@@ -243,20 +243,20 @@ export default function ProductDetailPage() {
                             <input
                                 type="number"
                                 value={quantity}
-                                onChange={(e) => setQuantity(Math.max(product.minOrder || 10, parseInt(e.target.value) || (product.minOrder || 10)))}
+                                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                                 className="w-20 h-full text-center border-none focus:ring-0 font-bold"
-                                min={product.minOrder || 10}
-                                step={product.minOrder || 10}
+                                min="1"
+                                step="1"
                             />
                             <button
-                                onClick={() => setQuantity(quantity + (product.minOrder || 10))}
+                                onClick={() => setQuantity(quantity + 1)}
                                 className="px-4 h-full hover:bg-surface-container-low transition-colors rounded-r"
                             >
                                 <Icon name="add" className="text-sm" />
                             </button>
                         </div>
                         <p className="text-xs text-on-surface-variant mt-2">
-                            *Pedido mínimo: {product.minOrder || 10} unidades combinables (mezcla de tallas y colores)
+                            *Pedido mínimo: 1 unidad. Puedes combinar tallas y colores.
                         </p>
                     </div>
 
@@ -386,7 +386,7 @@ export default function ProductDetailPage() {
                         <tbody>
                             <tr className="border-b border-outline-variant">
                                 <td className="py-3 text-xs uppercase text-outline w-1/3 font-bold">Pedido mínimo</td>
-                                <td className="py-3 text-sm font-bold">{product.minOrder || 10} unidades combinables</td>
+                                <td className="py-3 text-sm font-bold">1 unidad</td>
                             </tr>
                             {product.sizes && product.sizes.length > 0 && (
                                 <tr className="border-b border-outline-variant">
