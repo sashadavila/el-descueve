@@ -21,6 +21,11 @@ export function CartProvider({ children }) {
         console.log('🛒 [CartContext] addToCart llamado con:', { product, quantity })
         console.log('🛒 [CartContext] product.embroidery:', product.embroidery)
 
+        // ✅ CORREGIDO: Convertir precio a número si viene como string
+        const priceNumber = typeof product.price === 'string'
+            ? parseFloat(product.price)
+            : product.price
+
         setCart(prev => {
             const existingIndex = prev.findIndex(item => item.id === product.id)
 
@@ -30,7 +35,8 @@ export function CartProvider({ children }) {
                 updated[existingIndex] = {
                     ...updated[existingIndex],
                     quantity,
-                    embroidery: product.embroidery || updated[existingIndex].embroidery
+                    embroidery: product.embroidery || updated[existingIndex].embroidery,
+                    price: priceNumber  // ← Asegurar precio número
                 }
                 console.log('🛒 [CartContext] Producto actualizado:', updated[existingIndex])
                 return updated
@@ -40,7 +46,7 @@ export function CartProvider({ children }) {
                 id: product.id,
                 name: product.name,
                 reference: product.reference,
-                price: product.price,
+                price: priceNumber,  // ← Usar precio como número
                 image: product.image,
                 minOrder: product.minOrder,
                 selectedColor: product.selectedColor,
@@ -88,7 +94,12 @@ export function CartProvider({ children }) {
 
     const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0)
 
-    const getTotalPrice = () => cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0)
+    // ✅ CORREGIDO: getTotalPrice con manejo seguro de precios como número
+    const getTotalPrice = () => cart.reduce((sum, item) => {
+        const price = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0
+        const quantity = typeof item.quantity === 'number' ? item.quantity : 1
+        return sum + (price * quantity)
+    }, 0)
 
     // Log del estado actual del carrito cada vez que cambia
     useEffect(() => {
