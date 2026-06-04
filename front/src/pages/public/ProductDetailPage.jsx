@@ -74,16 +74,17 @@ export default function ProductDetailPage() {
         console.log('¿Tiene bordado?', embroideryData ? 'SÍ' : 'NO')
 
         if (product) {
+            // ✅ CORREGIDO: Convertir precio a número y crear copia del bordado
             const cartProduct = {
                 id: product.id,
                 name: product.name,
                 reference: product.reference,
-                price: product.price,
+                price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,  // ← Convertir a número
                 image: product.imageUrl || product.images?.[0] || 'https://via.placeholder.com/400',
-                minOrder: product.minOrder,
+                minOrder: product.minOrder || 10,
                 selectedColor: selectedColor,
                 selectedSize: selectedSize,
-                embroidery: embroideryData  // ← Asegurar que esto NO sea null si hay bordado
+                embroidery: embroideryData ? { ...embroideryData } : null  // ← Crear copia
             }
 
             console.log('📦 Producto a agregar al carrito:', cartProduct)
