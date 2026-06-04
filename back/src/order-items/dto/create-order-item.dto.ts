@@ -1,5 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsUUID, Min } from 'class-validator';
+// src/order-items/dto/create-order-item.dto.ts
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsNotEmpty, IsOptional, IsUUID, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateOrderItemDto {
     @ApiProperty({
@@ -10,12 +12,14 @@ export class CreateOrderItemDto {
     @IsNotEmpty()
     productId: string;
 
-    @ApiProperty({
+    @ApiPropertyOptional({
         example: 2,
-        description: 'Cantidad del producto',
+        description: 'Cantidad del producto (opcional, si no se envía se usará el minOrder del producto o 1)',
         minimum: 1,
     })
+    @IsOptional()
     @IsInt()
     @Min(1)
-    quantity: number;
+    @Type(() => Number)
+    quantity?: number;
 }
