@@ -1,3 +1,4 @@
+// src/orders/dto/create-order.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import {
     ArrayMinSize,
@@ -24,7 +25,7 @@ export class CreateOrderDto {
         example: [
             {
                 productId: 'b7d5f4b2-1e7a-4a12-9a41-123456789abc',
-                quantity: 2,
+                quantity: 2,  // ← quantity es opcional ahora
             },
         ],
     })
