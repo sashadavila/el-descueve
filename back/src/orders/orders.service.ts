@@ -1,3 +1,4 @@
+// src/orders/orders.service.ts
 import {
   BadRequestException,
   Injectable,
@@ -23,7 +24,7 @@ export class OrdersService {
 
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
-  ) {}
+  ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     let total = 0;
@@ -52,24 +53,31 @@ export class OrdersService {
         );
       }
 
-      if (product.stock < item.quantity) {
+      // ✅ CORREGIDO: Si no viene quantity, usar minOrder del producto o 1 por defecto
+      let quantity = item.quantity;
+      if (!quantity || quantity < 1) {
+        quantity = product.minOrder || 1;
+        console.log(`📦 [OrdersService] quantity no enviado para producto ${product.name}, usando minOrder: ${quantity}`);
+      }
+
+      if (product.stock < quantity) {
         throw new BadRequestException(
-          `Stock insuficiente para el producto ${product.name}`,
+          `Stock insuficiente para el producto ${product.name}. Disponible: ${product.stock}, Solicitado: ${quantity}`,
         );
       }
 
       const unitPrice = Number(product.price);
-      const subtotal = unitPrice * item.quantity;
+      const subtotal = unitPrice * quantity;
 
       total += subtotal;
 
-      product.stock -= item.quantity;
+      product.stock -= quantity;
       await this.productsRepository.save(product);
 
       const orderItem = this.orderItemsRepository.create({
         orderId: savedOrder.id,
         productId: product.id,
-        quantity: item.quantity,
+        quantity: quantity,
         unitPrice,
         subtotal,
       });
