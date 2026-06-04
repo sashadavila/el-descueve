@@ -7,8 +7,14 @@ export function CartProvider({ children }) {
     const [cart, setCart] = useState(() => {
         const saved = localStorage.getItem('cart')
         const parsed = saved ? JSON.parse(saved) : []
-        console.log('🛒 [CartContext] Cargando carrito desde localStorage:', parsed)
-        return parsed
+        // Asegurar que los precios cargados sean números
+        const normalized = parsed.map(item => ({
+            ...item,
+            price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
+            quantity: typeof item.quantity === 'number' ? item.quantity : 1
+        }))
+        console.log('🛒 [CartContext] Cargando carrito desde localStorage:', normalized)
+        return normalized
     })
 
     useEffect(() => {
@@ -21,10 +27,13 @@ export function CartProvider({ children }) {
         console.log('🛒 [CartContext] addToCart llamado con:', { product, quantity })
         console.log('🛒 [CartContext] product.embroidery:', product.embroidery)
 
-        // ✅ CORREGIDO: Convertir precio a número si viene como string
-        const priceNumber = typeof product.price === 'string'
-            ? parseFloat(product.price)
-            : product.price
+        // ✅ Convertir precio a número
+        const priceNumber = typeof product.price === 'number'
+            ? product.price
+            : parseFloat(product.price) || 0
+
+        // ✅ Asegurar que quantity sea número
+        const finalQuantity = typeof quantity === 'number' ? quantity : 1
 
         setCart(prev => {
             const existingIndex = prev.findIndex(item => item.id === product.id)
@@ -34,9 +43,11 @@ export function CartProvider({ children }) {
                 const updated = [...prev]
                 updated[existingIndex] = {
                     ...updated[existingIndex],
-                    quantity,
+                    quantity: finalQuantity,
                     embroidery: product.embroidery || updated[existingIndex].embroidery,
-                    price: priceNumber  // ← Asegurar precio número
+                    price: priceNumber,
+                    selectedColor: product.selectedColor || updated[existingIndex].selectedColor,
+                    selectedSize: product.selectedSize || updated[existingIndex].selectedSize
                 }
                 console.log('🛒 [CartContext] Producto actualizado:', updated[existingIndex])
                 return updated
@@ -46,12 +57,13 @@ export function CartProvider({ children }) {
                 id: product.id,
                 name: product.name,
                 reference: product.reference,
-                price: priceNumber,  // ← Usar precio como número
+                price: priceNumber,
                 image: product.image,
-                minOrder: product.minOrder,
-                selectedColor: product.selectedColor,
-                selectedSize: product.selectedSize,
-                embroidery: product.embroidery || null
+                minOrder: product.minOrder || 10,
+                selectedColor: product.selectedColor || null,
+                selectedSize: product.selectedSize || null,
+                embroidery: product.embroidery || null,
+                quantity: finalQuantity
             }
 
             console.log('🛒 [CartContext] Nuevo producto agregado:', newProduct)
@@ -78,12 +90,13 @@ export function CartProvider({ children }) {
 
     const updateQuantity = (productId, quantity) => {
         console.log('🛒 [CartContext] updateQuantity:', { productId, quantity })
-        if (quantity <= 0) {
+        const finalQuantity = typeof quantity === 'number' ? quantity : 1
+        if (finalQuantity <= 0) {
             removeFromCart(productId)
             return
         }
         setCart(prev => prev.map(item =>
-            item.id === productId ? { ...item, quantity } : item
+            item.id === productId ? { ...item, quantity: finalQuantity } : item
         ))
     }
 
@@ -92,19 +105,25 @@ export function CartProvider({ children }) {
         setCart([])
     }
 
-    const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0)
+    const getTotalItems = () => cart.reduce((sum, item) => {
+        const qty = typeof item.quantity === 'number' ? item.quantity : 1
+        return sum + qty
+    }, 0)
 
-    // ✅ CORREGIDO: getTotalPrice con manejo seguro de precios como número
+    // ✅ getTotalPrice corregido
     const getTotalPrice = () => cart.reduce((sum, item) => {
         const price = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0
         const quantity = typeof item.quantity === 'number' ? item.quantity : 1
-        return sum + (price * quantity)
+        const subtotal = price * quantity
+        console.log(`💰 [CartContext] ${item.name}: precio=${price}, cantidad=${quantity}, subtotal=${subtotal}`)
+        return sum + subtotal
     }, 0)
 
     // Log del estado actual del carrito cada vez que cambia
     useEffect(() => {
         console.log('🛒 [CartContext] Estado actual del carrito:', cart)
         console.log('🛒 [CartContext] Items con embroidery:', cart.filter(item => item.embroidery))
+        console.log('🛒 [CartContext] Precio total:', getTotalPrice())
     }, [cart])
 
     return (
