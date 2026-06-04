@@ -106,7 +106,7 @@ export const api = {
         },
     },
 
-    // ✅ SECCIÓN DE ÓRDENES - Agregar esto
+    // ✅ SECCIÓN DE ÓRDENES
     orders: {
         create: async (orderData) => {
             const response = await fetch(`${API_BASE_URL}/orders`, {
