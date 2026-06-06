@@ -1,21 +1,168 @@
-import { useState } from 'react'
+// src/pages/public/HomePage.jsx
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import SolutionDetailModal from '../../components/ui/SolutionDetailModal'
 import FeaturedProductCard from '../../components/ui/FeaturedProductCard'
-import { featuredProductsHome } from '../../data/mockData'
+import api from '../../config/api'
 
 export default function HomePage() {
     const navigate = useNavigate()
     const [selectedSolution, setSelectedSolution] = useState(null)
     const [modalOpen, setModalOpen] = useState(false)
+    const [featuredProducts, setFeaturedProducts] = useState([])
+    const [categories, setCategories] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
 
+    // Definición de soluciones con mapeo a categorías reales
     const solutions = [
-        { id: 'corporativo', title: 'Poleras y Camisas', category: 'LÍNEA CORPORATIVA', badge: 'MÁS VENDIDO', badgeColor: 'bg-secondary-container', price: 'Desde $12.900 CLP', description: 'Prendas profesionales para imagen corporativa. Bordado personalizado incluido.', image: 'https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=400&h=400&fit=crop' },
-        { id: 'industrial', title: 'Ropa de Trabajo', category: 'LÍNEA INDUSTRIAL', badge: 'DURADERO', badgeColor: 'bg-primary', price: 'Desde $28.900 CLP', description: 'Pantalones cargo, chalecos geólogo y prendas resistentes para terreno.', image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop' },
-        { id: 'bordado', title: 'Bordado de Logo', category: 'PERSONALIZACIÓN', badge: 'BORDADO INCLUIDO', badgeColor: 'bg-secondary-container', price: 'Desde $10.000 CLP', description: 'Bordado profesional de alta calidad en todas tus prendas corporativas.', image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=400&h=400&fit=crop' },
-        { id: 'equipos', title: 'Desde 10 Prendas', category: 'EQUIPOS PEQUEÑOS', badge: 'FLEXIBLE', badgeColor: 'bg-primary', price: 'Precios B2B', description: 'Soluciones flexibles combinando diferentes prendas, tallas y colores.', image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop' }
+        {
+            id: 'corporativo',
+            title: 'Poleras y Camisas',
+            category: 'LÍNEA CORPORATIVA',
+            badge: 'MÁS VENDIDO',
+            badgeColor: 'bg-secondary-container',
+            price: 'Desde $12.900 CLP',
+            description: 'Prendas profesionales para imagen corporativa. Bordado personalizado incluido.',
+            image: 'https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=400&h=400&fit=crop',
+            categoryId: null // Se asignará dinámicamente
+        },
+        {
+            id: 'industrial',
+            title: 'Ropa de Trabajo',
+            category: 'LÍNEA INDUSTRIAL',
+            badge: 'DURADERO',
+            badgeColor: 'bg-primary',
+            price: 'Desde $28.900 CLP',
+            description: 'Pantalones cargo, chalecos geólogo y prendas resistentes para terreno.',
+            image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop',
+            categoryId: null
+        },
+        {
+            id: 'bordado',
+            title: 'Bordado de Logo',
+            category: 'PERSONALIZACIÓN',
+            badge: 'BORDADO INCLUIDO',
+            badgeColor: 'bg-secondary-container',
+            price: 'Desde $10.000 CLP',
+            description: 'Bordado profesional de alta calidad en todas tus prendas corporativas.',
+            image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=400&h=400&fit=crop',
+            categoryId: null
+        },
+        {
+            id: 'equipos',
+            title: 'Desde 10 Prendas',
+            category: 'EQUIPOS PEQUEÑOS',
+            badge: 'FLEXIBLE',
+            badgeColor: 'bg-primary',
+            price: 'Precios B2B',
+            description: 'Soluciones flexibles combinando diferentes prendas, tallas y colores.',
+            image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop',
+            categoryId: null
+        }
     ]
+
+    // Cargar productos destacados y categorías desde el backend
+    useEffect(() => {
+        const fetchHomeData = async () => {
+            setLoading(true)
+            setError(null)
+
+            try {
+                // 1. Obtener categorías
+                const categoriesResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/categories`)
+                const categoriesData = await categoriesResponse.json()
+
+                if (categoriesResponse.ok) {
+                    setCategories(categoriesData)
+
+                    // Mapear soluciones a IDs de categorías reales
+                    const categoryMap = {
+                        corporativo: categoriesData.find(c => c.name?.toLowerCase().includes('corporativo') || c.name?.toLowerCase().includes('polera'))?.id,
+                        industrial: categoriesData.find(c => c.name?.toLowerCase().includes('industrial') || c.name?.toLowerCase().includes('pantalon'))?.id,
+                        bordado: categoriesData.find(c => c.name?.toLowerCase().includes('bordado'))?.id,
+                        equipos: categoriesData.find(c => c.name?.toLowerCase().includes('equipo') || c.name?.toLowerCase().includes('kit'))?.id
+                    }
+
+                    // Actualizar solutions con categoryId
+                    solutions.forEach(solution => {
+                        solution.categoryId = categoryMap[solution.id]
+                    })
+                }
+
+                // 2. Obtener productos destacados (isFeatured = true)
+                const productsResponse = await api.products.getAll(1, 8, { isFeatured: true })
+
+                if (productsResponse.data) {
+                    // Transformar productos al formato esperado por FeaturedProductCard
+                    const formattedProducts = productsResponse.data.map(product => ({
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        image: product.imageUrl || product.images?.[0] || 'https://via.placeholder.com/400',
+                        minOrder: product.minOrder || 10,
+                        reference: product.reference,
+                        isNew: product.isNew,
+                        isFeatured: product.isFeatured,
+                        hasDiscount: product.hasDiscount,
+                        discount: product.discount,
+                        inStock: product.stock > 0
+                    }))
+                    setFeaturedProducts(formattedProducts)
+                }
+
+            } catch (err) {
+                console.error('Error fetching home data:', err)
+                setError(err.message || 'Error al cargar los datos')
+
+                // Fallback: usar datos de mock solo si hay error
+                try {
+                    const { featuredProductsHome } = await import('../../data/mockData')
+                    setFeaturedProducts(featuredProductsHome)
+                } catch (mockErr) {
+                    console.error('Error loading mock data:', mockErr)
+                }
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchHomeData()
+    }, [])
+
+    // Recargar productos destacados cuando cambian las categorías
+    useEffect(() => {
+        const fetchFeaturedProducts = async () => {
+            if (categories.length === 0) return
+
+            try {
+                const productsResponse = await api.products.getAll(1, 8, { isFeatured: true })
+                if (productsResponse.data) {
+                    const formattedProducts = productsResponse.data.map(product => ({
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        image: product.imageUrl || product.images?.[0] || 'https://via.placeholder.com/400',
+                        minOrder: product.minOrder || 10,
+                        reference: product.reference,
+                        isNew: product.isNew,
+                        isFeatured: product.isFeatured,
+                        hasDiscount: product.hasDiscount,
+                        discount: product.discount,
+                        inStock: product.stock > 0
+                    }))
+                    setFeaturedProducts(formattedProducts)
+                }
+            } catch (err) {
+                console.error('Error fetching featured products:', err)
+            }
+        }
+
+        fetchFeaturedProducts()
+    }, [categories])
 
     const handleViewDetails = (solution) => {
         setSelectedSolution(solution)
@@ -31,6 +178,18 @@ export default function HomePage() {
         navigate('/contacto')
     }
 
+    // Mostrar loading
+    if (loading && featuredProducts.length === 0) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#FC9430] mx-auto"></div>
+                    <p className="mt-4 text-gray-500 font-medium">Cargando página de inicio...</p>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div>
             {/* Hero Section */}
@@ -40,6 +199,9 @@ export default function HomePage() {
                         src="https://www.eldescuevee.cl/categoria-bordado.jpg"
                         alt="Ropa corporativa bordada"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.target.src = 'https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=1920&h=600&fit=crop'
+                        }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40"></div>
                 </div>
@@ -55,9 +217,15 @@ export default function HomePage() {
                         <div className="flex gap-4 flex-wrap">
                             <Link
                                 to="/contacto"
-                                className="bg-[#FC9430] text-white px-8 py-4 font-bold uppercase tracking-wider hover:brightness-110 transition-all active:scale-95"
+                                className="bg-[#FC9430] text-white px-8 py-4 font-bold uppercase tracking-wider hover:brightness-110 transition-all active:scale-95 rounded"
                             >
                                 Cotizar desde 10 prendas
+                            </Link>
+                            <Link
+                                to="/catalogo"
+                                className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 font-bold uppercase tracking-wider hover:bg-white/30 transition-all rounded"
+                            >
+                                Ver Catálogo
                             </Link>
                         </div>
                     </div>
@@ -73,7 +241,7 @@ export default function HomePage() {
                         { icon: 'handshake', title: 'Trato Directo', desc: 'Hablamos cercano para orientarte mejor' }
                     ].map((item) => (
                         <div key={item.title} className="flex items-center gap-4 group cursor-pointer">
-                            <div className="w-16 h-16 bg-primary flex items-center justify-center text-white group-hover:bg-[#FC9430] transition-colors">
+                            <div className="w-16 h-16 bg-primary flex items-center justify-center text-white group-hover:bg-[#FC9430] transition-colors rounded">
                                 <Icon name={item.icon} className="text-4xl" fill={false} weight={400} />
                             </div>
                             <div>
@@ -98,11 +266,17 @@ export default function HomePage() {
                     </Link>
                 </div>
 
+                {error && (
+                    <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                        <p className="text-sm text-yellow-700">{error}</p>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {solutions.map((solution) => (
-                        <div key={solution.id} className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative">
+                        <div key={solution.id} className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative rounded-lg overflow-hidden">
                             <div className="absolute top-4 left-4 z-10">
-                                <span className={`${solution.badgeColor} text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter`}>
+                                <span className={`${solution.badgeColor} text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter rounded`}>
                                     {solution.badge}
                                 </span>
                             </div>
@@ -126,9 +300,6 @@ export default function HomePage() {
                                         <span className="text-h3 text-[#FC9430] font-black">{solution.price}</span>
                                         <span className="text-[10px] text-on-surface-variant">Pedido mínimo 10 unidades</span>
                                     </div>
-                                    <span className="text-[10px] font-bold text-on-surface uppercase border-b border-primary">
-                                        VER MÁS
-                                    </span>
                                 </div>
                             </div>
                             <div className="p-4 pt-0 grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -163,11 +334,18 @@ export default function HomePage() {
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {featuredProductsHome.map(product => (
-                        <FeaturedProductCard key={product.id} product={product} />
-                    ))}
-                </div>
+                {featuredProducts.length === 0 && !loading ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                        <Icon name="inventory_2" className="text-5xl text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No hay productos destacados disponibles</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {featuredProducts.map(product => (
+                            <FeaturedProductCard key={product.id} product={product} />
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Modal de detalles */}
