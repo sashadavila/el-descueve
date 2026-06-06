@@ -13,6 +13,7 @@ import {
   UploadedFile,
   UseInterceptors,
   ParseIntPipe,
+  DefaultValuePipe,  // ← Agregar DefaultValuePipe
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -100,31 +101,29 @@ export class ProductsController {
   @Get()
   @Public()
   async findAll(
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 15,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('isFeatured') isFeatured?: string,
+    @Query('isNew') isNew?: string,
     @Query('productType') productType?: ProductType,
     @Query('categoryId') categoryId?: string,
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder: 'ASC' | 'DESC' = 'ASC',
-    @Query('isFeatured') isFeatured?: string,
-    @Query('isNew') isNew?: string,
   ) {
-    // ⚠️ CRÍTICO: Solo convertir a boolean si el parámetro existe en la URL
-    // Si el parámetro no viene en la URL, será undefined
+    const pageNum = page ? Math.max(1, parseInt(page, 10)) : 1;
+    const limitNum = limit ? Math.min(100, Math.max(1, parseInt(limit, 10))) : 15;
     const featuredBool = isFeatured !== undefined ? isFeatured === 'true' : undefined;
     const newBool = isNew !== undefined ? isNew === 'true' : undefined;
 
-    console.log('📊 [Controller] isFeatured:', isFeatured, '->', featuredBool);
-    console.log('📊 [Controller] isNew:', isNew, '->', newBool);
-    console.log('📊 [Controller] productType:', productType);
-    console.log('📊 [Controller] categoryId:', categoryId);
+    console.log('📊 [Controller] page:', pageNum, 'limit:', limitNum);
+    console.log('📊 [Controller] isFeatured:', featuredBool, 'isNew:', newBool);
 
     return this.productsService.findAll(
-      page, limit, productType, categoryId, search,
+      pageNum, limitNum, productType, categoryId, search,
       sortBy, sortOrder,
-      featuredBool,  // ← undefined si no viene en la URL
-      newBool        // ← undefined si no viene en la URL
+      featuredBool,
+      newBool
     );
   }
 
