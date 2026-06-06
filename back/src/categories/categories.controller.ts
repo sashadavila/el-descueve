@@ -31,7 +31,7 @@ import { UserRole } from '../users/entities/user.entity';
 @ApiTags('Categories')
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(private readonly categoriesService: CategoriesService) { }
 
   @Post()
   @ApiBearerAuth()
