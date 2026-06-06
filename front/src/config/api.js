@@ -218,14 +218,24 @@ export const api = {
     products: {
         getAll: async (page = 1, limit = 15, filters = {}) => {
             let url = `${API_BASE_URL}/products?page=${page}&limit=${limit}`;
-            if (filters.productType) url += `&productType=${filters.productType}`;
-            if (filters.categoryId) url += `&categoryId=${filters.categoryId}`;
+
+            // Solo agregar parámetros si existen en filters
+            if (filters.productType) url += `&productType=${encodeURIComponent(filters.productType)}`;
+            if (filters.categoryId) url += `&categoryId=${encodeURIComponent(filters.categoryId)}`;
             if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
-            if (filters.sortBy) url += `&sortBy=${filters.sortBy}`;
-            if (filters.sortOrder) url += `&sortOrder=${filters.sortOrder}`;
-            if (filters.isFeatured !== undefined) url += `&isFeatured=${filters.isFeatured}`;
-            if (filters.isNew !== undefined) url += `&isNew=${filters.isNew}`;
-            if (filters.limit) url = url.replace(/limit=\d+/, `limit=${filters.limit}`);
+            if (filters.sortBy) url += `&sortBy=${encodeURIComponent(filters.sortBy)}`;
+            if (filters.sortOrder) url += `&sortOrder=${encodeURIComponent(filters.sortOrder)}`;
+
+            // ⚠️ CRÍTICO: NO agregar isFeatured o isNew a menos que vengan explícitamente
+            // Si filters tiene isFeatured y NO es undefined, agregarlo
+            if (filters.isFeatured !== undefined && filters.isFeatured !== null) {
+                url += `&isFeatured=${filters.isFeatured}`;
+            }
+            if (filters.isNew !== undefined && filters.isNew !== null) {
+                url += `&isNew=${filters.isNew}`;
+            }
+
+            console.log('📊 [API] URL generada:', url);
 
             const response = await fetch(url);
             const data = await response.json();
