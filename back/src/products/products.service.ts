@@ -79,7 +79,9 @@ export class ProductsService {
     categoryId?: string,
     search?: string,
     sortBy?: string,
-    sortOrder: 'ASC' | 'DESC' = 'ASC'
+    sortOrder: 'ASC' | 'DESC' = 'ASC',
+    isFeatured?: boolean,
+    isNew?: boolean,
   ): Promise<{ data: Product[]; total: number; page: number; totalPages: number }> {
     const where: FindOptionsWhere<Product> = { isActive: true };
 
@@ -89,6 +91,14 @@ export class ProductsService {
 
     if (categoryId) {
       where.categoryId = categoryId;
+    }
+
+    if (isFeatured !== undefined) {
+      where.isFeatured = isFeatured;
+    }
+
+    if (isNew !== undefined) {
+      where.isNew = isNew;
     }
 
     if (search) {
