@@ -1,3 +1,4 @@
+// src/categories/categories.controller.ts
 import {
   Body,
   Controller,
@@ -27,6 +28,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
+import { Public } from '../common/decorators/public.decorator'; // ← Importar Public
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -63,6 +65,7 @@ export class CategoriesController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({
     summary: 'Obtener todas las categorías',
     description: 'Endpoint público para listar categorías visibles en la tienda.',
@@ -77,6 +80,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({
     summary: 'Obtener una categoría por ID',
     description: 'Endpoint público para ver una categoría y sus productos asociados.',
