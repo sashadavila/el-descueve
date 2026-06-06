@@ -223,6 +223,9 @@ export const api = {
             if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
             if (filters.sortBy) url += `&sortBy=${filters.sortBy}`;
             if (filters.sortOrder) url += `&sortOrder=${filters.sortOrder}`;
+            if (filters.isFeatured !== undefined) url += `&isFeatured=${filters.isFeatured}`;
+            if (filters.isNew !== undefined) url += `&isNew=${filters.isNew}`;
+            if (filters.limit) url = url.replace(/limit=\d+/, `limit=${filters.limit}`);
 
             const response = await fetch(url);
             const data = await response.json();
