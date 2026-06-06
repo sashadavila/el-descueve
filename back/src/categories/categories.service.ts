@@ -27,6 +27,7 @@ export class CategoriesService {
 
   async findAll(): Promise<Category[]> {
     return this.categoriesRepository.find({
+      where: { isActive: true },
       order: { name: 'ASC' },
     });
   }
