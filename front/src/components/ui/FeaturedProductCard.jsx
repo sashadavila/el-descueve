@@ -17,9 +17,16 @@ export default function FeaturedProductCard({ product }) {
     return (
         <div className="bg-white border border-outline-variant group hover:border-primary transition-all duration-300 flex flex-col relative rounded-lg overflow-hidden">
             <div className="absolute top-4 left-4 z-10">
-                <span className="bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter rounded">
-                    DISPONIBLE
-                </span>
+                {product.isFeatured && (
+                    <span className="bg-[#FC9430] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter rounded">
+                        DESTACADO
+                    </span>
+                )}
+                {!product.isFeatured && (
+                    <span className="bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter rounded">
+                        DISPONIBLE
+                    </span>
+                )}
             </div>
             <Link to={isAuthenticated ? `/producto/${productId}` : "/login"}>
                 <div className="aspect-square overflow-hidden bg-surface-container-low p-8">
