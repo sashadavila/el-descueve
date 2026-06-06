@@ -25,14 +25,18 @@ export default function CatalogoPage() {
     const loadProducts = async () => {
         setLoading(true)
         try {
-            const filters = {
-                page: currentPage,
-                limit: itemsPerPage,
-            }
+            // ✅ SOLO estos filtros - NO incluir isFeatured o isNew
+            const filters = {}
 
-            if (selectedType !== 'all') filters.productType = selectedType
-            if (selectedCategory !== 'all') filters.categoryId = selectedCategory
-            if (searchTerm) filters.search = searchTerm
+            if (selectedType && selectedType !== 'all') {
+                filters.productType = selectedType
+            }
+            if (selectedCategory && selectedCategory !== 'all') {
+                filters.categoryId = selectedCategory
+            }
+            if (searchTerm && searchTerm.trim()) {
+                filters.search = searchTerm
+            }
             if (sortBy === 'price_asc') {
                 filters.sortBy = 'price'
                 filters.sortOrder = 'ASC'
@@ -41,12 +45,20 @@ export default function CatalogoPage() {
                 filters.sortOrder = 'DESC'
             }
 
+            // IMPORTANTE: No agregar isFeatured o isNew
+
+            console.log('📊 [CatalogoPage] Enviando filtros:', filters)
+
             const response = await api.products.getAll(currentPage, itemsPerPage, filters)
-            setProducts(response.data)
-            setTotalPages(response.totalPages)
-            setTotalProducts(response.total)
+
+            console.log('📊 Productos cargados:', response.data?.length, 'de', response.total)
+
+            setProducts(response.data || [])
+            setTotalPages(response.totalPages || 1)
+            setTotalProducts(response.total || 0)
         } catch (error) {
             console.error('Error loading products:', error)
+            setProducts([])
         } finally {
             setLoading(false)
         }
@@ -120,8 +132,8 @@ export default function CatalogoPage() {
                         key={page}
                         onClick={() => handlePageChange(page)}
                         className={`px-4 py-2 text-sm border rounded-lg transition-colors ${currentPage === page
-                                ? 'bg-primary text-white border-primary'
-                                : 'hover:bg-gray-50'
+                            ? 'bg-primary text-white border-primary'
+                            : 'hover:bg-gray-50'
                             }`}
                     >
                         {page}
@@ -164,8 +176,8 @@ export default function CatalogoPage() {
                     <button
                         onClick={() => setSelectedType('all')}
                         className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedType === 'all'
-                                ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
-                                : 'text-slate-500 hover:bg-slate-100'
+                            ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
+                            : 'text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         <Icon name="grid_view" />
@@ -175,8 +187,8 @@ export default function CatalogoPage() {
                     <button
                         onClick={() => setSelectedType('corporativo')}
                         className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedType === 'corporativo'
-                                ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
-                                : 'text-slate-500 hover:bg-slate-100'
+                            ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
+                            : 'text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         <Icon name="work" />
@@ -186,8 +198,8 @@ export default function CatalogoPage() {
                     <button
                         onClick={() => setSelectedType('industrial')}
                         className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedType === 'industrial'
-                                ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
-                                : 'text-slate-500 hover:bg-slate-100'
+                            ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
+                            : 'text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         <Icon name="construction" />
@@ -197,8 +209,8 @@ export default function CatalogoPage() {
                     <button
                         onClick={() => setSelectedType('bordados')}
                         className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedType === 'bordados'
-                                ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
-                                : 'text-slate-500 hover:bg-slate-100'
+                            ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
+                            : 'text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         <Icon name="brush" />
@@ -208,8 +220,8 @@ export default function CatalogoPage() {
                     <button
                         onClick={() => setSelectedType('equipos')}
                         className={`px-6 py-3 flex items-center gap-3 text-sm font-semibold uppercase transition-colors w-full text-left ${selectedType === 'equipos'
-                                ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
-                                : 'text-slate-500 hover:bg-slate-100'
+                            ? 'bg-white text-[#163C7A] border-l-4 border-[#FC9430]'
+                            : 'text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         <Icon name="groups" />
