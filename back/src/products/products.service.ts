@@ -83,7 +83,16 @@ export class ProductsService {
     isFeatured?: boolean,
     isNew?: boolean,
   ): Promise<{ data: Product[]; total: number; page: number; totalPages: number }> {
-    const where: FindOptionsWhere<Product> = { isActive: true };
+    // IMPORTANTE: No filtrar por isActive aquí si quieres ver todos
+    const where: FindOptionsWhere<Product> = {}; // ← REMOVER { isActive: true } temporalmente
+
+    console.log('📊 [ProductsService] findAll - Parámetros:');
+    console.log('  page:', page, 'limit:', limit);
+    console.log('  where sin filtros:', where);
+
+    // Contar el total de productos (sin filtros de actividad)
+    const totalActive = await this.productsRepository.count();
+    console.log('📊 [ProductsService] Total productos en BD (sin filtros):', totalActive);
 
     if (productType) {
       where.productType = productType;
@@ -101,9 +110,11 @@ export class ProductsService {
       where.isNew = isNew;
     }
 
+    // Si hay búsqueda, usar query builder
     if (search) {
       const queryBuilder = this.productsRepository.createQueryBuilder('product');
-      queryBuilder.where('product.isActive = :isActive', { isActive: true });
+      // No filtrar por isActive aquí tampoco
+      // queryBuilder.where('product.isActive = :isActive', { isActive: true });
 
       if (productType) {
         queryBuilder.andWhere('product.productType = :productType', { productType });
@@ -113,10 +124,20 @@ export class ProductsService {
         queryBuilder.andWhere('product.categoryId = :categoryId', { categoryId });
       }
 
-      queryBuilder.andWhere(
-        '(LOWER(product.name) LIKE :search OR LOWER(product.description) LIKE :search OR LOWER(product.reference) LIKE :search)',
-        { search: `%${search.toLowerCase()}%` }
-      );
+      if (isFeatured !== undefined) {
+        queryBuilder.andWhere('product.isFeatured = :isFeatured', { isFeatured });
+      }
+
+      if (isNew !== undefined) {
+        queryBuilder.andWhere('product.isNew = :isNew', { isNew });
+      }
+
+      if (search) {
+        queryBuilder.andWhere(
+          '(LOWER(product.name) LIKE :search OR LOWER(product.description) LIKE :search OR LOWER(product.reference) LIKE :search)',
+          { search: `%${search.toLowerCase()}%` }
+        );
+      }
 
       if (sortBy === 'price') {
         queryBuilder.orderBy('product.price', sortOrder);
@@ -130,6 +151,8 @@ export class ProductsService {
 
       const [data, total] = await queryBuilder.getManyAndCount();
 
+      console.log('📊 [ProductsService] Búsqueda - Encontrados:', total, 'Retornando:', data.length);
+
       return {
         data,
         total,
@@ -138,6 +161,7 @@ export class ProductsService {
       };
     }
 
+    // Sin búsqueda
     let order: any = { createdAt: 'DESC' };
     if (sortBy === 'price') {
       order = { price: sortOrder };
@@ -154,6 +178,9 @@ export class ProductsService {
         category: true,
       },
     });
+
+    console.log('📊 [ProductsService] findAndCount - Encontrados total:', total, 'Retornando:', data.length);
+    console.log('📊 [ProductsService] Primeros 5 productos:', data.slice(0, 5).map(p => ({ id: p.id, name: p.name })));
 
     return {
       data,
