@@ -106,6 +106,8 @@ export class ProductsController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'sortBy', required: false, enum: ['price', 'name'] })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['ASC', 'DESC'] })
+  @ApiQuery({ name: 'isFeatured', required: false, type: Boolean })
+  @ApiQuery({ name: 'isNew', required: false, type: Boolean })
   async findAll(
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 15,
@@ -114,8 +116,15 @@ export class ProductsController {
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder: 'ASC' | 'DESC' = 'ASC',
+    @Query('isFeatured') isFeatured?: string,
+    @Query('isNew') isNew?: string,
   ) {
-    return this.productsService.findAll(page, limit, productType, categoryId, search, sortBy, sortOrder);
+    return this.productsService.findAll(
+      page, limit, productType, categoryId, search,
+      sortBy, sortOrder,
+      isFeatured === 'true',
+      isNew === 'true'
+    );
   }
 
   @Get('stats')
