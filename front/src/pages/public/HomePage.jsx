@@ -14,9 +14,8 @@ export default function HomePage() {
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-    const [retryCount, setRetryCount] = useState(0)
 
-    // Definición de soluciones con IDs de categorías (se actualizarán dinámicamente)
+    // Definición de soluciones
     const solutions = [
         {
             id: 'corporativo',
@@ -27,8 +26,6 @@ export default function HomePage() {
             price: 'Desde $12.900 CLP',
             description: 'Prendas profesionales para imagen corporativa. Bordado personalizado incluido.',
             image: 'https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=400&h=400&fit=crop',
-            categoryId: null,
-            categoryName: 'corporativo'
         },
         {
             id: 'industrial',
@@ -39,8 +36,6 @@ export default function HomePage() {
             price: 'Desde $28.900 CLP',
             description: 'Pantalones cargo, chalecos geólogo y prendas resistentes para terreno.',
             image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop',
-            categoryId: null,
-            categoryName: 'industrial'
         },
         {
             id: 'bordado',
@@ -51,8 +46,6 @@ export default function HomePage() {
             price: 'Desde $10.000 CLP',
             description: 'Bordado profesional de alta calidad en todas tus prendas corporativas.',
             image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=400&h=400&fit=crop',
-            categoryId: null,
-            categoryName: 'bordados'
         },
         {
             id: 'equipos',
@@ -63,117 +56,64 @@ export default function HomePage() {
             price: 'Precios B2B',
             description: 'Soluciones flexibles combinando diferentes prendas, tallas y colores.',
             image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop',
-            categoryId: null,
-            categoryName: 'equipos'
         }
     ]
 
-    // Función para cargar datos con reintento
-    const fetchHomeData = async (retry = false) => {
-        setLoading(true)
-        setError(null)
-
-        try {
-            // Intentar cargar categorías y productos en paralelo
-            const [categoriesResponse, productsResponse] = await Promise.all([
-                fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/categories`),
-                api.products.getAll(1, 8, { isFeatured: true })
-            ])
-
-            // Procesar categorías
-            if (!categoriesResponse.ok) {
-                throw new Error(`Error ${categoriesResponse.status}: No se pudieron cargar las categorías`)
-            }
-
-            const categoriesData = await categoriesResponse.json()
-
-            if (!categoriesData || categoriesData.length === 0) {
-                throw new Error('No hay categorías disponibles en la base de datos')
-            }
-
-            setCategories(categoriesData)
-
-            // Mapear soluciones a IDs de categorías reales
-            const updatedSolutions = solutions.map(solution => {
-                const matchedCategory = categoriesData.find(c =>
-                    c.name?.toLowerCase().includes(solution.categoryName) ||
-                    c.name?.toLowerCase().includes(solution.id) ||
-                    (solution.id === 'corporativo' && c.name?.toLowerCase().includes('polera')) ||
-                    (solution.id === 'industrial' && c.name?.toLowerCase().includes('pantalon')) ||
-                    (solution.id === 'bordado' && c.name?.toLowerCase().includes('bordado')) ||
-                    (solution.id === 'equipos' && (c.name?.toLowerCase().includes('equipo') || c.name?.toLowerCase().includes('kit')))
-                )
-                return {
-                    ...solution,
-                    categoryId: matchedCategory?.id || null
-                }
-            })
-
-            // Actualizar las soluciones con los IDs encontrados
-            solutions.forEach((sol, idx) => {
-                sol.categoryId = updatedSolutions[idx].categoryId
-            })
-
-            // Procesar productos destacados
-            if (!productsResponse || !productsResponse.data) {
-                throw new Error('No se pudieron cargar los productos destacados')
-            }
-
-            const formattedProducts = productsResponse.data.map(product => ({
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                price: typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0,
-                image: product.imageUrl || product.images?.[0] || 'https://via.placeholder.com/400',
-                minOrder: product.minOrder || 10,
-                reference: product.reference,
-                isNew: product.isNew || false,
-                isFeatured: product.isFeatured || false,
-                hasDiscount: product.hasDiscount || false,
-                discount: product.discount || 0,
-                inStock: (product.stock || 0) > 0
-            }))
-
-            setFeaturedProducts(formattedProducts)
-
-        } catch (err) {
-            console.error('Error fetching home data:', err)
-
-            // Si hay error y es el primer intento, reintentar después de 2 segundos
-            if (retryCount < 2 && !retry) {
-                console.log(`Reintentando cargar datos... (intento ${retryCount + 1}/2)`)
-                setRetryCount(prev => prev + 1)
-                setTimeout(() => fetchHomeData(true), 2000)
-                return
-            }
-
-            // Determinar el mensaje de error específico
-            let errorMessage = 'No se pudieron cargar los datos desde el servidor'
-
-            if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-                errorMessage = '⚠️ No se pudo conectar con el servidor. Verifica que el backend esté corriendo en http://localhost:3000'
-            } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-                errorMessage = '⚠️ Error de autenticación. Por favor, inicia sesión nuevamente.'
-            } else if (err.message.includes('404')) {
-                errorMessage = '⚠️ El servidor no responde correctamente. Verifica la configuración de la API.'
-            } else if (err.message.includes('No hay categorías')) {
-                errorMessage = '⚠️ No hay categorías registradas en la base de datos. Contacta al administrador.'
-            } else if (err.message.includes('No se pudieron cargar los productos')) {
-                errorMessage = '⚠️ No hay productos disponibles en este momento.'
-            } else {
-                errorMessage = `⚠️ Error: ${err.message}`
-            }
-
-            setError(errorMessage)
-            setFeaturedProducts([])
-            setCategories([])
-        } finally {
-            setLoading(false)
-        }
-    }
-
+    // Cargar productos destacados desde el backend
     useEffect(() => {
-        fetchHomeData()
+        const fetchFeaturedProducts = async () => {
+            setLoading(true)
+            setError(null)
+
+            try {
+                // ✅ Cargar productos con isFeatured = true
+                console.log('📊 [HomePage] Cargando productos destacados (isFeatured=true)...')
+
+                const response = await api.products.getAll(1, 8, { isFeatured: true })
+
+                console.log('📊 [HomePage] Respuesta:', response)
+                console.log('📊 [HomePage] Productos destacados encontrados:', response.data?.length)
+
+                if (response.data && response.data.length > 0) {
+                    // Transformar productos al formato esperado
+                    const formattedProducts = response.data.map(product => ({
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0,
+                        image: product.imageUrl || product.images?.[0] || 'https://via.placeholder.com/400',
+                        minOrder: product.minOrder || 10,
+                        reference: product.reference,
+                        isNew: product.isNew || false,
+                        isFeatured: product.isFeatured || false,
+                        hasDiscount: product.hasDiscount || false,
+                        discount: product.discount || 0,
+                        inStock: (product.stock || 0) > 0
+                    }))
+
+                    setFeaturedProducts(formattedProducts)
+                } else {
+                    console.log('📊 [HomePage] No hay productos destacados, mostrando mensaje')
+                    setFeaturedProducts([])
+                }
+
+                // También cargar categorías para las soluciones
+                const categoriesResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/categories`)
+                if (categoriesResponse.ok) {
+                    const categoriesData = await categoriesResponse.json()
+                    setCategories(categoriesData)
+                }
+
+            } catch (err) {
+                console.error('Error fetching featured products:', err)
+                setError(err.message)
+                setFeaturedProducts([])
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchFeaturedProducts()
     }, [])
 
     const handleViewDetails = (solution) => {
@@ -190,66 +130,17 @@ export default function HomePage() {
         navigate('/contacto')
     }
 
-    const handleRetry = () => {
-        setRetryCount(0)
-        fetchHomeData()
-    }
-
-    // Pantalla de error - Muestra un mensaje claro cuando no se pueden cargar los datos
-    if (error && !loading) {
-        return (
-            <div className="min-h-[70vh] flex items-center justify-center px-4">
-                <div className="text-center max-w-md mx-auto">
-                    <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Icon name="error" className="text-5xl text-red-500" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-800 mb-3">No se pudieron cargar los datos</h1>
-                    <p className="text-gray-600 mb-2">{error}</p>
-                    <p className="text-sm text-gray-500 mb-6">
-                        Verifica que el servidor backend esté corriendo en <strong>http://localhost:3000</strong>
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <button
-                            onClick={handleRetry}
-                            className="bg-[#FC9430] text-white px-6 py-3 font-bold uppercase rounded-lg hover:bg-[#e0852b] transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Icon name="refresh" className="text-sm" />
-                            Reintentar
-                        </button>
-                        <Link
-                            to="/contacto"
-                            className="border-2 border-gray-300 text-gray-700 px-6 py-3 font-bold uppercase rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                            Contactar Soporte
-                        </Link>
-                    </div>
-                    <div className="mt-8 p-4 bg-gray-50 rounded-lg text-left">
-                        <p className="text-xs text-gray-500 font-mono">
-                            <strong>Debug:</strong><br />
-                            API URL: {import.meta.env.VITE_API_URL || 'http://localhost:3000'}<br />
-                            Estado: {error.includes('conectar') ? '❌ Sin conexión' : '⚠️ Error en respuesta'}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    // Pantalla de carga
+    // Mostrar loading
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#FC9430] mx-auto"></div>
                     <p className="mt-4 text-gray-500 font-medium">Cargando página de inicio...</p>
-                    <p className="text-xs text-gray-400 mt-2">Conectando con el servidor</p>
                 </div>
             </div>
         )
     }
-
-    // Si no hay productos destacados pero no hay error, mostrar mensaje informativo
-    const hasNoProducts = featuredProducts.length === 0 && !loading && !error
 
     return (
         <div>
@@ -389,11 +280,17 @@ export default function HomePage() {
                     </Link>
                 </div>
 
-                {hasNoProducts ? (
+                {error && (
+                    <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                        <p className="text-sm text-yellow-700">{error}</p>
+                    </div>
+                )}
+
+                {featuredProducts.length === 0 ? (
                     <div className="text-center py-12 bg-gray-50 rounded-lg">
                         <Icon name="inventory_2" className="text-5xl text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500">No hay productos destacados disponibles en este momento</p>
-                        <p className="text-xs text-gray-400 mt-2">Agrega productos desde el panel de administrador</p>
+                        <p className="text-xs text-gray-400 mt-2">Los productos destacados aparecerán aquí cuando marques productos como "Destacados" en el panel de administración</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
