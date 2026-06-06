@@ -1,3 +1,4 @@
+// src/products/products.controller.ts
 import {
   Body,
   Controller,
@@ -98,16 +99,6 @@ export class ProductsController {
 
   @Get()
   @Public()
-  @ApiOperation({ summary: 'Obtener todos los productos con paginación' })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 15 })
-  @ApiQuery({ name: 'productType', required: false, enum: ProductType })
-  @ApiQuery({ name: 'categoryId', required: false })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'sortBy', required: false, enum: ['price', 'name'] })
-  @ApiQuery({ name: 'sortOrder', required: false, enum: ['ASC', 'DESC'] })
-  @ApiQuery({ name: 'isFeatured', required: false, type: Boolean })
-  @ApiQuery({ name: 'isNew', required: false, type: Boolean })
   async findAll(
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 15,
@@ -119,11 +110,21 @@ export class ProductsController {
     @Query('isFeatured') isFeatured?: string,
     @Query('isNew') isNew?: string,
   ) {
+    // ⚠️ CRÍTICO: Solo convertir a boolean si el parámetro existe en la URL
+    // Si el parámetro no viene en la URL, será undefined
+    const featuredBool = isFeatured !== undefined ? isFeatured === 'true' : undefined;
+    const newBool = isNew !== undefined ? isNew === 'true' : undefined;
+
+    console.log('📊 [Controller] isFeatured:', isFeatured, '->', featuredBool);
+    console.log('📊 [Controller] isNew:', isNew, '->', newBool);
+    console.log('📊 [Controller] productType:', productType);
+    console.log('📊 [Controller] categoryId:', categoryId);
+
     return this.productsService.findAll(
       page, limit, productType, categoryId, search,
       sortBy, sortOrder,
-      isFeatured === 'true',
-      isNew === 'true'
+      featuredBool,  // ← undefined si no viene en la URL
+      newBool        // ← undefined si no viene en la URL
     );
   }
 
