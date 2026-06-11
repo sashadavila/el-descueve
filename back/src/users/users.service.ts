@@ -1,10 +1,11 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -96,5 +97,18 @@ export class UsersService {
       isActive: true,
       role: UserRole.CLIENT,
     });
+  }
+  async remove(id: string): Promise<{ message: string }> {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    // Eliminar en cascada (TypeORM maneja CASCADE si está configurado)
+    await this.usersRepository.remove(user);
+
+    this.logger.log(`✅ Usuario eliminado: ${user.email} - ID: ${id}`);
+
+    return { message: `Usuario con ID ${id} eliminado correctamente` };
   }
 }
