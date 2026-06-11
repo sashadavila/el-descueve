@@ -1,3 +1,5 @@
+// src/App.jsx
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ScrollToTop from './components/common/ScrollToTop'
 import Layout from './components/common/Layout'
@@ -24,14 +26,28 @@ import TermsConditions from './pages/legal/TermsConditions'
 import PrivacyPolicy from './pages/legal/PrivacyPolicy'
 import InvoicePage from './pages/public/InvoicePage'
 
-// Admin
-import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminClients from './pages/admin/AdminClients'
-import AdminEditClient from './pages/admin/AdminEditClient'
-import AdminStatistics from './pages/admin/AdminStatistics'
-import AdminHelp from './pages/admin/AdminHelp'
-import AdminNotifications from './pages/admin/AdminNotifications'
-import AdminProducts from './pages/admin/AdminProducts'
+// Admin - Zona Clientes
+import AdminClientsDirectory from './pages/admin/zones/clients/AdminClientsDirectory'
+import AdminClientsStats from './pages/admin/zones/clients/AdminClientsStats'
+import AdminClientsNotifications from './pages/admin/zones/clients/AdminClientsNotifications'
+
+// Admin - Zona Inventarios
+import AdminInventoryDirectory from './pages/admin/zones/inventory/AdminInventoryDirectory'
+import AdminInventoryStats from './pages/admin/zones/inventory/AdminInventoryStats'
+import AdminInventoryNotifications from './pages/admin/zones/inventory/AdminInventoryNotifications'
+
+// Admin - Zona Pedidos
+import AdminOrdersDirectory from './pages/admin/zones/orders/AdminOrdersDirectory'
+import AdminOrdersStats from './pages/admin/zones/orders/AdminOrdersStats'
+import AdminOrdersNotifications from './pages/admin/zones/orders/AdminOrdersNotifications'
+
+// Admin - Zona Envíos
+import AdminShipmentsDirectory from './pages/admin/zones/shipments/AdminShipmentsDirectory'
+import AdminShipmentsStats from './pages/admin/zones/shipments/AdminShipmentsStats'
+import AdminShipmentsNotifications from './pages/admin/zones/shipments/AdminShipmentsNotifications'
+
+// Admin - Ayuda
+import AdminHelp from './pages/admin/AdminHelp'  // ← Agregar esta línea
 
 // Componente para proteger rutas admin
 function AdminRoute({ children }) {
@@ -89,13 +105,30 @@ function App() {
             <AdminLayout />
           </AdminRoute>
         }>
-          <Route index element={<AdminDashboard />} />
-          <Route path="clientes" element={<AdminClients />} />
-          <Route path="clientes/editar/:id" element={<AdminEditClient />} />
-          <Route path="estadisticas" element={<AdminStatistics />} />
+          <Route index element={<Navigate to="/admin/clientes/directorio" replace />} />
+
+          {/* Zona Clientes */}
+          <Route path="clientes/directorio" element={<AdminClientsDirectory />} />
+          <Route path="clientes/estadisticas" element={<AdminClientsStats />} />
+          <Route path="clientes/notificaciones" element={<AdminClientsNotifications />} />
+
+          {/* Zona Inventarios */}
+          <Route path="inventarios/directorio" element={<AdminInventoryDirectory />} />
+          <Route path="inventarios/estadisticas" element={<AdminInventoryStats />} />
+          <Route path="inventarios/notificaciones" element={<AdminInventoryNotifications />} />
+
+          {/* Zona Pedidos */}
+          <Route path="pedidos/directorio" element={<AdminOrdersDirectory />} />
+          <Route path="pedidos/estadisticas" element={<AdminOrdersStats />} />
+          <Route path="pedidos/notificaciones" element={<AdminOrdersNotifications />} />
+
+          {/* Zona Envíos */}
+          <Route path="envios/directorio" element={<AdminShipmentsDirectory />} />
+          <Route path="envios/estadisticas" element={<AdminShipmentsStats />} />
+          <Route path="envios/notificaciones" element={<AdminShipmentsNotifications />} />
+
+          {/* Ayuda */}
           <Route path="ayuda" element={<AdminHelp />} />
-          <Route path="notificaciones" element={<AdminNotifications />} />
-          <Route path="productos" element={<AdminProducts />} />
         </Route>
       </Routes>
     </>
