@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -132,6 +132,44 @@ export class OrdersService {
 
     return {
       message: `Orden con ID ${id} eliminada correctamente`,
+    };
+  }
+
+  async getStats(): Promise<{
+    total: number;
+    byStatus: Record<string, number>;
+    totalRevenue: number;
+    averageOrderValue: number;
+    pendingOrders: number;
+    recentOrders: number;
+  }> {
+    const total = await this.ordersRepository.count();
+
+    const byStatus = {
+      PENDING: await this.ordersRepository.count({ where: { status: 'PENDING' } }),
+      PAID: await this.ordersRepository.count({ where: { status: 'PAID' } }),
+      CANCELLED: await this.ordersRepository.count({ where: { status: 'CANCELLED' } }),
+      DELIVERED: await this.ordersRepository.count({ where: { status: 'DELIVERED' } }),
+    };
+
+    const allOrders = await this.ordersRepository.find();
+    const totalRevenue = allOrders.reduce((sum, order) => sum + (parseFloat(order.total as any) || 0), 0);
+    const averageOrderValue = total > 0 ? totalRevenue / total : 0;
+    const pendingOrders = await this.ordersRepository.count({ where: { status: 'PENDING' } });
+
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const recentOrders = await this.ordersRepository.count({
+      where: { createdAt: MoreThan(lastMonth) },
+    });
+
+    return {
+      total,
+      byStatus,
+      totalRevenue,
+      averageOrderValue,
+      pendingOrders,
+      recentOrders,
     };
   }
 }
