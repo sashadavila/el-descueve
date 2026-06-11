@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, Between, FindOptionsWhere } from 'typeorm';
 import * as XLSX from 'xlsx';
@@ -6,6 +6,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product, ProductType, ProductSize } from './entities/product.entity';
 import { CategoriesService } from '../categories/categories.service';
+import { OrderItem } from '../order-items/entities/order-item.entity';
 
 // Definir la interfaz para las filas del Excel
 interface ExcelRow {
@@ -56,6 +57,8 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemsRepository: Repository<OrderItem>,
     private readonly categoriesService: CategoriesService,
   ) { }
 
@@ -230,7 +233,22 @@ export class ProductsService {
 
   async remove(id: string): Promise<{ message: string }> {
     const product = await this.findOne(id);
+
+    // Verificar si el producto está en alguna orden
+    const orderItems = await this.orderItemsRepository.find({
+      where: { productId: id },
+      relations: ['order'],
+    });
+
+    if (orderItems.length > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar el producto "${product.name}" porque tiene ${orderItems.length} pedidos asociados. ` +
+        `Primero elimina las órdenes relacionadas o cambia el estado del producto a inactivo.`
+      );
+    }
+
     await this.productsRepository.remove(product);
+    this.logger.log(`✅ Producto eliminado: ${product.name} (${product.reference})`);
     return { message: `Producto con ID ${id} eliminado correctamente` };
   }
 
