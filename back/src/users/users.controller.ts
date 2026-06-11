@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, ParseUUIDPipe, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Put, Param, ParseUUIDPipe, Body, UseGuards, BadRequestException, Delete } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { User, UserRole } from './entities/user.entity';
@@ -81,5 +81,14 @@ export class UsersController {
         console.log('📊 Estadísticas:', stats);
 
         return stats;
+    }
+    @Delete(':id')
+    @Roles(UserRole.ADMIN)
+    @ApiOperation({ summary: 'Eliminar un usuario (solo admin) - Elimina en cascada todos sus registros' })
+    @ApiResponse({ status: 200, description: 'Usuario eliminado correctamente.' })
+    @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+    async remove(@Param('id', ParseUUIDPipe) id: string): Promise<{ message: string }> {
+        console.log(`🗑️ [UsersController] DELETE /users/${id}`);
+        return this.usersService.remove(id);
     }
 }
