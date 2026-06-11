@@ -1,15 +1,61 @@
+// src/components/layout/AdminLayout.jsx
+// Reemplazar completamente con esta versión
+
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useState, useEffect } from 'react'
+import Icon from '../../components/ui/Icon'
 import api from '../../config/api'
 
-const navItems = [
-    { path: '/admin', label: 'Dashboard', icon: 'dashboard', description: 'Resumen y métricas' },
-    { path: '/admin/clientes', label: 'Clientes', icon: 'groups', description: 'Gestión de clientes' },
-    { path: '/admin/productos', label: 'Productos', icon: 'inventory_2', description: 'Gestión de productos' },
-    { path: '/admin/estadisticas', label: 'Estadísticas', icon: 'bar_chart', description: 'Análisis de datos' },
-    { path: '/admin/notificaciones', label: 'Notificaciones', icon: 'notifications', description: 'Actividad reciente' },
-    { path: '/admin/ayuda', label: 'Ayuda', icon: 'help_outline', description: 'Guía y soporte' },
+const menuItems = [
+    {
+        title: 'Clientes',
+        icon: 'groups',
+        basePath: '/admin/clientes',
+        subItems: [
+            { path: '/admin/clientes/directorio', label: 'Directorio', icon: 'contact_page' },
+            { path: '/admin/clientes/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
+            { path: '/admin/clientes/notificaciones', label: 'Notificaciones', icon: 'notifications' },
+        ]
+    },
+    {
+        title: 'Inventarios',
+        icon: 'inventory_2',
+        basePath: '/admin/inventarios',
+        subItems: [
+            { path: '/admin/inventarios/directorio', label: 'Directorio', icon: 'catalog' },
+            { path: '/admin/inventarios/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
+            { path: '/admin/inventarios/notificaciones', label: 'Notificaciones', icon: 'notifications' },
+        ]
+    },
+    {
+        title: 'Pedidos',
+        icon: 'receipt_long',
+        basePath: '/admin/pedidos',
+        subItems: [
+            { path: '/admin/pedidos/directorio', label: 'Directorio', icon: 'list_alt' },
+            { path: '/admin/pedidos/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
+            { path: '/admin/pedidos/notificaciones', label: 'Notificaciones', icon: 'notifications' },
+        ]
+    },
+    {
+        title: 'Envíos',
+        icon: 'local_shipping',
+        basePath: '/admin/envios',
+        subItems: [
+            { path: '/admin/envios/directorio', label: 'Directorio', icon: 'local_shipping' },
+            { path: '/admin/envios/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
+            { path: '/admin/envios/notificaciones', label: 'Notificaciones', icon: 'notifications' },
+        ]
+    },
+    {
+        title: 'Ayuda',
+        icon: 'help_outline',
+        basePath: '/admin/ayuda',
+        subItems: [
+            { path: '/admin/ayuda', label: 'Centro de Ayuda', icon: 'support_agent' },
+        ]
+    },
 ]
 
 export default function AdminLayout() {
@@ -17,8 +63,20 @@ export default function AdminLayout() {
     const navigate = useNavigate()
     const { isAdmin, isAuthenticated, loading, user } = useAuth()
     const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [expandedMenus, setExpandedMenus] = useState({})
     const [currentTime, setCurrentTime] = useState('')
     const [unreadCount, setUnreadCount] = useState(0)
+
+    // Determinar qué menú está expandido basado en la ruta actual
+    useEffect(() => {
+        const expanded = {}
+        menuItems.forEach(menu => {
+            if (location.pathname.startsWith(menu.basePath)) {
+                expanded[menu.title] = true
+            }
+        })
+        setExpandedMenus(expanded)
+    }, [location.pathname])
 
     // Escuchar actualizaciones del contador de notificaciones
     useEffect(() => {
@@ -28,7 +86,6 @@ export default function AdminLayout() {
 
         window.addEventListener('unreadCountUpdate', handleUnreadCountUpdate)
 
-        // Cargar contador inicial
         const fetchUnreadCount = async () => {
             try {
                 const { count } = await api.notifications.getUnreadCount()
@@ -71,6 +128,13 @@ export default function AdminLayout() {
         return () => clearInterval(interval)
     }, [])
 
+    const toggleMenu = (menuTitle) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [menuTitle]: !prev[menuTitle]
+        }))
+    }
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 to-white">
@@ -86,34 +150,24 @@ export default function AdminLayout() {
         return null
     }
 
-    // Obtener el nombre del usuario o usar "Administrador"
     const userName = user?.name?.split(' ')[0] || 'Admin'
     const userEmail = user?.email || 'admin@eldescuevee.cl'
 
-    // Obtener el título de la página actual
     const getCurrentPageTitle = () => {
-        if (location.pathname === '/admin') return 'Dashboard'
-        if (location.pathname === '/admin/clientes') return 'Clientes'
-        if (location.pathname === '/admin/productos') return 'Productos'
-        if (location.pathname === '/admin/estadisticas') return 'Estadísticas'
-        if (location.pathname === '/admin/notificaciones') return 'Notificaciones'
-        if (location.pathname === '/admin/ayuda') return 'Ayuda'
+        const path = location.pathname
+        for (const menu of menuItems) {
+            for (const subItem of menu.subItems) {
+                if (subItem.path === path) {
+                    return `${menu.title} - ${subItem.label}`
+                }
+            }
+        }
         return 'Panel de Control'
-    }
-
-    const getCurrentPageDescription = () => {
-        if (location.pathname === '/admin') return 'Resumen y métricas del negocio'
-        if (location.pathname === '/admin/clientes') return 'Gestión de clientes registrados'
-        if (location.pathname === '/admin/productos') return 'Administra tu catálogo de productos'
-        if (location.pathname === '/admin/estadisticas') return 'Análisis de datos y rendimiento'
-        if (location.pathname === '/admin/notificaciones') return 'Actividad reciente y alertas'
-        if (location.pathname === '/admin/ayuda') return 'Guía y soporte técnico'
-        return 'Bienvenido al panel de administración'
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {/* Overlay para mobile cuando el sidebar está abierto */}
+            {/* Overlay para mobile */}
             {sidebarOpen && (
                 <div
                     className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -121,9 +175,9 @@ export default function AdminLayout() {
                 />
             )}
 
-            {/* Sidebar - Versión mejorada */}
-            <aside className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-[#163C7A] to-[#0f2a5c] shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-                {/* Logo y marca */}
+            {/* Sidebar */}
+            <aside className={`fixed left-0 top-0 h-full w-80 bg-gradient-to-b from-[#163C7A] to-[#0f2a5c] shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 overflow-y-auto`}>
+                {/* Logo */}
                 <div className="px-6 py-8 border-b border-white/10">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[#FC9430] rounded-xl flex items-center justify-center shadow-lg">
@@ -136,7 +190,7 @@ export default function AdminLayout() {
                     </div>
                 </div>
 
-                {/* Perfil del usuario */}
+                {/* Perfil */}
                 <div className="px-6 py-6 border-b border-white/10">
                     <div className="flex items-center gap-3">
                         <div className="relative">
@@ -157,39 +211,62 @@ export default function AdminLayout() {
                     </div>
                 </div>
 
-                {/* Navegación principal */}
-                <nav className="flex-1 px-4 py-6 space-y-1">
-                    {navItems.map(item => {
-                        const isActive = location.pathname === item.path
+                {/* Navegación principal con submenús */}
+                <nav className="flex-1 px-4 py-6">
+                    {menuItems.map((menu) => {
+                        const isExpanded = expandedMenus[menu.title]
+                        const hasActiveChild = menu.subItems.some(sub => location.pathname === sub.path)
+
                         return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setSidebarOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
-                                        ? 'bg-[#FC9430] text-white shadow-lg'
+                            <div key={menu.title} className="mb-2">
+                                <button
+                                    onClick={() => toggleMenu(menu.title)}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ${hasActiveChild
+                                        ? 'bg-[#FC9430]/20 text-white'
                                         : 'text-white/70 hover:bg-white/10 hover:text-white'
-                                    }`}
-                            >
-                                <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
-                                    }`}>
-                                    {item.icon}
-                                </span>
-                                <div className="flex-1">
-                                    <div className="font-semibold text-sm uppercase tracking-wide">{item.label}</div>
-                                    <div className={`text-[10px] ${isActive ? 'text-white/80' : 'text-white/40'}`}>
-                                        {item.description}
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-xl">{menu.icon}</span>
+                                        <span className="font-semibold text-sm uppercase tracking-wide">{menu.title}</span>
                                     </div>
-                                </div>
-                                {isActive && (
-                                    <span className="w-1.5 h-8 bg-white rounded-full"></span>
+                                    <span className="material-symbols-outlined text-sm">
+                                        {isExpanded ? 'expand_less' : 'expand_more'}
+                                    </span>
+                                </button>
+
+                                {isExpanded && (
+                                    <div className="ml-6 mt-1 space-y-1 border-l border-white/20">
+                                        {menu.subItems.map((subItem) => {
+                                            const isActive = location.pathname === subItem.path
+                                            return (
+                                                <Link
+                                                    key={subItem.path}
+                                                    to={subItem.path}
+                                                    onClick={() => setSidebarOpen(false)}
+                                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${isActive
+                                                        ? 'bg-[#FC9430] text-white shadow-md'
+                                                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                                                        }`}
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">{subItem.icon}</span>
+                                                    <span className="text-xs font-medium">{subItem.label}</span>
+                                                    {subItem.label === 'Notificaciones' && unreadCount > 0 && (
+                                                        <span className="ml-auto bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">
+                                                            {unreadCount}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
                                 )}
-                            </Link>
+                            </div>
                         )
                     })}
                 </nav>
 
-                {/* Footer del sidebar */}
+                {/* Footer */}
                 <div className="px-6 py-6 border-t border-white/10">
                     <Link
                         to="/"
@@ -204,9 +281,8 @@ export default function AdminLayout() {
                 </div>
             </aside>
 
-            {/* Top Bar - Header mejorado */}
-            <header className="fixed top-0 right-0 left-0 md:left-72 h-16 bg-white border-b border-gray-200 z-30 flex justify-between items-center px-4 md:px-8 shadow-sm">
-                {/* Botón hamburguesa para mobile */}
+            {/* Top Bar */}
+            <header className="fixed top-0 right-0 left-0 md:left-80 h-16 bg-white border-b border-gray-200 z-30 flex justify-between items-center px-4 md:px-8 shadow-sm">
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
                     className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
@@ -214,38 +290,18 @@ export default function AdminLayout() {
                     <span className="material-symbols-outlined">menu</span>
                 </button>
 
-                {/* Título de la página actual */}
                 <div className="flex items-center gap-3">
-                    <div className="hidden md:block">
-                        <h2 className="text-lg font-bold text-[#163C7A]">
-                            {getCurrentPageTitle()}
-                        </h2>
-                        <p className="text-xs text-gray-500">
-                            {getCurrentPageDescription()}
-                        </p>
-                    </div>
+                    <h2 className="text-lg font-bold text-[#163C7A]">
+                        {getCurrentPageTitle()}
+                    </h2>
                 </div>
 
-                {/* Acciones del header */}
                 <div className="flex items-center gap-4">
-                    {/* Reloj */}
                     <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg">
                         <span className="material-symbols-outlined text-sm text-gray-500">schedule</span>
                         <span className="text-sm font-medium text-gray-700">{currentTime}</span>
                     </div>
 
-                    {/* Notificaciones en header */}
-                    <Link
-                        to="/admin/notificaciones"
-                        className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        <span className="material-symbols-outlined">notifications_none</span>
-                        {unreadCount > 0 && (
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-                        )}
-                    </Link>
-
-                    {/* Link a inicio */}
                     <Link
                         to="/"
                         className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -253,33 +309,12 @@ export default function AdminLayout() {
                         <span className="material-symbols-outlined text-sm">home</span>
                         <span className="hidden sm:inline text-sm font-medium">Inicio</span>
                     </Link>
-
-                    {/* Botón de ayuda en header */}
-                    <Link
-                        to="/admin/ayuda"
-                        className="hidden md:flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-sm">help_outline</span>
-                        <span className="text-sm font-medium">Ayuda</span>
-                    </Link>
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="md:ml-72 pt-20 px-4 md:px-8 pb-8 min-h-screen">
+            <main className="md:ml-80 pt-20 px-4 md:px-8 pb-8 min-h-screen">
                 <div className="max-w-[1400px] mx-auto">
-                    {/* Breadcrumb */}
-                    <div className="mb-6">
-                        <div className="flex items-center gap-2 text-sm">
-                            <Link to="/admin" className="text-gray-500 hover:text-[#163C7A] transition-colors">Admin</Link>
-                            <span className="material-symbols-outlined text-sm text-gray-400">chevron_right</span>
-                            <span className="font-medium text-[#163C7A]">
-                                {getCurrentPageTitle()}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Contenido principal con animación */}
                     <div className="animate-fade-in-up">
                         <Outlet />
                     </div>
