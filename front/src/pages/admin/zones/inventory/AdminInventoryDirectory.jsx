@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Icon from '../../../../components/ui/Icon'
 import api from '../../../../config/api'
+import ProductEditModal from '../../../../components/admin/ProductEditModal'
 
 export default function AdminInventoryDirectory() {
     const [products, setProducts] = useState([])
@@ -482,6 +483,15 @@ export default function AdminInventoryDirectory() {
                     </div>
                 </div>
             )}
+            <ProductEditModal
+                isOpen={showModal}
+                onClose={() => {
+                    setShowModal(false)
+                    setEditingProduct(null)
+                }}
+                product={editingProduct}
+                onSave={loadProducts}
+            />
         </>
     )
 }
