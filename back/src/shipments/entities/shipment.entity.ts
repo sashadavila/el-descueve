@@ -49,7 +49,7 @@ export class Shipment {
     carrier: CarrierType;
 
     @Column({ type: 'varchar', length: 100, nullable: true })
-    carrierName: string; // Ej: "Chilexpress", "Starken", etc.
+    carrierName: string;
 
     @Column({ type: 'enum', enum: ShipmentStatus, default: ShipmentStatus.RECEIVED })
     status: ShipmentStatus;
@@ -64,7 +64,7 @@ export class Shipment {
     deliveredAt: Date;
 
     @Column({ type: 'text', nullable: true })
-    notes: string; // Notas de despacho
+    notes: string;
 
     @Column({ type: 'jsonb', nullable: true })
     trackingHistory: {
