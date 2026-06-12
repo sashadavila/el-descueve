@@ -1,3 +1,4 @@
+// src/notifications/dto/create-notification.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 import { NotificationType, NotificationStatus } from '../entities/notification.entity';
