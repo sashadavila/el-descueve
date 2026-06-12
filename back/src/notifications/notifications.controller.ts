@@ -144,4 +144,18 @@ export class NotificationsController {
     async cleanOldNotifications(@Query('days') days: string = '30'): Promise<{ count: number; message: string }> {
         return this.notificationsService.cleanOldNotifications(parseInt(days));
     }
+
+
+    @Post('actions/generate-orders')
+    @ApiOperation({ summary: 'Generar notificaciones automáticas de pedidos' })
+    @ApiResponse({ status: 200, description: 'Notificaciones de pedidos generadas correctamente.' })
+    async generateOrderNotifications(
+        @Body('orders') orders: any[]
+    ): Promise<{ created: number; skipped: number; cleaned: number; message: string }> {
+        const result = await this.notificationsService.generateOrderNotifications(orders);
+        return {
+            ...result,
+            message: `✅ Notificaciones de pedidos actualizadas: ${result.created} nuevas, ${result.skipped} omitidas (ya existían), ${result.cleaned} eliminadas (antiguas >30 días)`
+        };
+    }
 }
