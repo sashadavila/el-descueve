@@ -12,6 +12,7 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
 import { OrderItem } from '../order-items/entities/order-item.entity';
 import { Product } from '../products/entities/product.entity';
+import { Shipment, ShipmentStatus, CarrierType } from '../shipments/entities/shipment.entity';
 
 @Injectable()
 export class OrdersService {
@@ -24,6 +25,10 @@ export class OrdersService {
 
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
+
+    @InjectRepository(Shipment)
+    private readonly shipmentRepository: Repository<Shipment>,
+
   ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -36,7 +41,6 @@ export class OrdersService {
     });
 
     const savedOrder = await this.ordersRepository.save(order);
-
     const orderItems: OrderItem[] = [];
 
     for (const item of createOrderDto.items) {
@@ -53,11 +57,9 @@ export class OrdersService {
         );
       }
 
-      // ✅ CORREGIDO: Si no viene quantity, usar minOrder del producto o 1 por defecto
       let quantity = item.quantity;
       if (!quantity || quantity < 1) {
         quantity = product.minOrder || 1;
-        console.log(`📦 [OrdersService] quantity no enviado para producto ${product.name}, usando minOrder: ${quantity}`);
       }
 
       if (product.stock < quantity) {
@@ -87,8 +89,38 @@ export class OrdersService {
 
     savedOrder.total = total;
     savedOrder.items = orderItems;
+    const finalOrder = await this.ordersRepository.save(savedOrder);
 
-    return this.ordersRepository.save(savedOrder);
+    // ✅ CREAR ENVÍO AUTOMÁTICAMENTE PARA LA ORDEN
+    const trackingNumber = this.generateTrackingNumber(finalOrder.id);
+    const shipment = this.shipmentRepository.create({
+      orderId: finalOrder.id,
+      userId: createOrderDto.userId,
+      trackingNumber: trackingNumber,
+      carrier: CarrierType.OWN,
+      status: ShipmentStatus.RECEIVED,
+      trackingHistory: [
+        {
+          status: ShipmentStatus.RECEIVED,
+          location: 'Planta La Serena',
+          timestamp: new Date(),
+          description: 'Pedido recibido y en proceso de preparación'
+        }
+      ]
+    });
+    await this.shipmentRepository.save(shipment);
+
+    return finalOrder;
+  }
+
+  private generateTrackingNumber(orderId: string): string {
+    const shortId = orderId.slice(-8).toUpperCase();
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `ELD-${year}${month}${day}-${shortId}-${random}`;
   }
 
   async findAll(): Promise<Order[]> {
