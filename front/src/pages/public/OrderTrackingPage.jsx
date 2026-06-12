@@ -9,269 +9,367 @@ export default function OrderTrackingPage() {
     const { orderId } = useParams()
     const navigate = useNavigate()
     const { isAuthenticated, loading: authLoading, user } = useAuth()
+    const [userOrders, setUserOrders] = useState([])
     const [selectedOrder, setSelectedOrder] = useState(null)
-    const [orders, setOrders] = useState([])
-    const [searchTerm, setSearchTerm] = useState('')
-    const [filteredOrders, setFilteredOrders] = useState([])
+    const [tracking, setTracking] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-    const [searching, setSearching] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [selectedOrderId, setSelectedOrderId] = useState(null)
 
-    // Cargar las órdenes del usuario desde el backend
+    // Función para validar si es un UUID
+    const isValidUUID = (id) => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(id);
+    }
+
+    // Función para validar si es un número de seguimiento
+    const isValidTrackingNumber = (number) => {
+        const trackingRegex = /^ELD-\d{8}-[A-Z0-9]{8}-\d{3}$/i;
+        return trackingRegex.test(number);
+    }
+
+    // Cargar las órdenes del usuario autenticado
     useEffect(() => {
-        const fetchUserOrders = async () => {
-            if (!isAuthenticated || !user) return
+        if (authLoading) return
 
+        if (!isAuthenticated) {
+            // Guardar la ruta actual para redirigir después del login
+            localStorage.setItem('redirectAfterLogin', '/seguimiento')
+            navigate('/login', { state: { from: '/seguimiento' } })
+            return
+        }
+
+        const fetchUserOrders = async () => {
             try {
                 setLoading(true)
                 setError(null)
 
-                // Obtener todas las órdenes (solo admin puede ver todas, clientes verán las suyas)
-                // Por ahora, como el backend no tiene filtro por usuario, obtenemos todas
-                // TODO: Mejorar el backend para filtrar por userId
+                // Obtener todas las órdenes
                 const allOrders = await api.orders.getAll()
 
-                // Filtrar órdenes del usuario actual (si no es admin)
-                let userOrders = allOrders
-                if (user.role !== 'admin') {
-                    userOrders = allOrders.filter(order => order.userId === user.id)
+                // Filtrar órdenes del usuario actual
+                let userOrdersList = allOrders
+                if (user?.role !== 'admin') {
+                    userOrdersList = allOrders.filter(order => order.userId === user?.id)
                 }
 
-                // Transformar órdenes al formato esperado
-                const formattedOrders = userOrders.map(order => ({
-                    id: order.id,
-                    date: new Date(order.createdAt).toLocaleDateString('es-CL'),
-                    total: order.total,
-                    status: getOrderStatus(order.status),
-                    statusLabel: getStatusLabel(order.status),
-                    customer: {
-                        name: user.name,
-                        email: user.email,
-                        phone: user.phone || 'No registrado'
-                    },
-                    shipping: {
-                        carrier: 'Chilexpress',
-                        trackingNumber: order.id?.slice(-8) || 'N/A',
-                        estimatedDelivery: calculateEstimatedDelivery(order.createdAt),
-                        address: 'Dirección no disponible',
-                        currentLocation: getOrderLocation(order.status),
-                        lastUpdate: new Date(order.updatedAt).toLocaleString('es-CL'),
-                        history: getOrderHistory(order.status, order.createdAt, order.updatedAt)
-                    },
-                    items: order.items?.map(item => ({
-                        id: item.productId,
-                        name: item.product?.name || 'Producto',
-                        reference: item.product?.reference || 'N/A',
-                        quantity: item.quantity,
-                        price: item.unitPrice,
-                        subtotal: item.subtotal,
-                        image: item.product?.imageUrl || 'https://via.placeholder.com/100'
-                    })) || []
-                }))
+                // Ordenar por fecha descendente (más recientes primero)
+                userOrdersList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
-                setOrders(formattedOrders)
-                setFilteredOrders(formattedOrders)
+                setUserOrders(userOrdersList)
 
                 // Si hay un orderId en la URL, seleccionar esa orden
-                if (orderId) {
-                    const foundOrder = formattedOrders.find(o => o.id === orderId)
+                if (orderId && isValidUUID(orderId)) {
+                    const foundOrder = userOrdersList.find(o => o.id === orderId)
                     if (foundOrder) {
-                        setSelectedOrder(foundOrder)
+                        setSelectedOrderId(foundOrder.id)
+                        await loadOrderTracking(foundOrder.id)
                     } else {
-                        setError(`No se encontró el pedido con ID ${orderId}`)
+                        setError('No se encontró el pedido solicitado')
                     }
                 }
 
             } catch (err) {
-                console.error('Error fetching orders:', err)
+                console.error('Error fetching user orders:', err)
                 setError(err.message || 'Error al cargar tus pedidos')
             } finally {
                 setLoading(false)
             }
         }
 
-        if (isAuthenticated) {
+        if (isAuthenticated && user) {
             fetchUserOrders()
         }
-    }, [isAuthenticated, user, orderId])
+    }, [isAuthenticated, authLoading, user, orderId, navigate])
 
-    // Función auxiliar para determinar el estado
-    const getOrderStatus = (status) => {
-        const statusMap = {
-            'PENDING': 'pending',
-            'PAID': 'preparation',
-            'CANCELLED': 'cancelled',
-            'DELIVERED': 'delivered'
-        }
-        return statusMap[status] || 'pending'
-    }
+    // Cargar el tracking de una orden específica
+    const loadOrderTracking = async (orderId) => {
+        setLoading(true)
+        setError(null)
 
-    const getStatusLabel = (status) => {
-        const labelMap = {
-            'PENDING': 'Pedido Recibido',
-            'PAID': 'En Preparación',
-            'CANCELLED': 'Cancelado',
-            'DELIVERED': 'Entregado'
-        }
-        return labelMap[status] || 'Pendiente'
-    }
-
-    const calculateEstimatedDelivery = (createdAt) => {
-        const date = new Date(createdAt)
-        date.setDate(date.getDate() + 7)
-        return date.toLocaleDateString('es-CL')
-    }
-
-    const getOrderLocation = (status) => {
-        const locationMap = {
-            'PENDING': 'Planta La Serena',
-            'PAID': 'Taller de Bordado',
-            'CANCELLED': 'Pedido Cancelado',
-            'DELIVERED': 'Entregado al destinatario'
-        }
-        return locationMap[status] || 'En proceso'
-    }
-
-    const getOrderHistory = (status, createdAt, updatedAt) => {
-        const createDate = new Date(createdAt).toLocaleString('es-CL')
-        const updateDate = new Date(updatedAt).toLocaleString('es-CL')
-
-        const history = [
-            { status: 'Pedido Recibido', date: createDate, location: 'Online', completed: true }
-        ]
-
-        if (status === 'PAID' || status === 'DELIVERED') {
-            history.push({ status: 'En Preparación', date: updateDate, location: 'Taller de Bordado', completed: true })
-        } else {
-            history.push({ status: 'En Preparación', date: null, location: null, completed: false })
-        }
-
-        if (status === 'DELIVERED') {
-            history.push({ status: 'En Tránsito', date: updateDate, location: 'Ruta de entrega', completed: true })
-            history.push({ status: 'Entregado', date: updateDate, location: 'Dirección de destino', completed: true })
-        } else if (status === 'PAID') {
-            history.push({ status: 'En Tránsito', date: null, location: null, completed: false })
-            history.push({ status: 'Entregado', date: null, location: null, completed: false })
-        } else {
-            history.push({ status: 'En Tránsito', date: null, location: null, completed: false })
-            history.push({ status: 'Entregado', date: null, location: null, completed: false })
-        }
-
-        return history
-    }
-
-    // Filtrar pedidos por búsqueda
-    useEffect(() => {
-        if (searchTerm) {
-            const filtered = orders.filter(order =>
-                order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                order.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-            setFilteredOrders(filtered)
-        } else {
-            setFilteredOrders(orders)
-        }
-    }, [searchTerm, orders])
-
-    const handleSelectOrder = (order) => {
-        setSelectedOrder(order)
-        navigate(`/seguimiento/${order.id}`, { replace: true })
-    }
-
-    const handleSearchOrder = async () => {
-        if (!searchTerm) return
-
-        setSearching(true)
         try {
-            // Intentar buscar la orden por ID específico
-            const order = await api.orders.getById(searchTerm)
-            if (order) {
-                const formattedOrder = {
-                    id: order.id,
-                    date: new Date(order.createdAt).toLocaleDateString('es-CL'),
-                    total: order.total,
-                    status: getOrderStatus(order.status),
-                    statusLabel: getStatusLabel(order.status),
-                    customer: {
-                        name: user?.name || 'Cliente',
-                        email: user?.email || 'No disponible',
-                        phone: user?.phone || 'No registrado'
-                    },
-                    shipping: {
-                        carrier: 'Chilexpress',
-                        trackingNumber: order.id?.slice(-8) || 'N/A',
-                        estimatedDelivery: calculateEstimatedDelivery(order.createdAt),
-                        address: 'Dirección no disponible',
-                        currentLocation: getOrderLocation(order.status),
-                        lastUpdate: new Date(order.updatedAt).toLocaleString('es-CL'),
-                        history: getOrderHistory(order.status, order.createdAt, order.updatedAt)
-                    },
-                    items: order.items?.map(item => ({
-                        id: item.productId,
-                        name: item.product?.name || 'Producto',
-                        reference: item.product?.reference || 'N/A',
-                        quantity: item.quantity,
-                        price: item.unitPrice,
-                        subtotal: item.subtotal,
-                        image: item.product?.imageUrl || 'https://via.placeholder.com/100'
-                    })) || []
+            // Obtener la orden
+            const orderData = await api.orders.getById(orderId)
+            setSelectedOrder(orderData)
+
+            // Obtener el seguimiento
+            const trackingResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/tracking/order/${orderId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    'Content-Type': 'application/json',
                 }
-                setSelectedOrder(formattedOrder)
-                navigate(`/seguimiento/${order.id}`, { replace: true })
+            })
+
+            if (trackingResponse.ok) {
+                const text = await trackingResponse.text()
+                if (text) {
+                    const trackingData = JSON.parse(text)
+                    setTracking(trackingData)
+                } else {
+                    throw new Error('Respuesta vacía del servidor')
+                }
+            } else if (trackingResponse.status === 404) {
+                // Si no existe tracking, crear uno automáticamente
+                console.log('📦 Creando tracking para la orden...')
+
+                const createResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/from-order/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    },
+                    body: JSON.stringify({ userId: orderData.userId })
+                })
+
+                if (createResponse.ok) {
+                    const createText = await createResponse.text()
+                    if (createText) {
+                        const trackingData = JSON.parse(createText)
+                        setTracking(trackingData)
+                    } else {
+                        // Si la respuesta está vacía, crear un tracking temporal
+                        const tempTracking = {
+                            id: 'temp',
+                            orderId: orderId,
+                            userId: orderData.userId,
+                            trackingNumber: `ELD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${orderId.slice(-8)}-${Math.floor(Math.random() * 1000)}`,
+                            carrier: 'propio',
+                            status: 'Pedido Recibido',
+                            trackingHistory: [
+                                {
+                                    status: 'Pedido Recibido',
+                                    location: 'Planta La Serena',
+                                    timestamp: new Date(),
+                                    description: 'Pedido recibido y en proceso de preparación'
+                                }
+                            ],
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        }
+                        setTracking(tempTracking)
+                        console.log('📦 Usando tracking temporal:', tempTracking)
+                    }
+                } else {
+                    // Si falla la creación, crear un tracking temporal
+                    const tempTracking = {
+                        id: 'temp',
+                        orderId: orderId,
+                        userId: orderData.userId,
+                        trackingNumber: `ELD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${orderId.slice(-8)}-${Math.floor(Math.random() * 1000)}`,
+                        carrier: 'propio',
+                        status: 'Pedido Recibido',
+                        trackingHistory: [
+                            {
+                                status: 'Pedido Recibido',
+                                location: 'Planta La Serena',
+                                timestamp: new Date(),
+                                description: 'Pedido recibido y en proceso de preparación'
+                            }
+                        ],
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    }
+                    setTracking(tempTracking)
+                    console.log('📦 Usando tracking temporal (falló creación):', tempTracking)
+                }
             } else {
-                alert('No se encontró el pedido. Verifica el número ingresado.')
+                throw new Error(`Error al cargar el seguimiento: ${trackingResponse.status}`)
+            }
+        } catch (err) {
+            console.error('Error loading tracking:', err)
+            setError(err.message || 'Error al cargar el seguimiento del pedido')
+
+            // Si hay error, crear un tracking básico para mostrar algo
+            if (selectedOrder) {
+                const tempTracking = {
+                    id: 'temp',
+                    orderId: selectedOrder.id,
+                    userId: selectedOrder.userId,
+                    trackingNumber: `PENDIENTE-${selectedOrder.id.slice(-8)}`,
+                    carrier: 'propio',
+                    status: 'Pedido Recibido',
+                    trackingHistory: [
+                        {
+                            status: 'Pedido Recibido',
+                            location: 'Planta La Serena',
+                            timestamp: new Date(),
+                            description: 'Pedido recibido - Seguimiento en proceso de activación'
+                        }
+                    ],
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                }
+                setTracking(tempTracking)
+                setError(null) // Limpiar error ya que tenemos tracking temporal
+            }
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Buscar pedido por número de seguimiento o ID
+    const handleSearchOrder = async () => {
+        if (!searchTerm.trim()) {
+            alert('Ingresa un ID de pedido o número de seguimiento')
+            return
+        }
+
+        setLoading(true)
+        setError(null)
+
+        try {
+            let orderData = null
+            let trackingData = null
+
+            // Si es un UUID válido
+            if (isValidUUID(searchTerm)) {
+                // Verificar que la orden pertenezca al usuario
+                const orderExists = userOrders.find(o => o.id === searchTerm)
+                if (orderExists) {
+                    setSelectedOrderId(searchTerm)
+                    await loadOrderTracking(searchTerm)
+                    setSearchTerm('')
+                    setLoading(false)
+                    return
+                } else {
+                    throw new Error('No tienes acceso a este pedido')
+                }
+            }
+            // Si es un número de seguimiento válido
+            else if (isValidTrackingNumber(searchTerm)) {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/tracking/${searchTerm}`)
+
+                if (response.ok) {
+                    trackingData = await response.json()
+                    // Verificar que el tracking pertenezca al usuario
+                    const orderBelongsToUser = userOrders.find(o => o.id === trackingData.orderId)
+                    if (orderBelongsToUser || user?.role === 'admin') {
+                        setSelectedOrderId(trackingData.orderId)
+                        await loadOrderTracking(trackingData.orderId)
+                        setSearchTerm('')
+                        setLoading(false)
+                        return
+                    } else {
+                        throw new Error('No tienes acceso a este pedido')
+                    }
+                } else {
+                    throw new Error('Número de seguimiento no encontrado')
+                }
+            }
+            else {
+                throw new Error('Formato inválido. Usa el ID del pedido o número de seguimiento')
             }
         } catch (err) {
             console.error('Error searching order:', err)
-            alert('Error al buscar el pedido. Intenta nuevamente.')
-        } finally {
-            setSearching(false)
+            setError(err.message)
+            setLoading(false)
         }
     }
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'pending': return 'bg-yellow-500'
-            case 'preparation': return 'bg-blue-500'
-            case 'transit': return 'bg-orange-500'
-            case 'delivered': return 'bg-green-500'
-            case 'cancelled': return 'bg-red-500'
-            default: return 'bg-gray-500'
-        }
+    // Seleccionar una orden de la lista
+    const handleSelectOrder = (order) => {
+        setSelectedOrderId(order.id)
+        loadOrderTracking(order.id)
     }
 
-    const getStatusText = (status) => {
-        switch (status) {
-            case 'pending': return 'Pedido Recibido'
-            case 'preparation': return 'En Preparación'
-            case 'transit': return 'En Tránsito'
-            case 'delivered': return 'Entregado'
-            case 'cancelled': return 'Cancelado'
-            default: return 'Desconocido'
+    // Calcular progreso del seguimiento
+    const getProgressSteps = () => {
+        const steps = [
+            { key: 'RECEIVED', label: 'Pedido Recibido', icon: 'task_alt' },
+            { key: 'PREPARING', label: 'En Preparación', icon: 'inventory_2' },
+            { key: 'TRANSIT', label: 'En Tránsito', icon: 'local_shipping' },
+            { key: 'DELIVERED', label: 'Entregado', icon: 'package_2' }
+        ]
+
+        const currentStatus = tracking?.status || 'RECEIVED'
+        let currentIndex = steps.findIndex(s => s.key === currentStatus)
+        if (currentIndex === -1) currentIndex = 0
+
+        return steps.map((step, index) => ({
+            ...step,
+            completed: index <= currentIndex,
+            active: index === currentIndex
+        }))
+    }
+
+    const formatDate = (date) => {
+        if (!date) return 'Pendiente'
+        return new Date(date).toLocaleDateString('es-CL', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    }
+
+    const getStatusBadge = (status) => {
+        const statusMap = {
+            'PENDING': { label: 'Pendiente', color: 'bg-yellow-500' },
+            'PAID': { label: 'Pagado', color: 'bg-blue-500' },
+            'CANCELLED': { label: 'Cancelado', color: 'bg-red-500' },
+            'DELIVERED': { label: 'Entregado', color: 'bg-green-500' }
         }
+        const info = statusMap[status] || { label: status, color: 'bg-gray-500' }
+        return (
+            <span className={`${info.color} text-white px-2 py-1 text-xs font-bold uppercase rounded`}>
+                {info.label}
+            </span>
+        )
     }
 
     // Mostrar loading mientras verifica autenticación
-    if (authLoading || loading) {
+    if (authLoading) {
         return (
             <div className="flex justify-center items-center h-96">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="mt-4 text-gray-500">Cargando tus pedidos...</p>
+                    <p className="mt-4 text-gray-500">Verificando autenticación...</p>
                 </div>
             </div>
         )
     }
 
-    // No mostrar nada si no está autenticado (redirige automáticamente)
     if (!isAuthenticated) {
-        return null
+        return null // Redirige al login
     }
+
+    const progressSteps = getProgressSteps()
+    const currentStepIndex = progressSteps.findIndex(s => s.active)
 
     return (
         <div className="max-w-[1280px] mx-auto px-8 py-12">
             <h1 className="text-4xl font-bold text-primary-container mb-2">Seguimiento de Pedidos</h1>
             <p className="text-lg text-outline mb-8">Consulta el estado de tus pedidos en tiempo real</p>
+
+            {/* Buscador de pedido */}
+            <div className="bg-white border border-outline-variant rounded-lg p-6 mb-8">
+                <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+                    <Icon name="search" />
+                    Buscar pedido específico
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <input
+                        type="text"
+                        placeholder="Ingresa el ID del pedido o número de seguimiento"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1 px-4 py-3 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearchOrder()}
+                    />
+                    <button
+                        onClick={handleSearchOrder}
+                        disabled={loading}
+                        className="bg-[#FC9430] text-white px-6 py-3 font-bold uppercase rounded-lg hover:bg-[#e0852b] transition-colors disabled:opacity-50"
+                    >
+                        Buscar Pedido
+                    </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-3">
+                    Puedes buscar por ID del pedido (UUID) o por número de seguimiento (formato: ELD-YYYYMMDD-XXXXXXXX-XXX)
+                </p>
+            </div>
 
             {error && (
                 <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -283,7 +381,7 @@ export default function OrderTrackingPage() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Panel izquierdo - Lista de pedidos */}
+                {/* Panel izquierdo - Lista de pedidos del usuario */}
                 <div className="lg:col-span-4">
                     <div className="bg-white border border-outline-variant rounded-lg shadow-sm sticky top-32">
                         <div className="p-4 border-b bg-surface-container-low">
@@ -293,49 +391,43 @@ export default function OrderTrackingPage() {
                             </h2>
                         </div>
 
-                        {/* Buscador */}
-                        <div className="p-4 border-b">
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                                    <Icon name="search" className="text-slate-400 text-sm" />
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar por N° pedido..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 text-sm border border-outline-variant focus:ring-1 focus:ring-primary outline-none rounded"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Lista de pedidos */}
                         <div className="max-h-[500px] overflow-y-auto">
-                            {filteredOrders.length === 0 ? (
+                            {loading && !selectedOrder ? (
                                 <div className="p-8 text-center">
-                                    <Icon name="search_off" className="text-4xl text-slate-300 mx-auto mb-2" />
-                                    <p className="text-sm text-gray-500">No se encontraron pedidos</p>
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                                    <p className="text-sm text-gray-500 mt-2">Cargando pedidos...</p>
+                                </div>
+                            ) : userOrders.length === 0 ? (
+                                <div className="p-8 text-center">
+                                    <Icon name="inbox" className="text-4xl text-slate-300 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">No tienes pedidos aún</p>
                                     <Link to="/catalogo" className="mt-4 inline-block text-[#FC9430] text-sm font-bold uppercase hover:underline">
                                         Comenzar a comprar
                                     </Link>
                                 </div>
                             ) : (
-                                filteredOrders.map(order => (
+                                userOrders.map(order => (
                                     <button
                                         key={order.id}
                                         onClick={() => handleSelectOrder(order)}
-                                        className={`w-full p-4 text-left border-b hover:bg-gray-50 transition-colors ${selectedOrder?.id === order.id ? 'bg-primary/5 border-l-4 border-primary' : ''
+                                        className={`w-full p-4 text-left border-b hover:bg-gray-50 transition-colors ${selectedOrderId === order.id ? 'bg-primary/5 border-l-4 border-primary' : ''
                                             }`}
                                     >
                                         <div className="flex justify-between items-start mb-2">
-                                            <span className="font-bold text-primary text-sm">{order.id.slice(-8).toUpperCase()}</span>
-                                            <span className={`text-xs px-2 py-1 rounded-full text-white ${getStatusColor(order.status)}`}>
-                                                {getStatusText(order.status)}
+                                            <span className="font-bold text-primary text-sm font-mono">
+                                                {order.id.slice(-8).toUpperCase()}
                                             </span>
+                                            {getStatusBadge(order.status)}
                                         </div>
-                                        <p className="text-sm text-gray-600 mb-1">{order.customer.name}</p>
-                                        <p className="text-xs text-gray-400">Fecha: {order.date}</p>
-                                        <p className="text-xs font-bold text-primary mt-1">${order.total.toLocaleString()} CLP</p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Fecha: {new Date(order.createdAt).toLocaleDateString('es-CL')}
+                                        </p>
+                                        <p className="text-sm font-bold text-[#FC9430] mt-2">
+                                            ${(parseFloat(order.total) || 0).toLocaleString()} CLP
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {order.items?.length || 0} productos
+                                        </p>
                                     </button>
                                 ))
                             )}
@@ -343,7 +435,7 @@ export default function OrderTrackingPage() {
                     </div>
                 </div>
 
-                {/* Panel derecho - Detalle del pedido */}
+                {/* Panel derecho - Detalle del pedido seleccionado */}
                 <div className="lg:col-span-8">
                     {!selectedOrder ? (
                         <div className="bg-white border border-outline-variant rounded-lg p-12 text-center">
@@ -351,141 +443,149 @@ export default function OrderTrackingPage() {
                             <h3 className="text-xl font-bold text-primary mb-2">Selecciona un pedido</h3>
                             <p className="text-gray-500">Elige un pedido de la lista para ver su seguimiento</p>
                         </div>
+                    ) : loading ? (
+                        <div className="bg-white border border-outline-variant rounded-lg p-12 text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                            <p className="mt-4 text-gray-500">Cargando detalles del pedido...</p>
+                        </div>
                     ) : (
                         <div className="space-y-6">
                             {/* Header del pedido */}
                             <div className="bg-white border border-outline-variant rounded-lg p-6">
-                                <div className="flex justify-between items-start flex-wrap gap-4">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-primary mb-1">{selectedOrder.id.slice(-8).toUpperCase()}</h2>
-                                        <p className="text-gray-500">Fecha: {selectedOrder.date}</p>
+                                        <h2 className="text-2xl font-bold text-primary mb-1 font-mono">
+                                            {selectedOrder.id.slice(-8).toUpperCase()}
+                                        </h2>
+                                        <p className="text-gray-500">
+                                            Número de seguimiento: {tracking?.trackingNumber || 'Generando...'}
+                                        </p>
                                     </div>
-                                    <div className={`px-4 py-2 rounded-full text-white font-bold ${getStatusColor(selectedOrder.status)}`}>
-                                        {getStatusText(selectedOrder.status)}
+                                    <div className={`px-4 py-2 rounded-full text-white font-bold ${tracking?.status === 'Entregado' ? 'bg-green-500' :
+                                        tracking?.status === 'En Tránsito' ? 'bg-orange-500' :
+                                            tracking?.status === 'En Preparación' ? 'bg-blue-500' : 'bg-yellow-500'
+                                        }`}>
+                                        {tracking?.status || 'Pedido Recibido'}
                                     </div>
                                 </div>
                                 <div className="mt-4 pt-4 border-t">
-                                    <h3 className="font-bold text-primary mb-2">Cliente</h3>
-                                    <p className="text-gray-700">{selectedOrder.customer.name}</p>
-                                    <p className="text-sm text-gray-500">{selectedOrder.customer.email}</p>
-                                    <p className="text-sm text-gray-500">{selectedOrder.customer.phone}</p>
+                                    <p className="text-sm text-gray-500">
+                                        Fecha del pedido: {new Date(selectedOrder.createdAt).toLocaleString('es-CL')}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Timeline de seguimiento */}
-                            <div className="bg-white border border-outline-variant rounded-lg p-6">
-                                <h3 className="font-bold text-primary mb-6 flex items-center gap-2">
-                                    <Icon name="timeline" />
-                                    Estado del Pedido
-                                </h3>
+                            {/* Timeline de progreso */}
+                            {tracking && (
+                                <div className="bg-white border border-outline-variant rounded-lg p-6">
+                                    <h3 className="font-bold text-primary mb-6 flex items-center gap-2">
+                                        <Icon name="timeline" />
+                                        Estado del Pedido
+                                    </h3>
 
-                                <div className="relative">
-                                    <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded-full z-0">
-                                        <div
-                                            className="h-1 bg-[#FC9430] rounded-full transition-all duration-500"
-                                            style={{
-                                                width: selectedOrder.status === 'pending' ? '0%' :
-                                                    selectedOrder.status === 'preparation' ? '33%' :
-                                                        selectedOrder.status === 'transit' ? '66%' :
-                                                            selectedOrder.status === 'delivered' ? '100%' : '0%'
-                                            }}
-                                        ></div>
-                                    </div>
-
-                                    <div className="flex justify-between items-center relative z-10">
-                                        <div className="flex flex-col items-center text-center flex-1">
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all ${selectedOrder.status === 'pending' || selectedOrder.status === 'preparation' || selectedOrder.status === 'transit' || selectedOrder.status === 'delivered'
-                                                ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
-                                                : 'bg-gray-200 text-gray-400'
-                                                }`}>
-                                                <Icon name="task_alt" className="text-xl" />
-                                            </div>
-                                            <span className={`text-xs font-bold uppercase ${selectedOrder.status === 'pending' || selectedOrder.status === 'preparation' || selectedOrder.status === 'transit' || selectedOrder.status === 'delivered'
-                                                ? 'text-primary'
-                                                : 'text-gray-400'
-                                                }`}>
-                                                Pedido Recibido
-                                            </span>
+                                    <div className="relative">
+                                        <div className="hidden md:block absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded-full z-0">
+                                            <div
+                                                className="h-1 bg-[#FC9430] rounded-full transition-all duration-500"
+                                                style={{ width: `${(currentStepIndex / (progressSteps.length - 1)) * 100}%` }}
+                                            ></div>
                                         </div>
 
-                                        <div className="flex flex-col items-center text-center flex-1">
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all ${selectedOrder.status === 'preparation' || selectedOrder.status === 'transit' || selectedOrder.status === 'delivered'
-                                                ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
-                                                : 'bg-gray-200 text-gray-400'
-                                                }`}>
-                                                <Icon name="inventory_2" className="text-xl" />
-                                            </div>
-                                            <span className={`text-xs font-bold uppercase ${selectedOrder.status === 'preparation' || selectedOrder.status === 'transit' || selectedOrder.status === 'delivered'
-                                                ? 'text-primary'
-                                                : 'text-gray-400'
-                                                }`}>
-                                                En Preparación
-                                            </span>
+                                        <div className="md:hidden absolute left-6 top-0 bottom-0 w-1 bg-gray-200 rounded-full z-0">
+                                            <div
+                                                className="w-1 bg-[#FC9430] rounded-full transition-all duration-500"
+                                                style={{ height: `${(currentStepIndex / (progressSteps.length - 1)) * 100}%` }}
+                                            ></div>
                                         </div>
 
-                                        <div className="flex flex-col items-center text-center flex-1">
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all ${selectedOrder.status === 'transit' || selectedOrder.status === 'delivered'
-                                                ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
-                                                : 'bg-gray-200 text-gray-400'
-                                                }`}>
-                                                <Icon name="local_shipping" className="text-xl" />
-                                            </div>
-                                            <span className={`text-xs font-bold uppercase ${selectedOrder.status === 'transit' || selectedOrder.status === 'delivered'
-                                                ? 'text-primary'
-                                                : 'text-gray-400'
-                                                }`}>
-                                                En Tránsito
-                                            </span>
-                                        </div>
-
-                                        <div className="flex flex-col items-center text-center flex-1">
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all ${selectedOrder.status === 'delivered'
-                                                ? 'bg-green-500 text-white ring-4 ring-green-500/30'
-                                                : 'bg-gray-200 text-gray-400'
-                                                }`}>
-                                                <Icon name="package_2" className="text-xl" />
-                                            </div>
-                                            <span className={`text-xs font-bold uppercase ${selectedOrder.status === 'delivered'
-                                                ? 'text-green-600'
-                                                : 'text-gray-400'
-                                                }`}>
-                                                Entregado
-                                            </span>
+                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center relative z-10 gap-4 md:gap-0">
+                                            {progressSteps.map((step, index) => (
+                                                <div key={step.key} className="flex flex-row md:flex-col items-center gap-3 md:gap-2 w-full md:w-auto">
+                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${step.completed
+                                                        ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
+                                                        : 'bg-gray-200 text-gray-400'
+                                                        }`}>
+                                                        <Icon name={step.icon} className="text-xl" />
+                                                    </div>
+                                                    <div className="text-center md:text-left">
+                                                        <span className={`text-xs font-bold uppercase block ${step.completed ? 'text-primary' : 'text-gray-400'
+                                                            }`}>
+                                                            {step.label}
+                                                        </span>
+                                                        {step.active && step.completed && (
+                                                            <span className="text-[10px] text-green-600 flex items-center gap-1 mt-1">
+                                                                <Icon name="check_circle" className="text-[10px]" />
+                                                                Completado
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Información de despacho */}
-                            <div className="bg-white border border-outline-variant rounded-lg p-6">
-                                <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
-                                    <Icon name="local_shipping" />
-                                    Información de Despacho
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-xs text-gray-500 uppercase font-bold">Transportista</p>
-                                        <p className="font-semibold">{selectedOrder.shipping.carrier}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500 uppercase font-bold">N° Seguimiento</p>
-                                        <p className="font-semibold">{selectedOrder.shipping.trackingNumber}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500 uppercase font-bold">Entrega estimada</p>
-                                        <p className="font-semibold text-[#FC9430]">{selectedOrder.shipping.estimatedDelivery}</p>
+                            {tracking && (
+                                <div className="bg-white border border-outline-variant rounded-lg p-6">
+                                    <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+                                        <Icon name="local_shipping" />
+                                        Información de Despacho
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Transportista</p>
+                                            <p className="font-semibold">
+                                                {tracking.carrier === 'externo' ? tracking.carrierName || 'Empresa externa' : 'Envío Propio'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 uppercase font-bold">N° Seguimiento</p>
+                                            <p className="font-semibold font-mono">{tracking.trackingNumber}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Fecha estimada de entrega</p>
+                                            <p className="font-semibold text-[#FC9430]">
+                                                {tracking.estimatedDelivery ? new Date(tracking.estimatedDelivery).toLocaleDateString('es-CL') : 'Por confirmar'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Ubicación actual</p>
+                                            <p className="font-semibold">
+                                                {tracking.trackingHistory?.slice(-1)[0]?.location || 'En proceso'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
+                            )}
 
-                                <div className="mt-4 pt-4 border-t">
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-bold">Última actualización:</span> {selectedOrder.shipping.lastUpdate}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-bold">Ubicación actual:</span> {selectedOrder.shipping.currentLocation}
-                                    </p>
+                            {/* Historial de seguimiento */}
+                            {tracking?.trackingHistory && tracking.trackingHistory.length > 0 && (
+                                <div className="bg-white border border-outline-variant rounded-lg p-6">
+                                    <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
+                                        <Icon name="history" />
+                                        Historial de Seguimiento
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {[...tracking.trackingHistory].reverse().map((event, index) => (
+                                            <div key={index} className="flex gap-3 pb-3 border-b last:border-0">
+                                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                                    <Icon name="check_circle" className="text-primary text-sm" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex flex-wrap justify-between items-start gap-2">
+                                                        <p className="font-bold text-primary">{event.status}</p>
+                                                        <p className="text-xs text-gray-400">{formatDate(event.timestamp)}</p>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600">{event.description}</p>
+                                                    <p className="text-xs text-gray-400 mt-1">📍 {event.location}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Resumen de productos */}
                             <div className="bg-white border border-outline-variant rounded-lg p-6">
@@ -493,26 +593,22 @@ export default function OrderTrackingPage() {
                                     <Icon name="shopping_bag" />
                                     Productos del Pedido
                                 </h3>
-                                <div className="space-y-4">
-                                    {selectedOrder.items.map((item, index) => (
-                                        <div key={index} className="flex gap-4 pb-4 border-b last:border-0">
-                                            <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = 'https://via.placeholder.com/80' }} />
+                                <div className="space-y-3">
+                                    {selectedOrder.items?.map((item, index) => (
+                                        <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
+                                            <div>
+                                                <p className="font-medium">{item.product?.name || 'Producto'}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    Cantidad: {item.quantity} | Ref: {item.product?.reference || 'N/A'}
+                                                </p>
                                             </div>
-                                            <div className="flex-1">
-                                                <h4 className="font-bold text-primary">{item.name}</h4>
-                                                <p className="text-xs text-gray-500">Ref: {item.reference}</p>
-                                                <div className="flex justify-between items-center mt-2">
-                                                    <p className="text-sm text-gray-600">Cantidad: {item.quantity}</p>
-                                                    <p className="font-bold text-primary">${item.subtotal.toLocaleString()} CLP</p>
-                                                </div>
-                                            </div>
+                                            <p className="font-bold text-primary">${(parseFloat(item.subtotal) || 0).toLocaleString()}</p>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="mt-4 pt-4 border-t flex justify-between items-center">
                                     <span className="font-bold text-lg text-primary">Total</span>
-                                    <span className="font-bold text-2xl text-[#FC9430]">${selectedOrder.total.toLocaleString()} CLP</span>
+                                    <span className="font-bold text-2xl text-[#FC9430]">${(parseFloat(selectedOrder.total) || 0).toLocaleString()} CLP</span>
                                 </div>
                             </div>
 
@@ -520,45 +616,21 @@ export default function OrderTrackingPage() {
                             <div className="flex gap-4">
                                 <Link
                                     to="/catalogo"
-                                    className="flex-1 bg-primary text-white py-3 font-bold uppercase text-center rounded-lg hover:bg-primary/80 transition-colors"
+                                    className="flex-1 bg-[#FC9430] text-white py-3 font-bold uppercase text-center rounded-lg hover:bg-[#e0852b] transition-colors"
                                 >
-                                    Comprar de nuevo
+                                    <Icon name="shopping_cart" className="text-sm inline mr-2" />
+                                    Seguir comprando
                                 </Link>
-                                <a
-                                    href={`https://wa.me/56912345678?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20pedido%20${selectedOrder.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1 border-2 border-[#25D366] text-[#25D366] py-3 font-bold uppercase text-center rounded-lg hover:bg-[#25D366] hover:text-white transition-colors"
+                                <Link
+                                    to={`/factura/${selectedOrder.id}`}
+                                    className="flex-1 border-2 border-primary text-primary py-3 font-bold uppercase text-center rounded-lg hover:bg-primary/5 transition-colors"
                                 >
-                                    Consultar por WhatsApp
-                                </a>
+                                    <Icon name="receipt" className="text-sm inline mr-2" />
+                                    Ver factura
+                                </Link>
                             </div>
                         </div>
                     )}
-                </div>
-            </div>
-
-            {/* Input para buscar pedido por número */}
-            <div className="mt-8 pt-8 border-t border-outline-variant">
-                <div className="bg-surface-container-low p-6 rounded-lg max-w-2xl mx-auto text-center">
-                    <h3 className="font-bold text-primary mb-2">¿No encuentras tu pedido?</h3>
-                    <p className="text-sm text-gray-600 mb-4">Ingresa el número de pedido manualmente</p>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <input
-                            type="text"
-                            placeholder="Ej: uuid-del-pedido"
-                            className="flex-1 px-4 py-2 border border-outline-variant rounded focus:ring-1 focus:ring-primary outline-none"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        <button
-                            onClick={handleSearchOrder}
-                            disabled={searching}
-                            className="bg-[#FC9430] text-white px-6 py-2 font-bold uppercase rounded hover:bg-[#e0852b] transition-colors disabled:opacity-50"
-                        >
-                            {searching ? 'Buscando...' : 'Buscar Pedido'}
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
