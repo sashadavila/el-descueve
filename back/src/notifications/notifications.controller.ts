@@ -1,3 +1,4 @@
+// src/notifications/notifications.controller.ts
 import {
     Controller,
     Get,
@@ -35,9 +36,8 @@ export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Crear una nueva notificación (con verificación de duplicados)' })
+    @ApiOperation({ summary: 'Crear una nueva notificación' })
     @ApiResponse({ status: 201, description: 'Notificación creada correctamente.' })
-    @ApiResponse({ status: 409, description: 'Ya existe una notificación de este tipo para este usuario.' })
     async create(@Body() createNotificationDto: CreateNotificationDto): Promise<Notification> {
         return this.notificationsService.create(createNotificationDto);
     }
@@ -47,7 +47,6 @@ export class NotificationsController {
     @ApiQuery({ name: 'status', required: false, enum: NotificationStatus })
     @ApiQuery({ name: 'page', required: false, example: 1 })
     @ApiQuery({ name: 'limit', required: false, example: 10 })
-    @ApiResponse({ status: 200, description: 'Lista de notificaciones obtenida correctamente.' })
     async findAll(
         @Query('status') status?: NotificationStatus,
         @Query('page') page: string = '1',
@@ -67,14 +66,11 @@ export class NotificationsController {
         return this.notificationsService.getUnreadCount();
     }
 
-    @Get('check/:type/:userId')
-    @ApiOperation({ summary: 'Verificar si ya existe una notificación para un usuario' })
-    @ApiResponse({ status: 200, description: 'Verificación realizada correctamente.' })
-    async checkExisting(
-        @Param('type') type: NotificationType,
-        @Param('userId') userId: string,
-    ) {
-        return this.notificationsService.checkExistingNotification(type, userId);
+    @Get('stats/summary')
+    @ApiOperation({ summary: 'Obtener estadísticas de notificaciones por tipo' })
+    @ApiResponse({ status: 200, description: 'Estadísticas obtenidas correctamente.' })
+    async getStats() {
+        return this.notificationsService.getStatsByType();
     }
 
     @Get(':id')
@@ -118,13 +114,27 @@ export class NotificationsController {
     }
 
     @Post('actions/generate')
-    @ApiOperation({ summary: 'Generar notificaciones automáticas (limpia antiguas + evita duplicados)' })
+    @ApiOperation({ summary: 'Generar notificaciones automáticas de usuarios' })
     @ApiResponse({ status: 200, description: 'Notificaciones generadas correctamente.' })
     async generateNotifications(@Body('users') users: any[]): Promise<{ created: number; skipped: number; cleaned: number; message: string }> {
         const result = await this.notificationsService.generateUserNotifications(users);
         return {
             ...result,
             message: `✅ Notificaciones actualizadas: ${result.created} nuevas, ${result.skipped} omitidas (ya existían), ${result.cleaned} eliminadas (antiguas >30 días)`
+        };
+    }
+
+    @Post('actions/generate-inventory')
+    @ApiOperation({ summary: 'Generar notificaciones automáticas de inventario (stock bajo y agotados)' })
+    @ApiResponse({ status: 200, description: 'Notificaciones de inventario generadas correctamente.' })
+    async generateInventoryNotifications(
+        @Body('products') products: any[],
+        @Body('threshold') threshold: number = 10
+    ): Promise<{ created: number; skipped: number; cleaned: number; message: string }> {
+        const result = await this.notificationsService.generateInventoryNotifications(products, threshold);
+        return {
+            ...result,
+            message: `✅ Notificaciones de inventario actualizadas: ${result.created} nuevas, ${result.skipped} omitidas, ${result.cleaned} eliminadas (antiguas >30 días)`
         };
     }
 
