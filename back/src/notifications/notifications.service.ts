@@ -1,3 +1,4 @@
+// src/notifications/notifications.service.ts
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, LessThan, MoreThan } from 'typeorm';
@@ -15,44 +16,8 @@ export class NotificationsService {
     ) { }
 
     async create(createNotificationDto: CreateNotificationDto): Promise<Notification> {
-        // VERIFICAR DUPLICADOS EN AMBOS ESTADOS (no leídas Y leídas)
-        const existingNotification = await this.findExistingNotification(
-            createNotificationDto.type,
-            createNotificationDto.metadata?.userId
-        );
-
-        if (existingNotification) {
-            this.logger.warn(`Notificación duplicada evitada: tipo=${createNotificationDto.type}, userId=${createNotificationDto.metadata?.userId}`);
-            throw new ConflictException(
-                `Ya existe una notificación del tipo "${createNotificationDto.type}" para este usuario. ` +
-                `Estado actual: ${existingNotification.status}`
-            );
-        }
-
         const notification = this.notificationsRepository.create(createNotificationDto);
         return this.notificationsRepository.save(notification);
-    }
-
-    // Método auxiliar para buscar notificaciones existentes (en cualquier estado)
-    private async findExistingNotification(
-        type: NotificationType,
-        userId?: string
-    ): Promise<Notification | null> {
-        if (!userId) {
-            return this.notificationsRepository.findOne({
-                where: { type }
-            });
-        }
-
-        const allNotificationsOfType = await this.notificationsRepository.find({
-            where: { type }
-        });
-
-        const existing = allNotificationsOfType.find(notification =>
-            notification.metadata?.userId === userId
-        );
-
-        return existing || null;
     }
 
     async findAll(
@@ -152,14 +117,114 @@ export class NotificationsService {
         };
     }
 
-    // Generar notificaciones automáticas SIN duplicados
-    async generateUserNotifications(users: any[]): Promise<{ created: number; skipped: number; cleaned: number }> {
-        this.logger.log(`Iniciando generación de notificaciones para ${users.length} usuarios`);
+    // Generar notificaciones de inventario (stock bajo y agotados)
+    async generateInventoryNotifications(products: any[], threshold: number = 10): Promise<{ created: number; skipped: number; cleaned: number }> {
+        this.logger.log(`🔄 Generando notificaciones de inventario para ${products.length} productos (umbral: ${threshold})`);
 
-        // PASO 1: Limpiar notificaciones antiguas
+        // Limpiar notificaciones antiguas (más de 30 días)
         const cleanResult = await this.cleanOldNotifications(30);
 
-        // PASO 2: Obtener TODAS las notificaciones existentes (para verificar duplicados)
+        // Obtener todas las notificaciones existentes
+        const allExistingNotifications = await this.notificationsRepository.find();
+
+        const notificationExists = (title: string): boolean => {
+            return allExistingNotifications.some(notification => notification.title === title);
+        };
+
+        let created = 0;
+        let skipped = 0;
+
+        // Filtrar productos con stock bajo y agotados
+        const lowStockProducts = products.filter(p => p.stock > 0 && p.stock < threshold);
+        const outOfStockProducts = products.filter(p => p.stock === 0);
+
+        this.logger.log(`📊 Productos con stock bajo: ${lowStockProducts.length}, agotados: ${outOfStockProducts.length}`);
+
+        // Generar notificaciones para productos con stock bajo
+        for (const product of lowStockProducts) {
+            const title = `⚠️ Stock bajo: ${product.name}`;
+
+            if (!notificationExists(title)) {
+                try {
+                    await this.create({
+                        title: title,
+                        message: `El producto "${product.name}" tiene solo ${product.stock} unidades restantes. Se recomienda reabastecer.`,
+                        type: NotificationType.SYSTEM_ALERT,
+                        metadata: {
+                            productId: product.id,
+                            productName: product.name,
+                            productReference: product.reference,
+                            stock: product.stock,
+                            threshold: threshold
+                        },
+                        icon: 'warning',
+                        iconColor: 'text-yellow-500',
+                        bgColor: 'bg-yellow-50',
+                        status: NotificationStatus.UNREAD,
+                    });
+                    created++;
+                    this.logger.log(`✅ Notificación creada: ${title}`);
+                } catch (err) {
+                    skipped++;
+                    this.logger.warn(`⚠️ Error al crear notificación: ${title}`);
+                }
+            } else {
+                skipped++;
+                this.logger.log(`⏭️ Notificación ya existente: ${title}`);
+            }
+        }
+
+        // Generar notificaciones para productos agotados
+        for (const product of outOfStockProducts) {
+            const title = `❌ Producto agotado: ${product.name}`;
+
+            if (!notificationExists(title)) {
+                try {
+                    await this.create({
+                        title: title,
+                        message: `El producto "${product.name}" está agotado. Se recomienda reabastecer urgentemente.`,
+                        type: NotificationType.SYSTEM_ALERT,
+                        metadata: {
+                            productId: product.id,
+                            productName: product.name,
+                            productReference: product.reference,
+                            stock: 0,
+                            threshold: threshold
+                        },
+                        icon: 'error',
+                        iconColor: 'text-red-500',
+                        bgColor: 'bg-red-50',
+                        status: NotificationStatus.UNREAD,
+                    });
+                    created++;
+                    this.logger.log(`✅ Notificación creada: ${title}`);
+                } catch (err) {
+                    skipped++;
+                    this.logger.warn(`⚠️ Error al crear notificación: ${title}`);
+                }
+            } else {
+                skipped++;
+                this.logger.log(`⏭️ Notificación ya existente: ${title}`);
+            }
+        }
+
+        this.logger.log(`📊 Generación completada: ${created} creadas, ${skipped} omitidas, ${cleanResult.count} limpiadas`);
+
+        return {
+            created,
+            skipped,
+            cleaned: cleanResult.count
+        };
+    }
+
+    // Generar notificaciones de usuarios (nuevos, inactivos, admins)
+    async generateUserNotifications(users: any[]): Promise<{ created: number; skipped: number; cleaned: number }> {
+        this.logger.log(`🔄 Generando notificaciones de usuarios para ${users.length} usuarios`);
+
+        // Limpiar notificaciones antiguas
+        const cleanResult = await this.cleanOldNotifications(30);
+
+        // Obtener TODAS las notificaciones existentes
         const allExistingNotifications = await this.notificationsRepository.find();
 
         const notificationExists = (type: NotificationType, userId: string): boolean => {
@@ -200,10 +265,10 @@ export class NotificationsService {
                         status: NotificationStatus.UNREAD,
                     });
                     created++;
-                    this.logger.log(`Notificación creada para nuevo usuario: ${user.name}`);
+                    this.logger.log(`✅ Notificación creada para nuevo usuario: ${user.name}`);
                 } catch (err) {
                     skipped++;
-                    this.logger.warn(`Notificación ya existente para: ${user.name}`);
+                    this.logger.warn(`⚠️ Notificación ya existente para: ${user.name}`);
                 }
             } else {
                 skipped++;
@@ -230,7 +295,7 @@ export class NotificationsService {
                         status: NotificationStatus.UNREAD,
                     });
                     created++;
-                    this.logger.log(`Notificación creada para usuario inactivo: ${user.name}`);
+                    this.logger.log(`✅ Notificación creada para usuario inactivo: ${user.name}`);
                 } catch (err) {
                     skipped++;
                 }
@@ -259,7 +324,7 @@ export class NotificationsService {
                         status: NotificationStatus.UNREAD,
                     });
                     created++;
-                    this.logger.log(`Notificación creada para administrador: ${user.name}`);
+                    this.logger.log(`✅ Notificación creada para administrador: ${user.name}`);
                 } catch (err) {
                     skipped++;
                 }
@@ -268,7 +333,7 @@ export class NotificationsService {
             }
         }
 
-        this.logger.log(`Generación completada: ${created} creadas, ${skipped} omitidas, ${cleanResult.count} limpiadas`);
+        this.logger.log(`📊 Generación completada: ${created} creadas, ${skipped} omitidas, ${cleanResult.count} limpiadas`);
 
         return {
             created,
@@ -277,13 +342,25 @@ export class NotificationsService {
         };
     }
 
-    async checkExistingNotification(type: NotificationType, userId: string): Promise<{ exists: boolean; status?: string }> {
-        const notification = await this.findExistingNotification(type, userId);
+    // Obtener estadísticas de notificaciones por tipo
+    async getStatsByType(): Promise<{
+        total: number;
+        unread: number;
+        read: number;
+        byType: Record<NotificationType, number>;
+    }> {
+        const total = await this.notificationsRepository.count();
+        const unread = await this.notificationsRepository.count({ where: { status: NotificationStatus.UNREAD } });
+        const read = await this.notificationsRepository.count({ where: { status: NotificationStatus.READ } });
 
-        if (notification) {
-            return { exists: true, status: notification.status };
-        }
+        const byType = {
+            [NotificationType.NEW_USER]: await this.notificationsRepository.count({ where: { type: NotificationType.NEW_USER } }),
+            [NotificationType.INACTIVE_USER]: await this.notificationsRepository.count({ where: { type: NotificationType.INACTIVE_USER } }),
+            [NotificationType.ADMIN_USER]: await this.notificationsRepository.count({ where: { type: NotificationType.ADMIN_USER } }),
+            [NotificationType.NEW_ORDER]: await this.notificationsRepository.count({ where: { type: NotificationType.NEW_ORDER } }),
+            [NotificationType.SYSTEM_ALERT]: await this.notificationsRepository.count({ where: { type: NotificationType.SYSTEM_ALERT } }),
+        };
 
-        return { exists: false };
+        return { total, unread, read, byType };
     }
 }
