@@ -9,16 +9,22 @@ import html2canvas from 'html2canvas'
 
 export default function InvoicePage() {
     const { orderId } = useParams()
-    const { isAuthenticated, user } = useAuth()
+    const { isAuthenticated, user, loading: authLoading } = useAuth()
     const navigate = useNavigate()
     const [order, setOrder] = useState(null)
+    const [orderUser, setOrderUser] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [generatingPDF, setGeneratingPDF] = useState(false)
     const invoiceRef = useRef(null)
 
     useEffect(() => {
+        // Esperar a que termine la verificación de autenticación
+        if (authLoading) return
+
         if (!isAuthenticated) {
+            // Guardar la ruta actual para redirigir después del login
+            localStorage.setItem('redirectAfterLogin', `/factura/${orderId}`)
             navigate('/login', { state: { from: `/factura/${orderId}` } })
             return
         }
@@ -28,6 +34,29 @@ export default function InvoicePage() {
                 setLoading(true)
                 const orderData = await api.orders.getById(orderId)
                 setOrder(orderData)
+
+                // Intentar obtener los datos del usuario de la orden
+                if (orderData.userId) {
+                    try {
+                        // Si el usuario logueado es admin, puede ver cualquier usuario
+                        if (user?.role === 'admin') {
+                            const userData = await api.admin.getUserById(orderData.userId)
+                            setOrderUser(userData)
+                        } else if (user?.id === orderData.userId) {
+                            // Si es el mismo usuario, usar sus datos
+                            setOrderUser(user)
+                        } else {
+                            // Si no es admin y no es su orden, redirigir
+                            setError('No tienes permisos para ver esta factura')
+                        }
+                    } catch (err) {
+                        console.error('Error fetching user:', err)
+                        // Si no se puede obtener el usuario, usar datos básicos
+                        setOrderUser(user)
+                    }
+                } else {
+                    setOrderUser(user)
+                }
             } catch (err) {
                 console.error('Error fetching order:', err)
                 setError(err.message || 'No se pudo cargar la factura')
@@ -36,10 +65,10 @@ export default function InvoicePage() {
             }
         }
 
-        if (orderId) {
+        if (orderId && isAuthenticated) {
             fetchOrder()
         }
-    }, [orderId, isAuthenticated, navigate])
+    }, [orderId, isAuthenticated, authLoading, user, navigate])
 
     const downloadPDF = async () => {
         if (!invoiceRef.current) return
@@ -49,38 +78,11 @@ export default function InvoicePage() {
         try {
             const element = invoiceRef.current
 
-            // Configurar estilos temporales para la captura
-            const originalStyles = {
-                backgroundColor: element.style.backgroundColor,
-                color: element.style.color
-            }
-
-            // Asegurar que los colores sean compatibles
-            element.style.backgroundColor = '#ffffff'
-
             const canvas = await html2canvas(element, {
                 scale: 2,
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff',
-                // Ignorar colores oklab
-                onclone: (clonedDoc, element) => {
-                    // Forzar colores compatibles en el clon
-                    const allElements = clonedDoc.querySelectorAll('*')
-                    allElements.forEach(el => {
-                        if (el.style) {
-                            // Reemplazar cualquier color problemático
-                            const bgColor = el.style.backgroundColor
-                            if (bgColor && bgColor.includes('oklab')) {
-                                el.style.backgroundColor = '#ffffff'
-                            }
-                            const color = el.style.color
-                            if (color && color.includes('oklab')) {
-                                el.style.color = '#000000'
-                            }
-                        }
-                    })
-                }
             })
 
             const imgData = canvas.toDataURL('image/png')
@@ -90,8 +92,8 @@ export default function InvoicePage() {
                 format: 'a4'
             })
 
-            const imgWidth = 210 // A4 width in mm
-            const pageHeight = 297 // A4 height in mm
+            const imgWidth = 210
+            const pageHeight = 297
             const imgHeight = (canvas.height * imgWidth) / canvas.width
             let heightLeft = imgHeight
             let position = 0
@@ -106,7 +108,7 @@ export default function InvoicePage() {
                 heightLeft -= pageHeight
             }
 
-            pdf.save(`factura_${orderId}.pdf`)
+            pdf.save(`factura_${orderId.slice(-8)}.pdf`)
         } catch (error) {
             console.error('Error generating PDF:', error)
             alert('Error al generar el PDF. Por favor, intenta nuevamente.')
@@ -115,7 +117,8 @@ export default function InvoicePage() {
         }
     }
 
-    if (loading) {
+    // Mostrar loading mientras verifica autenticación
+    if (authLoading || loading) {
         return (
             <div className="flex justify-center items-center h-96">
                 <div className="text-center">
@@ -132,12 +135,15 @@ export default function InvoicePage() {
                 <Icon name="error" className="text-6xl text-red-500 mx-auto mb-4" />
                 <h1 className="text-2xl font-bold text-primary mb-4">Factura no encontrada</h1>
                 <p className="text-gray-600 mb-8">{error || 'No se pudo encontrar la factura solicitada.'}</p>
-                <Link to="/" className="bg-[#FC9430] text-white px-6 py-3 font-bold uppercase inline-block hover:bg-[#e0852b] transition-colors rounded">
-                    Volver al inicio
+                <Link to="/admin/pedidos/directorio" className="bg-[#FC9430] text-white px-6 py-3 font-bold uppercase inline-block hover:bg-[#e0852b] transition-colors rounded">
+                    Volver al panel de pedidos
                 </Link>
             </div>
         )
     }
+
+    // Usar el usuario de la orden o el usuario logueado
+    const displayUser = orderUser || user
 
     // Calcular valores
     const subtotal = order.items?.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0) || parseFloat(order.total) || 0
@@ -156,34 +162,36 @@ export default function InvoicePage() {
         <div className="min-h-screen bg-gray-100 py-8">
             <div className="max-w-4xl mx-auto px-4">
                 {/* Botones de acción */}
-                <div className="flex justify-end gap-4 mb-6">
-                    <button
-                        onClick={() => window.print()}
-                        className="bg-gray-600 text-white px-6 py-2 font-bold uppercase rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
-                    >
-                        <Icon name="print" className="text-sm" />
-                        Imprimir
-                    </button>
-                    <button
-                        onClick={downloadPDF}
-                        disabled={generatingPDF}
-                        className="bg-[#FC9430] text-white px-6 py-2 font-bold uppercase rounded-lg hover:bg-[#e0852b] transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                        {generatingPDF ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Generando...
-                            </>
-                        ) : (
-                            <>
-                                <Icon name="download" className="text-sm" />
-                                Descargar Factura PDF
-                            </>
-                        )}
-                    </button>
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => window.print()}
+                            className="bg-gray-600 text-white px-6 py-2 font-bold uppercase rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+                        >
+                            <Icon name="print" className="text-sm" />
+                            Imprimir
+                        </button>
+                        <button
+                            onClick={downloadPDF}
+                            disabled={generatingPDF}
+                            className="bg-[#FC9430] text-white px-6 py-2 font-bold uppercase rounded-lg hover:bg-[#e0852b] transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {generatingPDF ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    Generando...
+                                </>
+                            ) : (
+                                <>
+                                    <Icon name="download" className="text-sm" />
+                                    Descargar Factura PDF
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
 
-                {/* Factura - Usando estilos inline para evitar conflictos con Tailwind v4 */}
+                {/* Factura */}
                 <div
                     ref={invoiceRef}
                     className="bg-white shadow-xl rounded-lg overflow-hidden"
@@ -219,11 +227,11 @@ export default function InvoicePage() {
                             <div>
                                 <h3 style={{ fontWeight: 'bold', color: '#00265b', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>Cliente</h3>
                                 <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: '1.5' }}>
-                                    <p><strong>Nombre:</strong> {user?.name || 'Cliente'}</p>
-                                    <p><strong>Email:</strong> {user?.email || '-'}</p>
-                                    <p><strong>Teléfono:</strong> {user?.phone || '-'}</p>
-                                    {user?.company && <p><strong>Empresa:</strong> {user.company}</p>}
-                                    {user?.rut && <p><strong>RUT:</strong> {user.rut}</p>}
+                                    <p><strong>Nombre:</strong> {displayUser?.name || 'Cliente'}</p>
+                                    <p><strong>Email:</strong> {displayUser?.email || '-'}</p>
+                                    <p><strong>Teléfono:</strong> {displayUser?.phone || '-'}</p>
+                                    {displayUser?.company && <p><strong>Empresa:</strong> {displayUser.company}</p>}
+                                    {displayUser?.rut && <p><strong>RUT:</strong> {displayUser.rut}</p>}
                                 </div>
                             </div>
                         </div>
