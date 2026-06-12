@@ -1,3 +1,4 @@
+// src/notifications/entities/notification.entity.ts
 import {
     Column,
     CreateDateColumn,
@@ -51,6 +52,12 @@ export class Notification {
         userEmail?: string;
         userCompany?: string;
         orderId?: string;
+        productId?: string;
+        productName?: string;
+        productReference?: string;
+        stock?: number;
+        threshold?: number;
+        trackingNumber?: string;
         [key: string]: any;
     };
 
