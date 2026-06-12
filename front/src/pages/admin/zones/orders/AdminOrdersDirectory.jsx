@@ -1,15 +1,18 @@
 // src/pages/admin/zones/orders/AdminOrdersDirectory.jsx
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import Icon from '../../../../components/ui/Icon'
 import api from '../../../../config/api'
 
 export default function AdminOrdersDirectory() {
     const [orders, setOrders] = useState([])
+    const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [searchTerm, setSearchTerm] = useState('')
     const [filterStatus, setFilterStatus] = useState('all')
     const [showStatusModal, setShowStatusModal] = useState(false)
+    const [showDetailModal, setShowDetailModal] = useState(false)
     const [selectedOrder, setSelectedOrder] = useState(null)
     const [newStatus, setNewStatus] = useState('')
     const [updating, setUpdating] = useState(false)
@@ -23,6 +26,7 @@ export default function AdminOrdersDirectory() {
 
     useEffect(() => {
         fetchOrders()
+        fetchUsers()
     }, [])
 
     const fetchOrders = async () => {
@@ -35,6 +39,20 @@ export default function AdminOrdersDirectory() {
             setError(err.message)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchUsers = async () => {
+        try {
+            const usersData = await api.admin.getAllUsers()
+            // Crear un mapa de usuarios por ID para búsqueda rápida
+            const userMap = {}
+            usersData.forEach(user => {
+                userMap[user.id] = user
+            })
+            setUsers(userMap)
+        } catch (err) {
+            console.error('Error fetching users:', err)
         }
     }
 
@@ -63,6 +81,11 @@ export default function AdminOrdersDirectory() {
         setShowStatusModal(true)
     }
 
+    const openDetailModal = (order) => {
+        setSelectedOrder(order)
+        setShowDetailModal(true)
+    }
+
     const getStatusBadge = (status) => {
         const option = statusOptions.find(opt => opt.value === status)
         return (
@@ -72,9 +95,42 @@ export default function AdminOrdersDirectory() {
         )
     }
 
+    // Obtener nombre del cliente por ID
+    const getClientName = (userId) => {
+        if (users[userId]) {
+            return users[userId].name
+        }
+        return userId?.slice(-8) || 'N/A'
+    }
+
+    // Obtener email del cliente por ID
+    const getClientEmail = (userId) => {
+        if (users[userId]) {
+            return users[userId].email
+        }
+        return ''
+    }
+
+    // Obtener empresa del cliente por ID
+    const getClientCompany = (userId) => {
+        if (users[userId]) {
+            return users[userId].company
+        }
+        return null
+    }
+
+    // Obtener teléfono del cliente por ID
+    const getClientPhone = (userId) => {
+        if (users[userId]) {
+            return users[userId].phone
+        }
+        return null
+    }
+
     const filteredOrders = orders.filter(order => {
+        const clientName = getClientName(order.userId).toLowerCase()
         const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.userId?.toLowerCase().includes(searchTerm.toLowerCase())
+            clientName.includes(searchTerm.toLowerCase())
         const matchesStatus = filterStatus === 'all' || order.status === filterStatus
         return matchesSearch && matchesStatus
     })
@@ -82,6 +138,19 @@ export default function AdminOrdersDirectory() {
     const getTotalByStatus = (status) => {
         return orders.filter(o => o.status === status).length
     }
+
+    // Calcular valores para el modal de detalle
+    const calculateOrderDetails = () => {
+        if (!selectedOrder) return { subtotal: 0, iva: 0, total: 0 }
+
+        const subtotal = selectedOrder.items?.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0) || parseFloat(selectedOrder.total) || 0
+        const iva = subtotal * 0.19
+        const total = subtotal + 4500 + iva // 4500 es el envío
+
+        return { subtotal, iva, total }
+    }
+
+    const { subtotal, iva, total } = calculateOrderDetails()
 
     if (loading) {
         return (
@@ -129,7 +198,7 @@ export default function AdminOrdersDirectory() {
                         </span>
                         <input
                             type="text"
-                            placeholder="Buscar por ID de orden o usuario..."
+                            placeholder="Buscar por ID de orden o nombre del cliente..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-1 focus:ring-primary outline-none"
@@ -170,6 +239,7 @@ export default function AdminOrdersDirectory() {
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">ID Orden</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Cliente</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">Contacto</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Fecha</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Productos</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Total</th>
@@ -180,7 +250,7 @@ export default function AdminOrdersDirectory() {
                             <tbody>
                                 {filteredOrders.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="text-center py-8 text-gray-500">
+                                        <td colSpan="8" className="text-center py-8 text-gray-500">
                                             No se encontraron pedidos
                                         </td>
                                     </tr>
@@ -193,8 +263,24 @@ export default function AdminOrdersDirectory() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="text-sm">{order.userId?.slice(-8) || 'N/A'}</div>
-                                                <div className="text-xs text-gray-500">ID: {order.userId?.slice(-8)}</div>
+                                                <div className="font-medium text-gray-800">
+                                                    {getClientName(order.userId)}
+                                                </div>
+                                                {getClientCompany(order.userId) && (
+                                                    <div className="text-xs text-gray-500">
+                                                        {getClientCompany(order.userId)}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="text-sm text-gray-600">
+                                                    {getClientEmail(order.userId)}
+                                                </div>
+                                                {getClientPhone(order.userId) && (
+                                                    <div className="text-xs text-gray-400">
+                                                        {getClientPhone(order.userId)}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-sm">
                                                 {new Date(order.createdAt).toLocaleDateString('es-CL')}
@@ -215,14 +301,30 @@ export default function AdminOrdersDirectory() {
                                                 {getStatusBadge(order.status)}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <button
-                                                    onClick={() => openStatusModal(order)}
-                                                    className="text-primary hover:text-[#FC9430] transition-colors flex items-center gap-1"
-                                                    title="Cambiar estado"
-                                                >
-                                                    <Icon name="edit" className="text-sm" />
-                                                    <span className="text-xs uppercase font-bold">Estado</span>
-                                                </button>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => openDetailModal(order)}
+                                                        className="text-primary hover:text-[#FC9430] transition-colors"
+                                                        title="Ver detalles"
+                                                    >
+                                                        <Icon name="visibility" className="text-sm" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openStatusModal(order)}
+                                                        className="text-[#FC9430] hover:text-primary transition-colors"
+                                                        title="Cambiar estado"
+                                                    >
+                                                        <Icon name="edit" className="text-sm" />
+                                                    </button>
+                                                    <Link
+                                                        to={`/factura/${order.id}`}
+                                                        target="_blank"
+                                                        className="text-green-600 hover:text-green-800 transition-colors"
+                                                        title="Ver factura"
+                                                    >
+                                                        <Icon name="receipt" className="text-sm" />
+                                                    </Link>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -254,6 +356,15 @@ export default function AdminOrdersDirectory() {
                             <div className="mb-4">
                                 <p className="text-sm text-gray-500">ID de Orden</p>
                                 <p className="font-mono font-bold text-primary">{selectedOrder.id.slice(-8).toUpperCase()}</p>
+                            </div>
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-500">Cliente</p>
+                                <p className="font-medium">{getClientName(selectedOrder.userId)}</p>
+                                <p className="text-xs text-gray-400">{getClientEmail(selectedOrder.userId)}</p>
+                            </div>
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-500">Monto</p>
+                                <p className="font-bold text-[#FC9430]">${(parseFloat(selectedOrder.total) || 0).toLocaleString()}</p>
                             </div>
 
                             <div className="mb-6">
@@ -297,6 +408,153 @@ export default function AdminOrdersDirectory() {
                                     ) : (
                                         'Actualizar Estado'
                                     )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Detalle del Pedido */}
+            {showDetailModal && selectedOrder && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-primary">Detalle del Pedido</h3>
+                            <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <Icon name="close" className="text-2xl" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            {/* Información del pedido */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b">
+                                <div>
+                                    <p className="text-xs text-gray-400 uppercase font-bold">N° Orden</p>
+                                    <p className="font-mono font-bold text-primary text-lg">{selectedOrder.id.slice(-8).toUpperCase()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 uppercase font-bold">Fecha</p>
+                                    <p className="font-medium">{new Date(selectedOrder.createdAt).toLocaleString('es-CL')}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 uppercase font-bold">Estado</p>
+                                    {getStatusBadge(selectedOrder.status)}
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 uppercase font-bold">Última actualización</p>
+                                    <p className="font-medium">{new Date(selectedOrder.updatedAt).toLocaleString('es-CL')}</p>
+                                </div>
+                            </div>
+
+                            {/* Información del cliente */}
+                            <div className="pb-4 border-b">
+                                <h4 className="font-bold text-primary mb-3 flex items-center gap-2">
+                                    <Icon name="person" className="text-sm" />
+                                    Información del Cliente
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <p className="text-xs text-gray-400">Nombre</p>
+                                        <p className="font-medium">{getClientName(selectedOrder.userId)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400">Email</p>
+                                        <p className="font-medium">{getClientEmail(selectedOrder.userId)}</p>
+                                    </div>
+                                    {getClientPhone(selectedOrder.userId) && (
+                                        <div>
+                                            <p className="text-xs text-gray-400">Teléfono</p>
+                                            <p className="font-medium">{getClientPhone(selectedOrder.userId)}</p>
+                                        </div>
+                                    )}
+                                    {getClientCompany(selectedOrder.userId) && (
+                                        <div>
+                                            <p className="text-xs text-gray-400">Empresa</p>
+                                            <p className="font-medium">{getClientCompany(selectedOrder.userId)}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Productos */}
+                            <div className="pb-4 border-b">
+                                <h4 className="font-bold text-primary mb-3 flex items-center gap-2">
+                                    <Icon name="shopping_bag" className="text-sm" />
+                                    Productos
+                                </h4>
+                                <div className="space-y-3">
+                                    {selectedOrder.items?.map((item, index) => (
+                                        <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
+                                            <div className="flex-1">
+                                                <p className="font-medium">{item.product?.name || 'Producto'}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    Ref: {item.product?.reference || 'N/A'} | Cantidad: {item.quantity}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-bold text-primary">${(parseFloat(item.unitPrice) || 0).toLocaleString()}</p>
+                                                <p className="text-xs text-gray-400">Subtotal: ${(parseFloat(item.subtotal) || 0).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Resumen de valores */}
+                            <div>
+                                <h4 className="font-bold text-primary mb-3 flex items-center gap-2">
+                                    <Icon name="receipt" className="text-sm" />
+                                    Resumen de Valores
+                                </h4>
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Subtotal</span>
+                                            <span className="font-medium">${Math.round(subtotal).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Envío (La Serena - Calbuco)</span>
+                                            <span className="font-medium">$4.500</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">IVA (19%)</span>
+                                            <span className="font-medium">${Math.round(iva).toLocaleString()}</span>
+                                        </div>
+                                        <div className="border-t pt-2 mt-2">
+                                            <div className="flex justify-between">
+                                                <span className="text-lg font-bold text-primary">Total</span>
+                                                <span className="text-xl font-bold text-[#FC9430]">${Math.round(total).toLocaleString()} CLP</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Botones de acción */}
+                            <div className="flex justify-end gap-4 pt-4 border-t">
+                                <button
+                                    onClick={() => setShowDetailModal(false)}
+                                    className="px-6 py-2 border border-gray-300 rounded font-bold hover:bg-gray-50"
+                                >
+                                    Cerrar
+                                </button>
+                                <Link
+                                    to={`/factura/${selectedOrder.id}`}
+                                    target="_blank"
+                                    className="px-6 py-2 bg-primary text-white rounded font-bold hover:bg-primary/80 transition-colors flex items-center gap-2"
+                                >
+                                    <Icon name="receipt" className="text-sm" />
+                                    Ver Factura Completa
+                                </Link>
+                                <button
+                                    onClick={() => {
+                                        setShowDetailModal(false)
+                                        openStatusModal(selectedOrder)
+                                    }}
+                                    className="px-6 py-2 bg-[#FC9430] text-white rounded font-bold hover:bg-[#e0852b] transition-colors flex items-center gap-2"
+                                >
+                                    <Icon name="edit" className="text-sm" />
+                                    Cambiar Estado
                                 </button>
                             </div>
                         </div>
