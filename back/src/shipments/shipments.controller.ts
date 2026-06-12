@@ -100,6 +100,13 @@ export class ShipmentsController {
         return this.shipmentsService.getUserShipments(req.user.id);
     }
 
+    @Get('tracking/order/:orderId')
+    @Public()  // Opcional: hacerlo público para que clientes puedan ver sin login
+    @ApiOperation({ summary: 'Obtener seguimiento por ID de orden' })
+    async getTrackingByOrderId(@Param('orderId', ParseUUIDPipe) orderId: string): Promise<Shipment | null> {
+        return this.shipmentsService.findByOrderId(orderId);
+    }
+
     @Get(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
@@ -140,5 +147,17 @@ export class ShipmentsController {
     @ApiOperation({ summary: 'Eliminar un envío (admin)' })
     async remove(@Param('id', ParseUUIDPipe) id: string): Promise<{ message: string }> {
         return this.shipmentsService.remove(id);
+    }
+
+    @Post('from-order/:orderId')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Crear envío a partir de una orden existente (admin)' })
+    async createFromOrder(
+        @Param('orderId', ParseUUIDPipe) orderId: string,
+        @Body('userId') userId: string
+    ): Promise<Shipment> {
+        return this.shipmentsService.createFromOrder(orderId, userId);
     }
 }
