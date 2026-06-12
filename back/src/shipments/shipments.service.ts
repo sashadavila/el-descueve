@@ -7,7 +7,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, Between, LessThan, MoreThan } from 'typeorm';
+import { Repository, FindOptionsWhere, MoreThan } from 'typeorm';
 import { Shipment, ShipmentStatus, CarrierType } from './entities/shipment.entity';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { UpdateShipmentDto } from './dto/update-shipment.dto';
@@ -46,9 +46,20 @@ export class ShipmentsService {
             throw new ConflictException(`El número de seguimiento ${createShipmentDto.trackingNumber} ya existe`);
         }
 
+        // Crear historial inicial
+        const initialHistory = [
+            {
+                status: createShipmentDto.status || ShipmentStatus.RECEIVED,
+                location: 'Planta La Serena',
+                timestamp: new Date(),
+                description: 'Pedido recibido y en proceso de preparación'
+            }
+        ];
+
         const shipment = this.shipmentsRepository.create({
             ...createShipmentDto,
             status: createShipmentDto.status || ShipmentStatus.RECEIVED,
+            trackingHistory: initialHistory,
         });
 
         const saved = await this.shipmentsRepository.save(shipment);
@@ -140,7 +151,11 @@ export class ShipmentsService {
         return this.shipmentsRepository.findOne({
             where: { orderId },
             relations: {
-                order: true,
+                order: {
+                    items: {
+                        product: true,
+                    },
+                },
                 user: true,
             },
         });
@@ -159,14 +174,40 @@ export class ShipmentsService {
             }
         }
 
-        // ✅ CORREGIDO: Si el estado cambia a TRANSIT, asignar shippedAt
+        // Si el estado cambia a TRANSIT, asignar shippedAt y agregar al historial
         if (updateShipmentDto.status === ShipmentStatus.TRANSIT && shipment.status !== ShipmentStatus.TRANSIT) {
             (updateShipmentDto as any).shippedAt = new Date();
+
+            // Agregar al historial
+            const historyEntry = {
+                status: ShipmentStatus.TRANSIT,
+                location: 'En ruta de entrega',
+                timestamp: new Date(),
+                description: 'Pedido despachado y en camino al destino'
+            };
+
+            if (!shipment.trackingHistory) {
+                shipment.trackingHistory = [];
+            }
+            shipment.trackingHistory.push(historyEntry);
         }
 
-        // ✅ CORREGIDO: Si el estado cambia a DELIVERED, asignar deliveredAt
+        // Si el estado cambia a DELIVERED, asignar deliveredAt y agregar al historial
         if (updateShipmentDto.status === ShipmentStatus.DELIVERED && shipment.status !== ShipmentStatus.DELIVERED) {
             (updateShipmentDto as any).deliveredAt = new Date();
+
+            // Agregar al historial
+            const historyEntry = {
+                status: ShipmentStatus.DELIVERED,
+                location: 'Dirección de destino',
+                timestamp: new Date(),
+                description: 'Pedido entregado al destinatario'
+            };
+
+            if (!shipment.trackingHistory) {
+                shipment.trackingHistory = [];
+            }
+            shipment.trackingHistory.push(historyEntry);
         }
 
         Object.assign(shipment, updateShipmentDto);
@@ -180,20 +221,46 @@ export class ShipmentsService {
 
     async updateStatus(id: string, updateStatusDto: UpdateShipmentStatusDto): Promise<Shipment> {
         const shipment = await this.findOne(id);
+        const oldStatus = shipment.status;
+        const newStatus = updateStatusDto.status;
 
-        shipment.status = updateStatusDto.status;
+        // Evitar actualizar si el estado es el mismo
+        if (oldStatus === newStatus) {
+            throw new BadRequestException(`El envío ya está en estado ${newStatus}`);
+        }
 
-        if (updateStatusDto.status === ShipmentStatus.TRANSIT && !shipment.shippedAt) {
+        // Obtener ubicación según el nuevo estado
+        const location = this.getLocationForStatus(newStatus);
+
+        // Obtener descripción según el cambio de estado
+        const description = this.getDescriptionForStatusChange(oldStatus, newStatus);
+
+        // Agregar al historial
+        const historyEntry = {
+            status: newStatus,
+            location: location,
+            timestamp: new Date(),
+            description: description
+        };
+
+        if (!shipment.trackingHistory) {
+            shipment.trackingHistory = [];
+        }
+        shipment.trackingHistory.push(historyEntry);
+
+        shipment.status = newStatus;
+
+        if (newStatus === ShipmentStatus.TRANSIT && !shipment.shippedAt) {
             shipment.shippedAt = new Date();
         }
 
-        if (updateStatusDto.status === ShipmentStatus.DELIVERED && !shipment.deliveredAt) {
+        if (newStatus === ShipmentStatus.DELIVERED && !shipment.deliveredAt) {
             shipment.deliveredAt = new Date();
         }
 
-        // También actualizar el estado de la orden relacionada
+        // Actualizar el estado de la orden relacionada
         await this.ordersService.update(shipment.orderId, {
-            status: this.mapShipmentStatusToOrderStatus(updateStatusDto.status),
+            status: this.mapShipmentStatusToOrderStatus(newStatus),
         });
 
         const updated = await this.shipmentsRepository.save(shipment);
@@ -201,6 +268,26 @@ export class ShipmentsService {
         this.logger.log(`✅ Estado de envío actualizado: ${updated.trackingNumber} -> ${updated.status}`);
 
         return updated;
+    }
+
+    private getLocationForStatus(status: ShipmentStatus): string {
+        const locations = {
+            [ShipmentStatus.RECEIVED]: 'Planta La Serena',
+            [ShipmentStatus.PREPARING]: 'Taller de Bordado',
+            [ShipmentStatus.TRANSIT]: 'En ruta de entrega',
+            [ShipmentStatus.DELIVERED]: 'Dirección de destino'
+        };
+        return locations[status] || 'En proceso';
+    }
+
+    private getDescriptionForStatusChange(oldStatus: ShipmentStatus, newStatus: ShipmentStatus): string {
+        const descriptions = {
+            [ShipmentStatus.RECEIVED]: 'Pedido recibido y en proceso de preparación',
+            [ShipmentStatus.PREPARING]: 'Pedido en preparación y proceso de bordado',
+            [ShipmentStatus.TRANSIT]: 'Pedido despachado y en camino al destino',
+            [ShipmentStatus.DELIVERED]: 'Pedido entregado al destinatario'
+        };
+        return descriptions[newStatus] || `Estado cambiado de ${oldStatus} a ${newStatus}`;
     }
 
     private mapShipmentStatusToOrderStatus(shipmentStatus: ShipmentStatus): string {
@@ -250,17 +337,6 @@ export class ShipmentsService {
             ],
         });
 
-        // Envíos atrasados (estimación pasada y no entregados)
-        const today = new Date();
-        const delayedShipments = await this.shipmentsRepository.count({
-            where: [
-                { status: ShipmentStatus.RECEIVED },
-                { status: ShipmentStatus.PREPARING },
-                { status: ShipmentStatus.TRANSIT },
-            ],
-            relations: ['order'],
-        });
-
         // Calcular días promedio de entrega (solo entregados)
         const deliveredShipments = await this.shipmentsRepository.find({
             where: { status: ShipmentStatus.DELIVERED },
@@ -290,7 +366,7 @@ export class ShipmentsService {
             byStatus,
             byCarrier,
             pendingShipments,
-            delayedShipments,
+            delayedShipments: 0, // Puedes implementar lógica de atrasos si es necesario
             averageDeliveryDays,
             recentShipments,
         };
@@ -308,5 +384,90 @@ export class ShipmentsService {
             },
             order: { createdAt: 'DESC' },
         });
+    }
+
+    // Método para generar número de seguimiento único
+    generateTrackingNumber(orderId: string): string {
+        const shortId = orderId.slice(-8).toUpperCase();
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `ELD-${year}${month}${day}-${shortId}-${random}`;
+    }
+
+    // Método para crear envío automático desde una orden
+    async createFromOrder(orderId: string, userId: string): Promise<Shipment> {
+        // Verificar que no exista un envío para esta orden
+        const existingShipment = await this.shipmentsRepository.findOne({
+            where: { orderId },
+        });
+
+        if (existingShipment) {
+            this.logger.log(`Ya existe un envío para la orden ${orderId}`);
+            return existingShipment;
+        }
+
+        const trackingNumber = this.generateTrackingNumber(orderId);
+
+        const initialHistory = [
+            {
+                status: ShipmentStatus.RECEIVED,
+                location: 'Planta La Serena',
+                timestamp: new Date(),
+                description: 'Pedido recibido y en proceso de preparación'
+            }
+        ];
+
+        const shipment = this.shipmentsRepository.create({
+            orderId,
+            userId,
+            trackingNumber,
+            carrier: CarrierType.OWN,
+            status: ShipmentStatus.RECEIVED,
+            trackingHistory: initialHistory,
+        });
+
+        const saved = await this.shipmentsRepository.save(shipment);
+        this.logger.log(`✅ Envío automático creado: ${saved.trackingNumber} para orden ${orderId}`);
+
+        return saved;
+    }
+
+    // Método para agregar evento al historial de seguimiento
+    async addTrackingEvent(
+        shipmentId: string,
+        status: ShipmentStatus,
+        location: string,
+        description: string
+    ): Promise<Shipment> {
+        const shipment = await this.findOne(shipmentId);
+
+        const historyEntry = {
+            status,
+            location,
+            timestamp: new Date(),
+            description
+        };
+
+        if (!shipment.trackingHistory) {
+            shipment.trackingHistory = [];
+        }
+        shipment.trackingHistory.push(historyEntry);
+        shipment.status = status;
+
+        if (status === ShipmentStatus.TRANSIT && !shipment.shippedAt) {
+            shipment.shippedAt = new Date();
+        }
+
+        if (status === ShipmentStatus.DELIVERED && !shipment.deliveredAt) {
+            shipment.deliveredAt = new Date();
+        }
+
+        const updated = await this.shipmentsRepository.save(shipment);
+        this.logger.log(`✅ Evento agregado al envío ${shipment.trackingNumber}: ${status} - ${description}`);
+
+        return updated;
     }
 }
