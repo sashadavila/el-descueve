@@ -363,4 +363,103 @@ export class NotificationsService {
 
         return { total, unread, read, byType };
     }
+
+    // Generar notificaciones de pedidos
+    async generateOrderNotifications(orders: any[]): Promise<{ created: number; skipped: number; cleaned: number }> {
+        this.logger.log(`🔄 Generando notificaciones de pedidos para ${orders.length} órdenes`);
+
+        // Limpiar notificaciones antiguas
+        const cleanResult = await this.cleanOldNotifications(30);
+
+        // Obtener todas las notificaciones existentes
+        const allExistingNotifications = await this.notificationsRepository.find();
+
+        const notificationExists = (title: string): boolean => {
+            return allExistingNotifications.some(notification => notification.title === title);
+        };
+
+        let created = 0;
+        let skipped = 0;
+
+        // Ordenar órdenes por fecha (más recientes primero)
+        const sortedOrders = [...orders].sort((a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        // Tomar solo las últimas 50 órdenes para no sobrecargar
+        const recentOrders = sortedOrders.slice(0, 50);
+
+        for (const order of recentOrders) {
+            const orderIdShort = order.id.slice(-8).toUpperCase();
+            let title = '';
+            let message = '';
+            let icon = '';
+            let iconColor = '';
+            let bgColor = '';
+
+            // Determinar tipo de notificación según el estado
+            if (order.status === 'PENDING') {
+                title = `🆕 Nuevo pedido: #${orderIdShort}`;
+                message = `Se ha recibido un nuevo pedido por $${(parseFloat(order.total) || 0).toLocaleString()} CLP.`;
+                icon = 'receipt_long';
+                iconColor = 'text-blue-500';
+                bgColor = 'bg-blue-50';
+            } else if (order.status === 'PAID') {
+                title = `✅ Pedido pagado: #${orderIdShort}`;
+                message = `El pedido #${orderIdShort} ha sido pagado y está en preparación.`;
+                icon = 'payments';
+                iconColor = 'text-green-500';
+                bgColor = 'bg-green-50';
+            } else if (order.status === 'DELIVERED') {
+                title = `📦 Pedido entregado: #${orderIdShort}`;
+                message = `El pedido #${orderIdShort} ha sido entregado al cliente.`;
+                icon = 'package_2';
+                iconColor = 'text-green-600';
+                bgColor = 'bg-green-100';
+            } else if (order.status === 'CANCELLED') {
+                title = `❌ Pedido cancelado: #${orderIdShort}`;
+                message = `El pedido #${orderIdShort} ha sido cancelado.`;
+                icon = 'cancel';
+                iconColor = 'text-red-500';
+                bgColor = 'bg-red-50';
+            }
+
+            if (title && !notificationExists(title)) {
+                try {
+                    await this.create({
+                        title: title,
+                        message: message,
+                        type: NotificationType.NEW_ORDER,
+                        metadata: {
+                            orderId: order.id,
+                            orderIdShort: orderIdShort,
+                            total: parseFloat(order.total) || 0,
+                            status: order.status,
+                            userId: order.userId,
+                            itemsCount: order.items?.length || 0
+                        },
+                        icon: icon,
+                        iconColor: iconColor,
+                        bgColor: bgColor,
+                        status: NotificationStatus.UNREAD,
+                    });
+                    created++;
+                    this.logger.log(`✅ Notificación creada: ${title}`);
+                } catch (err) {
+                    skipped++;
+                    this.logger.warn(`⚠️ Error al crear notificación: ${title}`);
+                }
+            } else {
+                skipped++;
+            }
+        }
+
+        this.logger.log(`📊 Generación completada: ${created} creadas, ${skipped} omitidas, ${cleanResult.count} limpiadas`);
+
+        return {
+            created,
+            skipped,
+            cleaned: cleanResult.count
+        };
+    }
 }
