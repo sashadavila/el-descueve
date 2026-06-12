@@ -23,7 +23,7 @@ const menuItems = [
         icon: 'inventory_2',
         basePath: '/admin/inventarios',
         subItems: [
-            { path: '/admin/inventarios/directorio', label: 'Directorio', icon: 'catalog' },
+            { path: '/admin/inventarios/directorio', label: 'Directorio', icon: 'inventory' },
             { path: '/admin/inventarios/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
             { path: '/admin/inventarios/notificaciones', label: 'Notificaciones', icon: 'notifications' },
         ]
