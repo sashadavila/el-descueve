@@ -361,6 +361,23 @@ export const api = {
             return data;
         },
     },
+
+    tracking: {
+        getByOrderId: async (orderId) => {
+            const response = await fetch(`${API_BASE_URL}/shipments/tracking/order/${orderId}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener seguimiento');
+            return data;
+        },
+        getByTrackingNumber: async (trackingNumber) => {
+            const response = await fetch(`${API_BASE_URL}/shipments/tracking/${trackingNumber}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener seguimiento');
+            return data;
+        },
+    },
 };
 
 export default api;
