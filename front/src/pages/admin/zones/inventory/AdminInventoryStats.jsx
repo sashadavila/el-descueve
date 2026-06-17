@@ -9,6 +9,10 @@ export default function AdminInventoryStats() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
+    // ✅ Estado para paginación de la tabla de productos con stock bajo
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(10)
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
@@ -51,9 +55,105 @@ export default function AdminInventoryStats() {
     const activeProducts = products.filter(p => p.isActive).length
     const inactiveProducts = products.filter(p => !p.isActive).length
 
+    // ✅ Combinar productos con problemas de stock para paginación
+    const problemProducts = [...lowStockProducts, ...outOfStockProducts]
+    const totalProblemProducts = problemProducts.length
+
+    // ✅ Obtener productos paginados
+    const getPaginatedProducts = () => {
+        const startIndex = (currentPage - 1) * itemsPerPage
+        const endIndex = startIndex + itemsPerPage
+        return problemProducts.slice(startIndex, endIndex)
+    }
+
+    // ✅ Calcular total de páginas
+    const totalPages = Math.ceil(totalProblemProducts / itemsPerPage)
+
+    // ✅ Cambiar página
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // ✅ Componente de paginación
+    const Pagination = () => {
+        if (totalPages <= 1) return null
+
+        const pages = []
+        const maxVisible = 5
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2))
+        let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+
+        if (endPage - startPage + 1 < maxVisible) {
+            startPage = Math.max(1, endPage - maxVisible + 1)
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i)
+        }
+
+        return (
+            <div className="flex justify-center items-center gap-2 mt-4">
+                <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Anterior
+                </button>
+
+                {startPage > 1 && (
+                    <>
+                        <button onClick={() => handlePageChange(1)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">1</button>
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
+                    </>
+                )}
+
+                {pages.map(page => (
+                    <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-1.5 text-sm border rounded-lg transition-colors ${currentPage === page
+                                ? 'bg-primary text-white border-primary'
+                                : 'hover:bg-gray-50'
+                            }`}
+                    >
+                        {page}
+                    </button>
+                ))}
+
+                {endPage < totalPages && (
+                    <>
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
+                        <button onClick={() => handlePageChange(totalPages)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">
+                            {totalPages}
+                        </button>
+                    </>
+                )}
+
+                <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Siguiente
+                </button>
+            </div>
+        )
+    }
+
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = () => {
+        const start = (currentPage - 1) * itemsPerPage + 1
+        const end = Math.min(currentPage * itemsPerPage, totalProblemProducts)
+        return { start, end }
+    }
+
     const byType = getProductsByType()
     const totalProducts = products.length
     const activePercentage = totalProducts > 0 ? Math.round((activeProducts / totalProducts) * 100) : 0
+    const paginatedProducts = getPaginatedProducts()
+    const { start, end } = getDisplayRange()
 
     if (loading) {
         return (
@@ -234,19 +334,23 @@ export default function AdminInventoryStats() {
                 </div>
             </div>
 
-            {/* Productos con stock bajo - tabla */}
-            {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
+            {/* ✅ Productos con stock bajo - tabla CON PAGINACIÓN */}
+            {(totalProblemProducts > 0) && (
                 <div className="bg-white border rounded-lg shadow-sm">
-                    <div className="p-4 border-b bg-yellow-50">
+                    <div className="p-4 border-b bg-yellow-50 flex justify-between items-center">
                         <h3 className="font-bold text-yellow-800 flex items-center gap-2">
                             <Icon name="warning" />
                             Alertas de Inventario
                         </h3>
+                        <span className="text-sm text-gray-500">
+                            Mostrando {start} - {end} de {totalProblemProducts} productos con problemas
+                        </span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    <th className="px-4 py-3 text-left text-sm font-bold">#</th>
                                     <th className="px-4 py-3 text-left text-sm font-bold">Producto</th>
                                     <th className="px-4 py-3 text-left text-sm font-bold">Referencia</th>
                                     <th className="px-4 py-3 text-left text-sm font-bold">Stock Actual</th>
@@ -255,49 +359,59 @@ export default function AdminInventoryStats() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {lowStockProducts.map(product => (
-                                    <tr key={product.id} className="border-t">
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium">{product.name}</div>
-                                            <div className="text-xs text-gray-500">{product.productType}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">{product.reference}</td>
-                                        <td className="px-4 py-3">
-                                            <span className="font-bold text-yellow-600">{product.stock} unidades</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="text-yellow-600 text-sm">Stock bajo</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <button className="text-primary text-sm hover:text-[#FC9430]">
-                                                Reabastecer
-                                            </button>
+                                {paginatedProducts.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="text-center py-8 text-gray-500">
+                                            No hay productos con problemas de stock
                                         </td>
                                     </tr>
-                                ))}
-                                {outOfStockProducts.map(product => (
-                                    <tr key={product.id} className="border-t">
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium">{product.name}</div>
-                                            <div className="text-xs text-gray-500">{product.productType}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">{product.reference}</td>
-                                        <td className="px-4 py-3">
-                                            <span className="font-bold text-red-600">Agotado</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="text-red-600 text-sm">Sin stock</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <button className="text-primary text-sm hover:text-[#FC9430]">
-                                                Reabastecer
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                ) : (
+                                    paginatedProducts.map((product, index) => {
+                                        const globalIndex = (currentPage - 1) * itemsPerPage + index + 1
+                                        const isOutOfStock = product.stock === 0
+                                        return (
+                                            <tr key={product.id} className="border-t hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                                                    {globalIndex}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="font-medium">{product.name}</div>
+                                                    <div className="text-xs text-gray-500">{product.productType}</div>
+                                                </td>
+                                                <td className="px-4 py-3 text-sm">{product.reference}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`font-bold ${isOutOfStock ? 'text-red-600' : 'text-yellow-600'}`}>
+                                                        {isOutOfStock ? 'Agotado' : `${product.stock} unidades`}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`text-sm ${isOutOfStock ? 'text-red-600' : 'text-yellow-600'}`}>
+                                                        {isOutOfStock ? 'Sin stock' : 'Stock bajo'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <button className="text-primary text-sm hover:text-[#FC9430] transition-colors">
+                                                        Reabastecer
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                )}
                             </tbody>
                         </table>
                     </div>
+
+                    {/* ✅ Paginación */}
+                    <Pagination />
+
+                    {/* ✅ Información de paginación */}
+                    {totalProblemProducts > 0 && (
+                        <div className="px-4 py-3 border-t bg-gray-50 text-center text-xs text-gray-500">
+                            Página {currentPage} de {totalPages} ·
+                            Mostrando {paginatedProducts.length} de {totalProblemProducts} productos con problemas de stock
+                        </div>
+                    )}
                 </div>
             )}
         </div>
