@@ -16,7 +16,7 @@ export default function AdminInventoryNotifications() {
     const [alertThreshold, setAlertThreshold] = useState(10)
     const [showAlertSettings, setShowAlertSettings] = useState(false)
 
-    // Paginación
+    // ✅ Paginación
     const [unreadPage, setUnreadPage] = useState(1)
     const [readPage, setReadPage] = useState(1)
     const [unreadTotalPages, setUnreadTotalPages] = useState(1)
@@ -26,37 +26,45 @@ export default function AdminInventoryNotifications() {
 
     const itemsPerPage = 10
 
-    // Cargar notificaciones y productos
-    const loadNotifications = async () => {
+    // ✅ Cargar todas las notificaciones (sin paginación del backend para filtrar correctamente)
+    const loadAllNotifications = async () => {
         setLoading(true)
         try {
-            const [unreadResult, readResult, productsData] = await Promise.all([
-                api.notifications.getAll('unread', unreadPage, itemsPerPage),
-                api.notifications.getAll('read', readPage, itemsPerPage),
-                api.products.getAll(1, 100)
-            ])
+            // Cargar todas las notificaciones (sin paginación para obtener todas)
+            const allNotifsResult = await api.notifications.getAll(null, 1, 1000)
 
-            // Filtrar notificaciones de inventario (system_alert o relacionadas con stock)
-            const filteredUnread = unreadResult.data.filter(n =>
+            // Filtrar solo notificaciones de inventario
+            const allInventoryNotifications = allNotifsResult.data.filter(n =>
                 n.type === 'system_alert' ||
                 n.title?.toLowerCase().includes('stock') ||
                 n.title?.toLowerCase().includes('producto') ||
-                n.title?.toLowerCase().includes('inventario')
-            )
-            const filteredRead = readResult.data.filter(n =>
-                n.type === 'system_alert' ||
-                n.title?.toLowerCase().includes('stock') ||
-                n.title?.toLowerCase().includes('producto') ||
-                n.title?.toLowerCase().includes('inventario')
+                n.title?.toLowerCase().includes('inventario') ||
+                n.title?.toLowerCase().includes('agotado') ||
+                n.metadata?.stock !== undefined
             )
 
-            setUnreadNotifications(filteredUnread)
-            setReadNotifications(filteredRead)
-            setUnreadTotalPages(Math.ceil(filteredUnread.length / itemsPerPage) || 1)
-            setReadTotalPages(Math.ceil(filteredRead.length / itemsPerPage) || 1)
-            setUnreadTotal(filteredUnread.length)
-            setReadTotal(filteredRead.length)
+            // Separar por estado
+            const unread = allInventoryNotifications.filter(n => n.status === 'unread')
+            const read = allInventoryNotifications.filter(n => n.status === 'read')
+
+            setUnreadTotal(unread.length)
+            setReadTotal(read.length)
+            setUnreadTotalPages(Math.ceil(unread.length / itemsPerPage) || 1)
+            setReadTotalPages(Math.ceil(read.length / itemsPerPage) || 1)
+
+            // ✅ Aplicar paginación manual
+            const startUnread = (unreadPage - 1) * itemsPerPage
+            const endUnread = startUnread + itemsPerPage
+            const startRead = (readPage - 1) * itemsPerPage
+            const endRead = startRead + itemsPerPage
+
+            setUnreadNotifications(unread.slice(startUnread, endUnread))
+            setReadNotifications(read.slice(startRead, endRead))
+
+            // Cargar productos para generar notificaciones
+            const productsData = await api.products.getAll(1, 1000)
             setProducts(productsData.data || [])
+
         } catch (error) {
             console.error('Error loading inventory notifications:', error)
         } finally {
@@ -74,7 +82,6 @@ export default function AdminInventoryNotifications() {
             const productsData = await api.products.getAll(1, 1000)
             const products = productsData.data || []
 
-            // Llamar al nuevo endpoint de inventario
             const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/actions/generate-inventory`, {
                 method: 'POST',
                 headers: {
@@ -101,7 +108,11 @@ export default function AdminInventoryNotifications() {
                 message: result.message
             })
 
-            await loadNotifications()
+            // ✅ Recargar notificaciones y resetear a página 1
+            setUnreadPage(1)
+            setReadPage(1)
+            await loadAllNotifications()
+            updateUnreadCount()
 
             setTimeout(() => {
                 setGenerateResult(null)
@@ -124,14 +135,17 @@ export default function AdminInventoryNotifications() {
     const markAsRead = async (id) => {
         try {
             await api.notifications.markAsRead(id)
+
+            // ✅ Mover la notificación de unread a read
             const movedNotification = unreadNotifications.find(n => n.id === id)
             if (movedNotification) {
                 setUnreadNotifications(prev => prev.filter(n => n.id !== id))
-                setReadNotifications(prev => [movedNotification, ...prev])
                 setUnreadTotal(prev => prev - 1)
                 setReadTotal(prev => prev + 1)
+                setReadNotifications(prev => [movedNotification, ...prev])
+                setReadTotalPages(Math.ceil((readTotal + 1) / itemsPerPage) || 1)
             }
-            await loadNotifications()
+
             updateUnreadCount()
         } catch (error) {
             console.error('Error marking as read:', error)
@@ -141,9 +155,22 @@ export default function AdminInventoryNotifications() {
 
     // Marcar todas como leídas
     const markAllAsRead = async () => {
+        if (unreadTotal === 0) {
+            alert('No hay notificaciones no leídas')
+            return
+        }
+
         try {
             await api.notifications.markAllAsRead()
-            await loadNotifications()
+
+            // ✅ Mover todas las notificaciones no leídas a leídas
+            const allRead = [...unreadNotifications, ...readNotifications]
+            setReadNotifications(allRead)
+            setUnreadNotifications([])
+            setUnreadTotal(0)
+            setReadTotal(allRead.length)
+            setReadTotalPages(Math.ceil(allRead.length / itemsPerPage) || 1)
+
             updateUnreadCount()
             alert('✅ Todas las notificaciones marcadas como leídas')
         } catch (error) {
@@ -171,9 +198,11 @@ export default function AdminInventoryNotifications() {
             if (isUnread) {
                 setUnreadNotifications(prev => prev.filter(n => n.id !== id))
                 setUnreadTotal(prev => prev - 1)
+                setUnreadTotalPages(Math.ceil((unreadTotal - 1) / itemsPerPage) || 1)
             } else {
                 setReadNotifications(prev => prev.filter(n => n.id !== id))
                 setReadTotal(prev => prev - 1)
+                setReadTotalPages(Math.ceil((readTotal - 1) / itemsPerPage) || 1)
             }
             alert('✅ Notificación eliminada correctamente')
             updateUnreadCount()
@@ -196,17 +225,32 @@ export default function AdminInventoryNotifications() {
         }
     }
 
-    // Recargar cuando cambian las páginas
+    // ✅ Cambiar página
+    const handlePageChange = (newPage) => {
+        if (activeTab === 'unread') {
+            setUnreadPage(newPage)
+        } else {
+            setReadPage(newPage)
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // ✅ Recargar cuando cambian las páginas
     useEffect(() => {
-        loadNotifications()
+        loadAllNotifications()
     }, [unreadPage, readPage])
 
-    // Cargar umbral de alerta guardado
+    // ✅ Cargar umbral de alerta guardado
     useEffect(() => {
         const savedThreshold = localStorage.getItem('stock_alert_threshold')
         if (savedThreshold) {
             setAlertThreshold(parseInt(savedThreshold))
         }
+    }, [])
+
+    // ✅ Cargar al inicio
+    useEffect(() => {
+        loadAllNotifications()
     }, [])
 
     const formatTimeAgo = (timestamp) => {
@@ -227,6 +271,7 @@ export default function AdminInventoryNotifications() {
     const lowStockProducts = products.filter(p => p.stock > 0 && p.stock < alertThreshold)
     const outOfStockProducts = products.filter(p => p.stock === 0)
 
+    // ✅ Paginación UI
     const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         if (totalPages <= 1) return null
 
@@ -256,7 +301,7 @@ export default function AdminInventoryNotifications() {
                 {startPage > 1 && (
                     <>
                         <button onClick={() => onPageChange(1)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">1</button>
-                        {startPage > 2 && <span className="px-2">...</span>}
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
                     </>
                 )}
 
@@ -275,7 +320,7 @@ export default function AdminInventoryNotifications() {
 
                 {endPage < totalPages && (
                     <>
-                        {endPage < totalPages - 1 && <span className="px-2">...</span>}
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
                         <button onClick={() => onPageChange(totalPages)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">
                             {totalPages}
                         </button>
@@ -294,16 +339,18 @@ export default function AdminInventoryNotifications() {
     }
 
     const currentNotifications = activeTab === 'unread' ? unreadNotifications : readNotifications
+    const currentTotal = activeTab === 'unread' ? unreadTotal : readTotal
     const currentPage = activeTab === 'unread' ? unreadPage : readPage
     const currentTotalPages = activeTab === 'unread' ? unreadTotalPages : readTotalPages
 
-    const handlePageChange = (newPage) => {
-        if (activeTab === 'unread') {
-            setUnreadPage(newPage)
-        } else {
-            setReadPage(newPage)
-        }
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = () => {
+        const start = (currentPage - 1) * itemsPerPage + 1
+        const end = Math.min(currentPage * itemsPerPage, currentTotal)
+        return { start, end }
     }
+
+    const { start, end } = getDisplayRange()
 
     if (loading && unreadNotifications.length === 0 && readNotifications.length === 0) {
         return (
@@ -373,33 +420,6 @@ export default function AdminInventoryNotifications() {
                             )}
                         </div>
                     </div>
-                </div>
-            )}
-
-            {/* Alertas Activas de Stock */}
-            {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
-                <div className="space-y-3">
-
-                    {outOfStockProducts.length > 0 && (
-                        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                                <Icon name="error" className="text-red-600" />
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-red-800">Productos Agotados ({outOfStockProducts.length})</h4>
-                                    <ul className="mt-2 space-y-1">
-                                        {outOfStockProducts.slice(0, 5).map(p => (
-                                            <li key={p.id} className="text-sm text-red-700">{p.name}</li>
-                                        ))}
-                                        {outOfStockProducts.length > 5 && (
-                                            <li className="text-xs text-red-600 mt-1">
-                                                ... y {outOfStockProducts.length - 5} productos más
-                                            </li>
-                                        )}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -525,12 +545,24 @@ export default function AdminInventoryNotifications() {
                 )}
             </div>
 
-            {/* Paginación */}
+            {/* ✅ Paginación */}
             <Pagination
                 currentPage={currentPage}
                 totalPages={currentTotalPages}
                 onPageChange={handlePageChange}
             />
+
+            {/* ✅ Información de paginación */}
+            {currentTotal > 0 && (
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-600">
+                        Mostrando {start} - {end} de {currentTotal} notificaciones
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        Página {currentPage} de {currentTotalPages}
+                    </div>
+                </div>
+            )}
 
             {/* Modal de confirmación para eliminar */}
             {showConfirmModal && (
