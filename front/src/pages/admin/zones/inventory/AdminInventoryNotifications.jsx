@@ -327,13 +327,6 @@ export default function AdminInventoryNotifications() {
 
                 <div className="flex gap-3">
                     <button
-                        onClick={() => setShowAlertSettings(true)}
-                        className="px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary/5 transition-colors flex items-center gap-2"
-                    >
-                        <Icon name="settings" className="text-sm" />
-                        Configurar Alertas
-                    </button>
-                    <button
                         onClick={generateNotifications}
                         disabled={generating}
                         className="px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -386,37 +379,6 @@ export default function AdminInventoryNotifications() {
             {/* Alertas Activas de Stock */}
             {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
                 <div className="space-y-3">
-                    <h3 className="font-bold text-primary flex items-center gap-2">
-                        <Icon name="warning" className="text-[#FC9430]" />
-                        Alertas Activas de Stock
-                    </h3>
-
-                    {lowStockProducts.length > 0 && (
-                        <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                                <Icon name="warning" className="text-yellow-600" />
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-yellow-800">Stock Bajo ({lowStockProducts.length} productos)</h4>
-                                    <p className="text-sm text-yellow-700 mt-1">
-                                        Productos con menos de {alertThreshold} unidades:
-                                    </p>
-                                    <ul className="mt-2 space-y-1">
-                                        {lowStockProducts.slice(0, 5).map(p => (
-                                            <li key={p.id} className="text-sm text-yellow-700 flex justify-between">
-                                                <span>{p.name}</span>
-                                                <span className="font-bold">{p.stock} unidades</span>
-                                            </li>
-                                        ))}
-                                        {lowStockProducts.length > 5 && (
-                                            <li className="text-xs text-yellow-600 mt-1">
-                                                ... y {lowStockProducts.length - 5} productos más
-                                            </li>
-                                        )}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     {outOfStockProducts.length > 0 && (
                         <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
