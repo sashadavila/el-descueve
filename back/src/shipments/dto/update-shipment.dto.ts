@@ -1,8 +1,7 @@
 // src/shipments/dto/update-shipment.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { PartialType } from '@nestjs/swagger';
-import { CreateShipmentDto } from './create-shipment.dto';
-import { IsEnum, IsOptional, IsDateString, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ShipmentStatus, CarrierType } from '../entities/shipment.entity';
 
 export class UpdateShipmentDto {
@@ -36,9 +35,29 @@ export class UpdateShipmentDto {
     @IsEnum(ShipmentStatus)
     status?: ShipmentStatus;
 
-    @ApiPropertyOptional()
+    // ✅ CORREGIDO: Permitir string vacío o null y transformar a null
+    @ApiPropertyOptional({
+        example: '2025-06-20',
+        description: 'Fecha estimada de entrega (ISO 8601)',
+        nullable: true,
+    })
     @IsOptional()
-    @IsDateString()
+    @Transform(({ value }) => {
+        // Si es string vacío o null, retornar null
+        if (value === '' || value === null || value === undefined) {
+            return null;
+        }
+        // Intentar convertir a fecha
+        try {
+            const date = new Date(value);
+            if (isNaN(date.getTime())) {
+                return null;
+            }
+            return date.toISOString();
+        } catch {
+            return null;
+        }
+    })
     estimatedDelivery?: Date | string | null;
 
     @ApiPropertyOptional()
@@ -46,8 +65,6 @@ export class UpdateShipmentDto {
     @IsString()
     notes?: string;
 
-    // ✅ Estos campos son gestionados internamente por el servicio
-    // No se deben enviar desde el frontend, pero los aceptamos como opcionales
     @ApiPropertyOptional()
     @IsOptional()
     shippedAt?: Date;
