@@ -34,7 +34,6 @@ export default function OrderTrackingPage() {
         if (authLoading) return
 
         if (!isAuthenticated) {
-            // Guardar la ruta actual para redirigir después del login
             localStorage.setItem('redirectAfterLogin', '/seguimiento')
             navigate('/login', { state: { from: '/seguimiento' } })
             return
@@ -45,21 +44,17 @@ export default function OrderTrackingPage() {
                 setLoading(true)
                 setError(null)
 
-                // Obtener todas las órdenes
                 const allOrders = await api.orders.getAll()
 
-                // Filtrar órdenes del usuario actual
                 let userOrdersList = allOrders
                 if (user?.role !== 'admin') {
                     userOrdersList = allOrders.filter(order => order.userId === user?.id)
                 }
 
-                // Ordenar por fecha descendente (más recientes primero)
                 userOrdersList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
                 setUserOrders(userOrdersList)
 
-                // Si hay un orderId en la URL, seleccionar esa orden
                 if (orderId && isValidUUID(orderId)) {
                     const foundOrder = userOrdersList.find(o => o.id === orderId)
                     if (foundOrder) {
@@ -93,88 +88,27 @@ export default function OrderTrackingPage() {
             const orderData = await api.orders.getById(orderId)
             setSelectedOrder(orderData)
 
-            // Obtener el seguimiento
-            const trackingResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/tracking/order/${orderId}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                    'Content-Type': 'application/json',
-                }
-            })
-
-            if (trackingResponse.ok) {
-                const text = await trackingResponse.text()
-                if (text) {
-                    const trackingData = JSON.parse(text)
+            // Obtener el seguimiento usando api.tracking
+            try {
+                const trackingData = await api.tracking.getByOrderId(orderId)
+                if (trackingData) {
                     setTracking(trackingData)
                 } else {
-                    throw new Error('Respuesta vacía del servidor')
+                    // Si no existe tracking, crearlo automáticamente
+                    console.log('📦 Creando tracking para la orden...')
+                    const newTracking = await api.shipments.createFromOrder(orderId, orderData.userId)
+                    setTracking(newTracking)
                 }
-            } else if (trackingResponse.status === 404) {
-                // Si no existe tracking, crear uno automáticamente
-                console.log('📦 Creando tracking para la orden...')
-
-                const createResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/from-order/${orderId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                    },
-                    body: JSON.stringify({ userId: orderData.userId })
-                })
-
-                if (createResponse.ok) {
-                    const createText = await createResponse.text()
-                    if (createText) {
-                        const trackingData = JSON.parse(createText)
-                        setTracking(trackingData)
-                    } else {
-                        // Si la respuesta está vacía, crear un tracking temporal
-                        const tempTracking = {
-                            id: 'temp',
-                            orderId: orderId,
-                            userId: orderData.userId,
-                            trackingNumber: `ELD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${orderId.slice(-8)}-${Math.floor(Math.random() * 1000)}`,
-                            carrier: 'propio',
-                            status: 'Pedido Recibido',
-                            trackingHistory: [
-                                {
-                                    status: 'Pedido Recibido',
-                                    location: 'Planta La Serena',
-                                    timestamp: new Date(),
-                                    description: 'Pedido recibido y en proceso de preparación'
-                                }
-                            ],
-                            createdAt: new Date(),
-                            updatedAt: new Date()
-                        }
-                        setTracking(tempTracking)
-                        console.log('📦 Usando tracking temporal:', tempTracking)
-                    }
+            } catch (err) {
+                console.error('Error loading tracking:', err)
+                // Si el error es 404 o "not found", crear tracking
+                if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
+                    console.log('📦 Creando tracking para la orden (404)...')
+                    const newTracking = await api.shipments.createFromOrder(orderId, orderData.userId)
+                    setTracking(newTracking)
                 } else {
-                    // Si falla la creación, crear un tracking temporal
-                    const tempTracking = {
-                        id: 'temp',
-                        orderId: orderId,
-                        userId: orderData.userId,
-                        trackingNumber: `ELD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${orderId.slice(-8)}-${Math.floor(Math.random() * 1000)}`,
-                        carrier: 'propio',
-                        status: 'Pedido Recibido',
-                        trackingHistory: [
-                            {
-                                status: 'Pedido Recibido',
-                                location: 'Planta La Serena',
-                                timestamp: new Date(),
-                                description: 'Pedido recibido y en proceso de preparación'
-                            }
-                        ],
-                        createdAt: new Date(),
-                        updatedAt: new Date()
-                    }
-                    setTracking(tempTracking)
-                    console.log('📦 Usando tracking temporal (falló creación):', tempTracking)
+                    throw err
                 }
-            } else {
-                throw new Error(`Error al cargar el seguimiento: ${trackingResponse.status}`)
             }
         } catch (err) {
             console.error('Error loading tracking:', err)
@@ -201,7 +135,7 @@ export default function OrderTrackingPage() {
                     updatedAt: new Date()
                 }
                 setTracking(tempTracking)
-                setError(null) // Limpiar error ya que tenemos tracking temporal
+                setError(null)
             }
         } finally {
             setLoading(false)
@@ -222,9 +156,7 @@ export default function OrderTrackingPage() {
             let orderData = null
             let trackingData = null
 
-            // Si es un UUID válido
             if (isValidUUID(searchTerm)) {
-                // Verificar que la orden pertenezca al usuario
                 const orderExists = userOrders.find(o => o.id === searchTerm)
                 if (orderExists) {
                     setSelectedOrderId(searchTerm)
@@ -235,14 +167,9 @@ export default function OrderTrackingPage() {
                 } else {
                     throw new Error('No tienes acceso a este pedido')
                 }
-            }
-            // Si es un número de seguimiento válido
-            else if (isValidTrackingNumber(searchTerm)) {
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/tracking/${searchTerm}`)
-
-                if (response.ok) {
-                    trackingData = await response.json()
-                    // Verificar que el tracking pertenezca al usuario
+            } else if (isValidTrackingNumber(searchTerm)) {
+                try {
+                    trackingData = await api.tracking.getByTrackingNumber(searchTerm)
                     const orderBelongsToUser = userOrders.find(o => o.id === trackingData.orderId)
                     if (orderBelongsToUser || user?.role === 'admin') {
                         setSelectedOrderId(trackingData.orderId)
@@ -253,11 +180,10 @@ export default function OrderTrackingPage() {
                     } else {
                         throw new Error('No tienes acceso a este pedido')
                     }
-                } else {
+                } catch (err) {
                     throw new Error('Número de seguimiento no encontrado')
                 }
-            }
-            else {
+            } else {
                 throw new Error('Formato inválido. Usa el ID del pedido o número de seguimiento')
             }
         } catch (err) {
@@ -332,7 +258,7 @@ export default function OrderTrackingPage() {
     }
 
     if (!isAuthenticated) {
-        return null // Redirige al login
+        return null
     }
 
     const progressSteps = getProgressSteps()
