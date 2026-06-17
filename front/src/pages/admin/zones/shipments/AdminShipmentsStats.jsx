@@ -13,21 +13,10 @@ export default function AdminShipmentsStats() {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const [shipmentsResponse, statsResponse] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments`, {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    }),
-                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/stats`, {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    })
+                const [shipmentsData, statsData] = await Promise.all([
+                    api.shipments.getAll(),
+                    api.shipments.getStats()
                 ])
-
-                if (!shipmentsResponse.ok) throw new Error('Error al cargar envíos')
-                if (!statsResponse.ok) throw new Error('Error al cargar estadísticas')
-
-                const shipmentsData = await shipmentsResponse.json()
-                const statsData = await statsResponse.json()
-
                 setShipments(shipmentsData.data || [])
                 setStats(statsData)
             } catch (err) {
