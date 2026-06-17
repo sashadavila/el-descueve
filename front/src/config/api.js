@@ -106,7 +106,6 @@ export const api = {
         },
     },
 
-    // ✅ SECCIÓN DE ÓRDENES
     orders: {
         create: async (orderData) => {
             const response = await fetch(`${API_BASE_URL}/orders`, {
@@ -213,21 +212,27 @@ export const api = {
             if (!response.ok) throw new Error(data.message || 'Error al generar notificaciones');
             return data;
         },
+        create: async (notificationData) => {
+            const response = await fetch(`${API_BASE_URL}/notifications`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(notificationData),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al crear notificación');
+            return data;
+        },
     },
 
     products: {
         getAll: async (page = 1, limit = 15, filters = {}) => {
             let url = `${API_BASE_URL}/products?page=${page}&limit=${limit}`;
 
-            // Solo agregar parámetros si existen en filters
             if (filters.productType) url += `&productType=${encodeURIComponent(filters.productType)}`;
             if (filters.categoryId) url += `&categoryId=${encodeURIComponent(filters.categoryId)}`;
             if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
             if (filters.sortBy) url += `&sortBy=${encodeURIComponent(filters.sortBy)}`;
             if (filters.sortOrder) url += `&sortOrder=${encodeURIComponent(filters.sortOrder)}`;
-
-            // ⚠️ CRÍTICO: NO agregar isFeatured o isNew a menos que vengan explícitamente
-            // Si filters tiene isFeatured y NO es undefined, agregarlo
             if (filters.isFeatured !== undefined && filters.isFeatured !== null) {
                 url += `&isFeatured=${filters.isFeatured}`;
             }
@@ -375,6 +380,111 @@ export const api = {
             const response = await fetch(`${API_BASE_URL}/shipments/tracking/${trackingNumber}`);
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Error al obtener seguimiento');
+            return data;
+        },
+    },
+
+    // ✅ NUEVO MÓDULO SHIPMENTS
+    shipments: {
+        // Obtener todos los envíos (admin)
+        getAll: async (status = null, carrier = null, page = 1, limit = 10) => {
+            let url = `${API_BASE_URL}/shipments?page=${page}&limit=${limit}`;
+            if (status) url += `&status=${encodeURIComponent(status)}`;
+            if (carrier) url += `&carrier=${encodeURIComponent(carrier)}`;
+            const response = await fetch(url, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener envíos');
+            return data;
+        },
+
+        // Obtener un envío por ID (admin)
+        getById: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/shipments/${id}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener el envío');
+            return data;
+        },
+
+        // Crear un nuevo envío (admin)
+        create: async (shipmentData) => {
+            const response = await fetch(`${API_BASE_URL}/shipments`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(shipmentData),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al crear el envío');
+            return data;
+        },
+
+        // Actualizar un envío (admin)
+        update: async (id, shipmentData) => {
+            const response = await fetch(`${API_BASE_URL}/shipments/${id}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(shipmentData),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al actualizar el envío');
+            return data;
+        },
+
+        // Actualizar solo el estado de un envío (admin)
+        updateStatus: async (id, status) => {
+            const response = await fetch(`${API_BASE_URL}/shipments/${id}/status`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ status }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al actualizar el estado');
+            return data;
+        },
+
+        // Eliminar un envío (admin)
+        delete: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/shipments/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al eliminar el envío');
+            return data;
+        },
+
+        // Obtener estadísticas de envíos (admin)
+        getStats: async () => {
+            const response = await fetch(`${API_BASE_URL}/shipments/stats`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener estadísticas');
+            return data;
+        },
+
+        // Obtener mis envíos (cliente autenticado)
+        getMyShipments: async () => {
+            const response = await fetch(`${API_BASE_URL}/shipments/my-shipments`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener tus envíos');
+            return data;
+        },
+
+        // Crear envío desde una orden existente (admin)
+        createFromOrder: async (orderId, userId) => {
+            const response = await fetch(`${API_BASE_URL}/shipments/from-order/${orderId}`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ userId }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al crear envío desde orden');
             return data;
         },
     },
