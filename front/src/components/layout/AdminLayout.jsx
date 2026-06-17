@@ -1,6 +1,4 @@
 // src/components/layout/AdminLayout.jsx
-// Reemplazar completamente con esta versión
-
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useState, useEffect } from 'react'
@@ -12,6 +10,7 @@ const menuItems = [
         title: 'Clientes',
         icon: 'groups',
         basePath: '/admin/clientes',
+        notificationType: 'client', // ✅ Identificador para notificaciones de clientes
         subItems: [
             { path: '/admin/clientes/directorio', label: 'Directorio', icon: 'contact_page' },
             { path: '/admin/clientes/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
@@ -22,6 +21,7 @@ const menuItems = [
         title: 'Inventarios',
         icon: 'inventory_2',
         basePath: '/admin/inventarios',
+        notificationType: 'inventory', // ✅ Identificador para notificaciones de inventario
         subItems: [
             { path: '/admin/inventarios/directorio', label: 'Directorio', icon: 'inventory' },
             { path: '/admin/inventarios/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
@@ -32,6 +32,7 @@ const menuItems = [
         title: 'Pedidos',
         icon: 'receipt_long',
         basePath: '/admin/pedidos',
+        notificationType: 'order', // ✅ Identificador para notificaciones de pedidos
         subItems: [
             { path: '/admin/pedidos/directorio', label: 'Directorio', icon: 'list_alt' },
             { path: '/admin/pedidos/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
@@ -42,6 +43,7 @@ const menuItems = [
         title: 'Envíos',
         icon: 'local_shipping',
         basePath: '/admin/envios',
+        notificationType: 'shipment', // ✅ Identificador para notificaciones de envíos
         subItems: [
             { path: '/admin/envios/directorio', label: 'Directorio', icon: 'local_shipping' },
             { path: '/admin/envios/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
@@ -52,6 +54,7 @@ const menuItems = [
         title: 'Ayuda',
         icon: 'help_outline',
         basePath: '/admin/ayuda',
+        notificationType: null,
         subItems: [
             { path: '/admin/ayuda', label: 'Centro de Ayuda', icon: 'support_agent' },
         ]
@@ -65,7 +68,12 @@ export default function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [expandedMenus, setExpandedMenus] = useState({})
     const [currentTime, setCurrentTime] = useState('')
-    const [unreadCount, setUnreadCount] = useState(0)
+
+    // ✅ Contadores específicos por zona
+    const [clientUnreadCount, setClientUnreadCount] = useState(0)
+    const [inventoryUnreadCount, setInventoryUnreadCount] = useState(0)
+    const [orderUnreadCount, setOrderUnreadCount] = useState(0)
+    const [shipmentUnreadCount, setShipmentUnreadCount] = useState(0)
 
     // Determinar qué menú está expandido basado en la ruta actual
     useEffect(() => {
@@ -78,23 +86,74 @@ export default function AdminLayout() {
         setExpandedMenus(expanded)
     }, [location.pathname])
 
-    // Escuchar actualizaciones del contador de notificaciones
+    // ✅ Función para obtener contadores específicos por zona
+    const fetchNotificationCounts = async () => {
+        try {
+            // Obtener todas las notificaciones no leídas
+            const allNotifsResult = await api.notifications.getAll('unread', 1, 1000)
+            const unreadNotifications = allNotifsResult.data || []
+
+            // Contar por zona usando filtros específicos
+            // 1. CLIENTES: new_user, inactive_user, admin_user
+            const clientNotifications = unreadNotifications.filter(n =>
+                n.type === 'new_user' ||
+                n.type === 'inactive_user' ||
+                n.type === 'admin_user'
+            )
+            setClientUnreadCount(clientNotifications.length)
+
+            // 2. INVENTARIOS: system_alert con productos o stock
+            const inventoryNotifications = unreadNotifications.filter(n =>
+                n.type === 'system_alert' &&
+                (n.title?.toLowerCase().includes('stock') ||
+                    n.title?.toLowerCase().includes('producto') ||
+                    n.title?.toLowerCase().includes('inventario') ||
+                    n.metadata?.productId)
+            )
+            setInventoryUnreadCount(inventoryNotifications.length)
+
+            // 3. PEDIDOS: new_order
+            const orderNotifications = unreadNotifications.filter(n =>
+                n.type === 'new_order'
+            )
+            setOrderUnreadCount(orderNotifications.length)
+
+            // 4. ENVÍOS: system_alert con trackingNumber o títulos de envíos
+            const shipmentNotifications = unreadNotifications.filter(n =>
+                (n.type === 'system_alert' && n.metadata?.trackingNumber) ||
+                n.title?.toLowerCase().includes('envío') ||
+                n.title?.toLowerCase().includes('despacho') ||
+                n.title?.toLowerCase().includes('entrega') ||
+                n.title?.toLowerCase().includes('seguimiento') ||
+                n.title?.toLowerCase().includes('tracking') ||
+                n.title?.toLowerCase().includes('pedido recibido') ||
+                n.title?.toLowerCase().includes('en preparación') ||
+                n.title?.toLowerCase().includes('en tránsito') ||
+                n.title?.toLowerCase().includes('entregado')
+            )
+            setShipmentUnreadCount(shipmentNotifications.length)
+
+            console.log('📊 Contadores de notificaciones:')
+            console.log('  Clientes:', clientNotifications.length)
+            console.log('  Inventarios:', inventoryNotifications.length)
+            console.log('  Pedidos:', orderNotifications.length)
+            console.log('  Envíos:', shipmentNotifications.length)
+
+        } catch (error) {
+            console.error('Error fetching notification counts:', error)
+        }
+    }
+
+    // ✅ Escuchar actualizaciones del contador de notificaciones
     useEffect(() => {
-        const handleUnreadCountUpdate = (event) => {
-            setUnreadCount(event.detail.count)
+        const handleUnreadCountUpdate = () => {
+            fetchNotificationCounts()
         }
 
         window.addEventListener('unreadCountUpdate', handleUnreadCountUpdate)
 
-        const fetchUnreadCount = async () => {
-            try {
-                const { count } = await api.notifications.getUnreadCount()
-                setUnreadCount(count)
-            } catch (error) {
-                console.error('Error fetching unread count:', error)
-            }
-        }
-        fetchUnreadCount()
+        // Carga inicial
+        fetchNotificationCounts()
 
         return () => {
             window.removeEventListener('unreadCountUpdate', handleUnreadCountUpdate)
@@ -133,6 +192,22 @@ export default function AdminLayout() {
             ...prev,
             [menuTitle]: !prev[menuTitle]
         }))
+    }
+
+    // ✅ Función para obtener el contador según el tipo de zona
+    const getNotificationCount = (notificationType) => {
+        switch (notificationType) {
+            case 'client':
+                return clientUnreadCount
+            case 'inventory':
+                return inventoryUnreadCount
+            case 'order':
+                return orderUnreadCount
+            case 'shipment':
+                return shipmentUnreadCount
+            default:
+                return 0
+        }
     }
 
     if (loading) {
@@ -216,6 +291,7 @@ export default function AdminLayout() {
                     {menuItems.map((menu) => {
                         const isExpanded = expandedMenus[menu.title]
                         const hasActiveChild = menu.subItems.some(sub => location.pathname === sub.path)
+                        const unreadCount = getNotificationCount(menu.notificationType)
 
                         return (
                             <div key={menu.title} className="mb-2">
@@ -229,6 +305,12 @@ export default function AdminLayout() {
                                     <div className="flex items-center gap-3">
                                         <span className="material-symbols-outlined text-xl">{menu.icon}</span>
                                         <span className="font-semibold text-sm uppercase tracking-wide">{menu.title}</span>
+                                        {/* ✅ Mostrar contador específico de la zona */}
+                                        {unreadCount > 0 && (
+                                            <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                                                {unreadCount}
+                                            </span>
+                                        )}
                                     </div>
                                     <span className="material-symbols-outlined text-sm">
                                         {isExpanded ? 'expand_less' : 'expand_more'}
@@ -239,6 +321,9 @@ export default function AdminLayout() {
                                     <div className="ml-6 mt-1 space-y-1 border-l border-white/20">
                                         {menu.subItems.map((subItem) => {
                                             const isActive = location.pathname === subItem.path
+                                            // ✅ Solo mostrar el contador en el subitem de Notificaciones
+                                            const showCount = subItem.label === 'Notificaciones' && unreadCount > 0
+
                                             return (
                                                 <Link
                                                     key={subItem.path}
@@ -251,8 +336,8 @@ export default function AdminLayout() {
                                                 >
                                                     <span className="material-symbols-outlined text-sm">{subItem.icon}</span>
                                                     <span className="text-xs font-medium">{subItem.label}</span>
-                                                    {subItem.label === 'Notificaciones' && unreadCount > 0 && (
-                                                        <span className="ml-auto bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">
+                                                    {showCount && (
+                                                        <span className="ml-auto bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
                                                             {unreadCount}
                                                         </span>
                                                     )}
