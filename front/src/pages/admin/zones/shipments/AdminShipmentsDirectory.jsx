@@ -45,17 +45,16 @@ export default function AdminShipmentsDirectory() {
     const fetchShipments = async () => {
         try {
             setLoading(true)
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                },
-            })
-            if (!response.ok) throw new Error('Error al cargar envíos')
-            const data = await response.json()
-            setShipments(data.data || [])
+            const response = await api.shipments.getAll(
+                filterStatus !== 'all' ? filterStatus : null,
+                filterCarrier !== 'all' ? filterCarrier : null,
+                1,
+                100
+            )
+            setShipments(response.data || [])
         } catch (err) {
             console.error('Error fetching shipments:', err)
-            setError(err.message)
+            setError(err.message || 'Error al cargar envíos')
         } finally {
             setLoading(false)
         }
@@ -105,23 +104,11 @@ export default function AdminShipmentsDirectory() {
         setSubmitting(true)
 
         try {
-            const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments${editingShipment ? `/${editingShipment.id}` : ''}`
-            const method = editingShipment ? 'PUT' : 'POST'
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                },
-                body: JSON.stringify(formData),
-            })
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.message || 'Error al guardar envío')
+            if (editingShipment) {
+                await api.shipments.update(editingShipment.id, formData)
+            } else {
+                await api.shipments.create(formData)
             }
-
             await fetchShipments()
             setShowModal(false)
             alert(editingShipment ? '✅ Envío actualizado correctamente' : '✅ Envío creado correctamente')
@@ -138,17 +125,7 @@ export default function AdminShipmentsDirectory() {
 
         setSubmitting(true)
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/${editingShipment.id}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                },
-                body: JSON.stringify({ status: formData.status }),
-            })
-
-            if (!response.ok) throw new Error('Error al actualizar estado')
-
+            await api.shipments.updateStatus(editingShipment.id, formData.status)
             await fetchShipments()
             setShowStatusModal(false)
             alert('✅ Estado del envío actualizado correctamente')
@@ -165,15 +142,7 @@ export default function AdminShipmentsDirectory() {
 
         setDeletingId(id)
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                },
-            })
-
-            if (!response.ok) throw new Error('Error al eliminar envío')
-
+            await api.shipments.delete(id)
             await fetchShipments()
             alert('✅ Envío eliminado correctamente')
         } catch (err) {
