@@ -28,36 +28,46 @@ export default function AdminShipmentsNotifications() {
     const loadNotifications = async () => {
         setLoading(true)
         try {
-            const [unreadResult, readResult] = await Promise.all([
-                api.notifications.getAll('unread', unreadPage, itemsPerPage),
-                api.notifications.getAll('read', readPage, itemsPerPage)
-            ])
+            // ✅ Cargar notificaciones (todas para filtrar correctamente)
+            const allNotifsResult = await api.notifications.getAll(null, 1, 1000)
 
-            // Obtener envíos usando el nuevo módulo api.shipments
+            // ✅ Filtrar SOLO notificaciones de envíos
+            const allShipmentNotifications = allNotifsResult.data.filter(n =>
+                n.title?.toLowerCase().includes('envío') ||
+                n.title?.toLowerCase().includes('despacho') ||
+                n.title?.toLowerCase().includes('entrega') ||
+                n.title?.toLowerCase().includes('seguimiento') ||
+                n.title?.toLowerCase().includes('tracking') ||
+                n.title?.toLowerCase().includes('pedido recibido') ||
+                n.title?.toLowerCase().includes('en preparación') ||
+                n.title?.toLowerCase().includes('en tránsito') ||
+                n.title?.toLowerCase().includes('entregado') ||
+                n.type === 'shipment_alert' ||
+                (n.type === 'system_alert' && n.metadata?.trackingNumber)
+            )
+
+            // ✅ Separar por estado (leídas / no leídas)
+            const unread = allShipmentNotifications.filter(n => n.status === 'unread')
+            const read = allShipmentNotifications.filter(n => n.status === 'read')
+
+            setUnreadTotal(unread.length)
+            setReadTotal(read.length)
+            setUnreadTotalPages(Math.ceil(unread.length / itemsPerPage) || 1)
+            setReadTotalPages(Math.ceil(read.length / itemsPerPage) || 1)
+
+            // ✅ Aplicar paginación manual
+            const startUnread = (unreadPage - 1) * itemsPerPage
+            const endUnread = startUnread + itemsPerPage
+            const startRead = (readPage - 1) * itemsPerPage
+            const endRead = startRead + itemsPerPage
+
+            setUnreadNotifications(unread.slice(startUnread, endUnread))
+            setReadNotifications(read.slice(startRead, endRead))
+
+            // ✅ Cargar envíos para generar notificaciones
             const shipmentsData = await api.shipments.getAll()
-
-            // Filtrar notificaciones de envíos
-            const filteredUnread = unreadResult.data.filter(n =>
-                n.title?.toLowerCase().includes('envío') ||
-                n.title?.toLowerCase().includes('despacho') ||
-                n.title?.toLowerCase().includes('entrega') ||
-                n.type === 'system_alert'
-            )
-            const filteredRead = readResult.data.filter(n =>
-                n.title?.toLowerCase().includes('envío') ||
-                n.title?.toLowerCase().includes('despacho') ||
-                n.title?.toLowerCase().includes('entrega') ||
-                n.type === 'system_alert'
-            )
-
-            setUnreadNotifications(filteredUnread)
-            setReadNotifications(filteredRead)
-            setUnreadTotalPages(Math.ceil(filteredUnread.length / itemsPerPage) || 1)
-            setReadTotalPages(Math.ceil(filteredRead.length / itemsPerPage) || 1)
-            setUnreadTotal(filteredUnread.length)
-            setReadTotal(filteredRead.length)
-
             setShipments(shipmentsData.data || [])
+
         } catch (error) {
             console.error('Error loading shipment notifications:', error)
         } finally {
@@ -65,7 +75,7 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Generar notificaciones automáticas de envíos
+    // ✅ Generar notificaciones automáticas de envíos
     const generateNotifications = async () => {
         setGenerating(true)
         setGenerateResult(null)
@@ -73,28 +83,44 @@ export default function AdminShipmentsNotifications() {
         try {
             let created = 0
             let skipped = 0
+            let updated = 0
 
-            // Obtener todas las notificaciones existentes
-            const existingNotifsResult = await api.notifications.getAll(null, 1, 100)
-            const existingTitles = new Set(existingNotifsResult.data.map(n => n.title))
+            // ✅ Obtener todas las notificaciones existentes
+            const existingNotifsResult = await api.notifications.getAll(null, 1, 1000)
+            const existingTitles = new Set(existingNotifsResult.data
+                .filter(n => n.title?.toLowerCase().includes('envío') || n.title?.toLowerCase().includes('despacho'))
+                .map(n => n.title)
+            )
 
-            // Verificar envíos pendientes
-            const pendingShipments = shipments.filter(s => s.status === 'Pedido Recibido' || s.status === 'En Preparación')
-            const inTransitShipments = shipments.filter(s => s.status === 'En Tránsito')
+            // ✅ Obtener todos los envíos
+            const shipmentsData = await api.shipments.getAll()
+            const allShipments = shipmentsData.data || []
 
-            // Generar notificaciones para envíos pendientes
+            // ✅ Filtrar envíos que requieren notificaciones
+            const pendingShipments = allShipments.filter(s =>
+                s.status === 'Pedido Recibido' || s.status === 'En Preparación'
+            )
+            const inTransitShipments = allShipments.filter(s => s.status === 'En Tránsito')
+            const deliveredShipments = allShipments.filter(s => s.status === 'Entregado')
+
+            console.log(`📊 Envíos para notificar: Pendientes: ${pendingShipments.length}, En Tránsito: ${inTransitShipments.length}, Entregados: ${deliveredShipments.length}`)
+
+            // ✅ 1. Notificaciones para envíos pendientes
             for (const shipment of pendingShipments) {
-                const title = `Envío pendiente: ${shipment.trackingNumber}`
+                const title = `📦 Envío pendiente: ${shipment.trackingNumber}`
                 if (!existingTitles.has(title)) {
                     try {
                         await api.notifications.create({
                             title: title,
-                            message: `El envío #${shipment.trackingNumber} está pendiente de procesamiento.`,
-                            type: 'system_alert',
+                            message: `El envío #${shipment.trackingNumber} está pendiente de procesamiento. Orden: ${shipment.orderId?.slice(-8).toUpperCase()}`,
+                            type: 'shipment_alert',
                             metadata: {
                                 trackingNumber: shipment.trackingNumber,
                                 orderId: shipment.orderId,
-                                status: shipment.status
+                                orderIdShort: shipment.orderId?.slice(-8).toUpperCase(),
+                                status: shipment.status,
+                                carrier: shipment.carrier,
+                                carrierName: shipment.carrierName
                             },
                             icon: 'pending',
                             iconColor: 'text-yellow-500',
@@ -104,25 +130,29 @@ export default function AdminShipmentsNotifications() {
                         created++
                     } catch (err) {
                         skipped++
+                        console.error(`Error creando notificación para ${shipment.trackingNumber}:`, err)
                     }
                 } else {
                     skipped++
                 }
             }
 
-            // Generar notificaciones para envíos en tránsito
+            // ✅ 2. Notificaciones para envíos en tránsito
             for (const shipment of inTransitShipments) {
-                const title = `Envío en tránsito: ${shipment.trackingNumber}`
+                const title = `🚚 Envío en tránsito: ${shipment.trackingNumber}`
                 if (!existingTitles.has(title)) {
                     try {
                         await api.notifications.create({
                             title: title,
-                            message: `El envío #${shipment.trackingNumber} está en camino.`,
-                            type: 'system_alert',
+                            message: `El envío #${shipment.trackingNumber} está en camino al destino. Orden: ${shipment.orderId?.slice(-8).toUpperCase()}`,
+                            type: 'shipment_alert',
                             metadata: {
                                 trackingNumber: shipment.trackingNumber,
                                 orderId: shipment.orderId,
-                                status: shipment.status
+                                orderIdShort: shipment.orderId?.slice(-8).toUpperCase(),
+                                status: shipment.status,
+                                carrier: shipment.carrier,
+                                carrierName: shipment.carrierName
                             },
                             icon: 'local_shipping',
                             iconColor: 'text-blue-500',
@@ -132,6 +162,40 @@ export default function AdminShipmentsNotifications() {
                         created++
                     } catch (err) {
                         skipped++
+                        console.error(`Error creando notificación para ${shipment.trackingNumber}:`, err)
+                    }
+                } else {
+                    skipped++
+                }
+            }
+
+            // ✅ 3. Notificaciones para envíos entregados
+            for (const shipment of deliveredShipments) {
+                const title = `✅ Envío entregado: ${shipment.trackingNumber}`
+                if (!existingTitles.has(title)) {
+                    try {
+                        await api.notifications.create({
+                            title: title,
+                            message: `El envío #${shipment.trackingNumber} ha sido entregado exitosamente. Orden: ${shipment.orderId?.slice(-8).toUpperCase()}`,
+                            type: 'shipment_alert',
+                            metadata: {
+                                trackingNumber: shipment.trackingNumber,
+                                orderId: shipment.orderId,
+                                orderIdShort: shipment.orderId?.slice(-8).toUpperCase(),
+                                status: shipment.status,
+                                carrier: shipment.carrier,
+                                carrierName: shipment.carrierName,
+                                deliveredAt: shipment.deliveredAt
+                            },
+                            icon: 'check_circle',
+                            iconColor: 'text-green-500',
+                            bgColor: 'bg-green-50',
+                            status: 'unread'
+                        })
+                        created++
+                    } catch (err) {
+                        skipped++
+                        console.error(`Error creando notificación para ${shipment.trackingNumber}:`, err)
                     }
                 } else {
                     skipped++
@@ -142,20 +206,25 @@ export default function AdminShipmentsNotifications() {
                 success: true,
                 created: created,
                 skipped: skipped,
-                cleaned: 0,
-                message: `✅ Notificaciones generadas: ${created} nuevas, ${skipped} omitidas`
+                updated: updated,
+                message: `✅ Notificaciones de envíos generadas: ${created} nuevas, ${skipped} omitidas (ya existían)`
             })
 
+            // ✅ Recargar notificaciones
             await loadNotifications()
+
+            // ✅ Actualizar contador en el header
+            updateUnreadCount()
 
             setTimeout(() => {
                 setGenerateResult(null)
-            }, 5000)
+            }, 6000)
+
         } catch (error) {
             console.error('Error generating shipment notifications:', error)
             setGenerateResult({
                 success: false,
-                message: error.message || 'Error al generar notificaciones de envíos'
+                message: error.message || '❌ Error al generar notificaciones de envíos'
             })
             setTimeout(() => {
                 setGenerateResult(null)
@@ -165,18 +234,21 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Marcar notificación como leída
+    // ✅ Marcar notificación como leída
     const markAsRead = async (id) => {
         try {
             await api.notifications.markAsRead(id)
+
+            // Mover la notificación de unread a read
             const movedNotification = unreadNotifications.find(n => n.id === id)
             if (movedNotification) {
                 setUnreadNotifications(prev => prev.filter(n => n.id !== id))
-                setReadNotifications(prev => [movedNotification, ...prev])
                 setUnreadTotal(prev => prev - 1)
                 setReadTotal(prev => prev + 1)
+                setReadNotifications(prev => [movedNotification, ...prev])
+                setReadTotalPages(Math.ceil((readTotal + 1) / itemsPerPage) || 1)
             }
-            await loadNotifications()
+
             updateUnreadCount()
         } catch (error) {
             console.error('Error marking as read:', error)
@@ -184,11 +256,24 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Marcar todas como leídas
+    // ✅ Marcar todas como leídas
     const markAllAsRead = async () => {
+        if (unreadTotal === 0) {
+            alert('No hay notificaciones no leídas')
+            return
+        }
+
         try {
             await api.notifications.markAllAsRead()
-            await loadNotifications()
+
+            // Mover todas las notificaciones no leídas a leídas
+            const allRead = [...unreadNotifications, ...readNotifications]
+            setReadNotifications(allRead)
+            setUnreadNotifications([])
+            setUnreadTotal(0)
+            setReadTotal(allRead.length)
+            setReadTotalPages(Math.ceil(allRead.length / itemsPerPage) || 1)
+
             updateUnreadCount()
             alert('✅ Todas las notificaciones marcadas como leídas')
         } catch (error) {
@@ -197,41 +282,37 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Eliminar notificación (solo si está leída)
-    const deleteNotification = async (id, isUnread) => {
-        if (isUnread) {
-            alert('❌ No se pueden eliminar notificaciones no leídas. Primero debe marcarlas como leídas.')
-            return
-        }
-
-        setNotificationToDelete({ id, isUnread })
+    // ✅ Eliminar notificación
+    const deleteNotification = async (id) => {
+        setNotificationToDelete(id)
         setShowConfirmModal(true)
     }
 
-    // Confirmar eliminación
     const confirmDelete = async () => {
-        const { id, isUnread } = notificationToDelete
         try {
-            await api.notifications.delete(id)
-            if (isUnread) {
-                setUnreadNotifications(prev => prev.filter(n => n.id !== id))
+            await api.notifications.delete(notificationToDelete)
+
+            if (activeTab === 'unread') {
+                setUnreadNotifications(prev => prev.filter(n => n.id !== notificationToDelete))
                 setUnreadTotal(prev => prev - 1)
+                setUnreadTotalPages(Math.ceil((unreadTotal - 1) / itemsPerPage) || 1)
             } else {
-                setReadNotifications(prev => prev.filter(n => n.id !== id))
+                setReadNotifications(prev => prev.filter(n => n.id !== notificationToDelete))
                 setReadTotal(prev => prev - 1)
+                setReadTotalPages(Math.ceil((readTotal - 1) / itemsPerPage) || 1)
             }
-            alert('✅ Notificación eliminada correctamente')
-            updateUnreadCount()
-        } catch (error) {
-            console.error('Error deleting notification:', error)
-            alert('❌ ' + (error.message || 'Error al eliminar notificación'))
-        } finally {
+
             setShowConfirmModal(false)
             setNotificationToDelete(null)
+            updateUnreadCount()
+            alert('✅ Notificación eliminada correctamente')
+        } catch (error) {
+            console.error('Error deleting notification:', error)
+            alert('❌ Error al eliminar notificación: ' + (error.message || 'Error desconocido'))
         }
     }
 
-    // Actualizar contador en el header
+    // ✅ Actualizar contador en el header
     const updateUnreadCount = async () => {
         try {
             const { count } = await api.notifications.getUnreadCount()
@@ -241,10 +322,49 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Recargar cuando cambian las páginas
+    // ✅ Cambiar página
+    const handlePageChange = (newPage) => {
+        if (activeTab === 'unread') {
+            setUnreadPage(newPage)
+        } else {
+            setReadPage(newPage)
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // ✅ Filtrar notificaciones por tipo de envío
+    const getFilteredNotifications = (notificationsList, filter) => {
+        if (filter === 'all') return notificationsList
+
+        switch (filter) {
+            case 'pending':
+                return notificationsList.filter(n =>
+                    n.title?.toLowerCase().includes('pendiente') ||
+                    n.title?.toLowerCase().includes('recibido')
+                )
+            case 'transit':
+                return notificationsList.filter(n =>
+                    n.title?.toLowerCase().includes('tránsito') ||
+                    n.title?.toLowerCase().includes('camino')
+                )
+            case 'delivered':
+                return notificationsList.filter(n =>
+                    n.title?.toLowerCase().includes('entregado')
+                )
+            default:
+                return notificationsList
+        }
+    }
+
+    // ✅ Recargar cuando cambian las páginas
     useEffect(() => {
         loadNotifications()
     }, [unreadPage, readPage])
+
+    // ✅ Cargar al inicio
+    useEffect(() => {
+        loadNotifications()
+    }, [])
 
     const formatTimeAgo = (timestamp) => {
         const date = new Date(timestamp)
@@ -260,15 +380,23 @@ export default function AdminShipmentsNotifications() {
         return `Hace ${diffDays} días`
     }
 
-    // Envíos que requieren atención
-    const pendingShipments = shipments.filter(s => s.status === 'Pedido Recibido' || s.status === 'En Preparación')
-    const delayedShipments = shipments.filter(s => {
-        if (!s.estimatedDelivery || s.status === 'Entregado') return false
-        const estimatedDate = new Date(s.estimatedDelivery)
-        const today = new Date()
-        return estimatedDate < today
-    })
+    const getStatusIcon = (title) => {
+        if (title?.toLowerCase().includes('pendiente')) return 'pending'
+        if (title?.toLowerCase().includes('tránsito')) return 'local_shipping'
+        if (title?.toLowerCase().includes('entregado')) return 'check_circle'
+        if (title?.toLowerCase().includes('recibido')) return 'task_alt'
+        return 'local_shipping'
+    }
 
+    const getStatusColor = (title) => {
+        if (title?.toLowerCase().includes('pendiente')) return 'bg-yellow-100 text-yellow-600'
+        if (title?.toLowerCase().includes('tránsito')) return 'bg-blue-100 text-blue-600'
+        if (title?.toLowerCase().includes('entregado')) return 'bg-green-100 text-green-600'
+        if (title?.toLowerCase().includes('recibido')) return 'bg-yellow-100 text-yellow-600'
+        return 'bg-gray-100 text-gray-600'
+    }
+
+    // ✅ Paginación UI
     const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         if (totalPages <= 1) return null
 
@@ -335,17 +463,16 @@ export default function AdminShipmentsNotifications() {
         )
     }
 
-    const currentNotifications = activeTab === 'unread' ? unreadNotifications : readNotifications
+    // ✅ Filtrar por tipo
+    const [filterType, setFilterType] = useState('all')
+
+    const currentNotifications = activeTab === 'unread'
+        ? getFilteredNotifications(unreadNotifications, filterType)
+        : getFilteredNotifications(readNotifications, filterType)
+
+    const currentTotal = activeTab === 'unread' ? unreadTotal : readTotal
     const currentPage = activeTab === 'unread' ? unreadPage : readPage
     const currentTotalPages = activeTab === 'unread' ? unreadTotalPages : readTotalPages
-
-    const handlePageChange = (newPage) => {
-        if (activeTab === 'unread') {
-            setUnreadPage(newPage)
-        } else {
-            setReadPage(newPage)
-        }
-    }
 
     if (loading && unreadNotifications.length === 0 && readNotifications.length === 0) {
         return (
@@ -364,24 +491,26 @@ export default function AdminShipmentsNotifications() {
                         <Icon name="local_shipping" className="text-4xl" />
                         Notificaciones de Envíos
                     </h2>
-                    <p className="text-on-surface-variant mt-1">Alertas sobre despachos y entregas</p>
+                    <p className="text-on-surface-variant mt-1">
+                        Alertas sobre despachos y entregas
+                    </p>
                 </div>
 
                 <div className="flex gap-3">
                     <button
                         onClick={generateNotifications}
                         disabled={generating}
-                        className="px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         {generating ? (
                             <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                 Generando...
                             </>
                         ) : (
                             <>
                                 <Icon name="refresh" className="text-sm" />
-                                Regenerar Notificaciones
+                                Generar Notificaciones
                             </>
                         )}
                     </button>
@@ -401,50 +530,63 @@ export default function AdminShipmentsNotifications() {
                     <div className="flex items-center gap-2">
                         <Icon name={generateResult.success ? 'check_circle' : 'error'}
                             className={generateResult.success ? 'text-green-500' : 'text-red-500'} />
-                        <p className={`text-sm ${generateResult.success ? 'text-green-700' : 'text-red-700'}`}>
-                            {generateResult.message}
-                        </p>
+                        <div className="flex-1">
+                            <p className={`text-sm ${generateResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                                {generateResult.message}
+                            </p>
+                            {generateResult.success && (
+                                <div className="flex gap-4 mt-2 text-xs">
+                                    <span className="text-green-600">✅ Nuevas: {generateResult.created || 0}</span>
+                                    <span className="text-yellow-600">⏭️ Omitidas: {generateResult.skipped || 0}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Alertas Activas */}
-            {(pendingShipments.length > 0 || delayedShipments.length > 0) && (
-                <div className="space-y-3">
-                    <h3 className="font-bold text-primary flex items-center gap-2">
-                        <Icon name="alert" className="text-[#FC9430]" />
-                        Alertas Activas
-                    </h3>
-
-                    {pendingShipments.length > 0 && (
-                        <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                                <Icon name="pending" className="text-yellow-600" />
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-yellow-800">Envíos Pendientes ({pendingShipments.length})</h4>
-                                    <p className="text-sm text-yellow-700 mt-1">
-                                        Hay {pendingShipments.length} envíos que requieren atención.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {delayedShipments.length > 0 && (
-                        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                                <Icon name="warning" className="text-red-600" />
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-red-800">Envíos Atrasados ({delayedShipments.length})</h4>
-                                    <p className="text-sm text-red-700 mt-1">
-                                        {delayedShipments.length} envíos superan la fecha estimada de entrega.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+            {/* Filtros por tipo */}
+            <div className="flex gap-3 flex-wrap">
+                <button
+                    onClick={() => setFilterType('all')}
+                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${filterType === 'all'
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                >
+                    Todas
+                </button>
+                <button
+                    onClick={() => setFilterType('pending')}
+                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterType === 'pending'
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                >
+                    <Icon name="pending" className="text-sm" />
+                    Pendientes
+                </button>
+                <button
+                    onClick={() => setFilterType('transit')}
+                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterType === 'transit'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                >
+                    <Icon name="local_shipping" className="text-sm" />
+                    En Tránsito
+                </button>
+                <button
+                    onClick={() => setFilterType('delivered')}
+                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterType === 'delivered'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                >
+                    <Icon name="check_circle" className="text-sm" />
+                    Entregados
+                </button>
+            </div>
 
             {/* Tabs */}
             <div className="flex gap-2 border-b border-outline-variant">
@@ -479,84 +621,113 @@ export default function AdminShipmentsNotifications() {
                                 ? 'No hay notificaciones de envíos no leídas'
                                 : 'No hay notificaciones de envíos leídas'}
                         </p>
+                        {activeTab === 'unread' && (
+                            <button
+                                onClick={generateNotifications}
+                                className="mt-4 inline-flex items-center gap-2 text-primary hover:text-[#FC9430] transition-colors"
+                            >
+                                <Icon name="refresh" className="text-sm" />
+                                Generar notificaciones
+                            </button>
+                        )}
                     </div>
                 ) : (
-                    currentNotifications.map(notification => (
-                        <div
-                            key={notification.id}
-                            className={`bg-white rounded-xl border transition-all hover:shadow-md ${activeTab === 'unread'
-                                ? 'border-l-4 border-l-[#FC9430] bg-gradient-to-r from-white to-orange-50/30'
-                                : 'border-outline-variant'
-                                }`}
-                        >
-                            <div className="p-4">
-                                <div className="flex items-start gap-4">
-                                    <div className={`w-10 h-10 ${notification.bgColor || 'bg-blue-100'} rounded-full flex items-center justify-center flex-shrink-0`}>
-                                        <Icon name={notification.icon || 'local_shipping'} className={`text-lg ${notification.iconColor || 'text-blue-600'}`} />
-                                    </div>
+                    currentNotifications.map(notification => {
+                        const trackingNumber = notification.metadata?.trackingNumber || ''
+                        const orderIdShort = notification.metadata?.orderIdShort ||
+                            notification.metadata?.orderId?.slice(-8) || ''
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex flex-wrap items-start justify-between gap-2">
-                                            <div>
-                                                <h4 className="font-bold text-gray-800 flex items-center gap-2">
-                                                    {notification.title}
-                                                    {activeTab === 'unread' && (
-                                                        <span className="w-2 h-2 bg-[#FC9430] rounded-full"></span>
-                                                    )}
-                                                </h4>
-                                                <p className="text-xs text-gray-400 mt-0.5">Envíos</p>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs text-gray-400 whitespace-nowrap">
-                                                    {formatTimeAgo(notification.createdAt)}
-                                                </span>
-                                                {activeTab === 'read' && (
-                                                    <button
-                                                        onClick={() => deleteNotification(notification.id, activeTab === 'unread')}
-                                                        className="text-gray-300 hover:text-red-500 transition-colors"
-                                                        title="Eliminar notificación"
-                                                    >
-                                                        <Icon name="delete" className="text-sm" />
-                                                    </button>
-                                                )}
-                                            </div>
+                        return (
+                            <div
+                                key={notification.id}
+                                className={`bg-white rounded-xl border transition-all hover:shadow-md ${activeTab === 'unread'
+                                    ? 'border-l-4 border-l-[#FC9430] bg-gradient-to-r from-white to-orange-50/30'
+                                    : 'border-outline-variant'
+                                    }`}
+                            >
+                                <div className="p-4">
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-10 h-10 ${getStatusColor(notification.title)} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                            <Icon name={getStatusIcon(notification.title)} className="text-lg" />
                                         </div>
 
-                                        <p className="text-gray-600 mt-2">{notification.message}</p>
-
-                                        {notification.metadata?.trackingNumber && (
-                                            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                                                <div className="flex flex-wrap gap-4 text-sm">
-                                                    <div>
-                                                        <span className="text-xs text-gray-400">N° Seguimiento</span>
-                                                        <p className="font-mono font-medium">{notification.metadata.trackingNumber}</p>
-                                                    </div>
-                                                    {notification.metadata.status && (
-                                                        <div>
-                                                            <span className="text-xs text-gray-400">Estado</span>
-                                                            <p className="font-medium">{notification.metadata.status}</p>
-                                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                                <div>
+                                                    <h4 className="font-bold text-gray-800 flex items-center gap-2">
+                                                        {notification.title}
+                                                        {activeTab === 'unread' && (
+                                                            <span className="w-2 h-2 bg-[#FC9430] rounded-full"></span>
+                                                        )}
+                                                    </h4>
+                                                    <p className="text-xs text-gray-400 mt-0.5">
+                                                        {formatTimeAgo(notification.createdAt)}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {activeTab === 'read' && (
+                                                        <button
+                                                            onClick={() => deleteNotification(notification.id)}
+                                                            className="text-gray-300 hover:text-red-500 transition-colors"
+                                                            title="Eliminar notificación"
+                                                        >
+                                                            <Icon name="delete" className="text-sm" />
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>
-                                        )}
 
-                                        <div className="mt-3">
+                                            <p className="text-gray-600 mt-2">{notification.message}</p>
+
+                                            {/* Mostrar metadata si existe */}
+                                            {(trackingNumber || orderIdShort) && (
+                                                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                                    <div className="flex flex-wrap gap-4 text-sm">
+                                                        {trackingNumber && (
+                                                            <div>
+                                                                <span className="text-xs text-gray-400">N° Seguimiento</span>
+                                                                <p className="font-mono font-medium text-primary">{trackingNumber}</p>
+                                                            </div>
+                                                        )}
+                                                        {orderIdShort && (
+                                                            <div>
+                                                                <span className="text-xs text-gray-400">Orden</span>
+                                                                <p className="font-mono font-medium">#{orderIdShort}</p>
+                                                            </div>
+                                                        )}
+                                                        {notification.metadata?.carrierName && (
+                                                            <div>
+                                                                <span className="text-xs text-gray-400">Transportista</span>
+                                                                <p className="font-medium">{notification.metadata.carrierName}</p>
+                                                            </div>
+                                                        )}
+                                                        {notification.metadata?.status && (
+                                                            <div>
+                                                                <span className="text-xs text-gray-400">Estado</span>
+                                                                <p className="font-medium">{notification.metadata.status}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {activeTab === 'unread' && (
-                                                <button
-                                                    onClick={() => markAsRead(notification.id)}
-                                                    className="text-xs text-primary hover:text-[#FC9430] transition-colors font-medium flex items-center gap-1"
-                                                >
-                                                    <Icon name="check" className="text-xs" />
-                                                    Marcar como leída
-                                                </button>
+                                                <div className="mt-3">
+                                                    <button
+                                                        onClick={() => markAsRead(notification.id)}
+                                                        className="text-xs text-primary hover:text-[#FC9430] transition-colors font-medium flex items-center gap-1"
+                                                    >
+                                                        <Icon name="check" className="text-xs" />
+                                                        Marcar como leída
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        )
+                    })
                 )}
             </div>
 
@@ -566,6 +737,22 @@ export default function AdminShipmentsNotifications() {
                 totalPages={currentTotalPages}
                 onPageChange={handlePageChange}
             />
+
+            {/* Resumen */}
+            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600">
+                    Total de notificaciones de envíos: <strong>{unreadTotal + readTotal}</strong>
+                    {unreadTotal > 0 && (
+                        <span className="ml-2 text-[#FC9430]">
+                            ({unreadTotal} no leídas)
+                        </span>
+                    )}
+                </div>
+                <div className="text-xs text-gray-400">
+                    Mostrando {currentNotifications.length} de {currentTotal} notificaciones
+                    {filterType !== 'all' && ` (filtrado por ${filterType})`}
+                </div>
+            </div>
 
             {/* Modal de confirmación para eliminar */}
             {showConfirmModal && (
@@ -600,14 +787,15 @@ export default function AdminShipmentsNotifications() {
             )}
 
             {/* Footer informativo */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg text-center">
+            <div className="p-4 bg-gray-50 rounded-lg text-center">
                 <p className="text-xs text-gray-400">
                     <Icon name="info" className="text-xs inline mr-1" />
-                    Las notificaciones <strong>no leídas</strong> no se pueden eliminar. Primero debe marcarlas como leídas.
+                    Las notificaciones se generan automáticamente al hacer clic en "Generar Notificaciones".
+                    Se crean para envíos pendientes, en tránsito y entregados.
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                     <Icon name="schedule" className="text-xs inline mr-1" />
-                    Las notificaciones leídas con más de <strong>30 días</strong> se eliminan automáticamente al hacer clic en "Regenerar Notificaciones".
+                    Las notificaciones leídas con más de <strong>30 días</strong> se eliminan automáticamente al generar nuevas notificaciones.
                 </p>
             </div>
         </div>
