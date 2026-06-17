@@ -15,6 +15,7 @@ export default function AdminShipmentsDirectory() {
     const [editingShipment, setEditingShipment] = useState(null)
     const [submitting, setSubmitting] = useState(false)
     const [deletingId, setDeletingId] = useState(null)
+    const [isEditMode, setIsEditMode] = useState(false)
     const [formData, setFormData] = useState({
         orderId: '',
         userId: '',
@@ -61,6 +62,7 @@ export default function AdminShipmentsDirectory() {
     }
 
     const handleCreate = () => {
+        setIsEditMode(false)
         setEditingShipment(null)
         setFormData({
             orderId: '',
@@ -76,6 +78,7 @@ export default function AdminShipmentsDirectory() {
     }
 
     const handleEdit = (shipment) => {
+        setIsEditMode(true)
         setEditingShipment(shipment)
         setFormData({
             orderId: shipment.orderId || '',
@@ -104,10 +107,32 @@ export default function AdminShipmentsDirectory() {
         setSubmitting(true)
 
         try {
+            // ✅ Construir objeto con datos limpios
+            const cleanData = {
+                orderId: formData.orderId,
+                userId: formData.userId,
+                trackingNumber: formData.trackingNumber,
+                carrier: formData.carrier,
+                status: formData.status,
+                notes: formData.notes || null,
+            }
+
+            // Agregar carrierName solo si tiene valor y es externo
+            if (formData.carrier === 'externo' && formData.carrierName && formData.carrierName.trim() !== '') {
+                cleanData.carrierName = formData.carrierName
+            }
+
+            // Solo enviar estimatedDelivery si tiene valor
+            if (formData.estimatedDelivery && formData.estimatedDelivery.trim() !== '') {
+                cleanData.estimatedDelivery = formData.estimatedDelivery
+            }
+
+            console.log('📦 Datos limpios a enviar:', cleanData)
+
             if (editingShipment) {
-                await api.shipments.update(editingShipment.id, formData)
+                await api.shipments.update(editingShipment.id, cleanData)
             } else {
-                await api.shipments.create(formData)
+                await api.shipments.create(cleanData)
             }
             await fetchShipments()
             setShowModal(false)
@@ -204,13 +229,6 @@ export default function AdminShipmentsDirectory() {
                         </h2>
                         <p className="text-on-surface-variant mt-1">Gestión completa de despachos y seguimiento</p>
                     </div>
-                    <button
-                        onClick={handleCreate}
-                        className="bg-[#FC9430] text-white px-4 py-2 rounded-lg font-bold uppercase text-sm hover:bg-[#e0852b] transition-colors flex items-center gap-2"
-                    >
-                        <Icon name="add" className="text-sm" />
-                        Nuevo Envío
-                    </button>
                 </div>
 
                 {/* Resumen rápido por estado */}
@@ -340,13 +358,6 @@ export default function AdminShipmentsDirectory() {
                                                         <Icon name="edit" className="text-sm" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleUpdateStatus(shipment)}
-                                                        className="text-[#FC9430] hover:text-primary transition-colors"
-                                                        title="Cambiar estado"
-                                                    >
-                                                        <Icon name="sync" className="text-sm" />
-                                                    </button>
-                                                    <button
                                                         onClick={() => handleDelete(shipment.id, shipment.trackingNumber)}
                                                         disabled={deletingId === shipment.id}
                                                         className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
@@ -382,7 +393,7 @@ export default function AdminShipmentsDirectory() {
                     <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
                             <h3 className="text-xl font-bold text-primary">
-                                {editingShipment ? 'Editar Envío' : 'Crear Nuevo Envío'}
+                                {isEditMode ? 'Editar Envío' : 'Crear Nuevo Envío'}
                             </h3>
                             <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                                 <Icon name="close" className="text-2xl" />
@@ -390,105 +401,117 @@ export default function AdminShipmentsDirectory() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">ID de Orden *</label>
-                                    <input
-                                        type="text"
-                                        name="orderId"
-                                        value={formData.orderId}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
-                                        placeholder="uuid-de-la-orden"
-                                    />
+                            {/* ✅ CAMPOS FIJOS (Solo lectura) - Solo visibles en modo edición */}
+                            {isEditMode && (
+                                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <h4 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                        <Icon name="info" className="text-sm" />
+                                        Información Fija
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">ID de Orden</label>
+                                            <p className="font-mono text-sm font-medium text-gray-700 bg-white p-2 rounded border border-gray-200">
+                                                {formData.orderId}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">ID de Usuario</label>
+                                            <p className="font-mono text-sm font-medium text-gray-700 bg-white p-2 rounded border border-gray-200">
+                                                {formData.userId}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">N° Seguimiento</label>
+                                            <p className="font-mono text-sm font-medium text-primary bg-white p-2 rounded border border-gray-200">
+                                                {formData.trackingNumber}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">ID de Usuario *</label>
-                                    <input
-                                        type="text"
-                                        name="userId"
-                                        value={formData.userId}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
-                                        placeholder="uuid-del-usuario"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Número de Seguimiento *</label>
-                                    <input
-                                        type="text"
-                                        name="trackingNumber"
-                                        value={formData.trackingNumber}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
-                                        placeholder="ELD-2025-001"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Transportista *</label>
-                                    <select
-                                        name="carrier"
-                                        value={formData.carrier}
-                                        onChange={handleChange}
-                                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
-                                    >
-                                        <option value="propio">Envío Propio</option>
-                                        <option value="externo">Empresa Externa</option>
-                                    </select>
-                                </div>
-                                {formData.carrier === 'externo' && (
+                            )}
+
+                            {/* ✅ CAMPOS EDITABLES - Siempre visibles */}
+                            <div className="space-y-4">
+                                <h4 className="text-sm font-bold text-primary uppercase flex items-center gap-2">
+                                    <Icon name="edit" className="text-sm" />
+                                    {isEditMode ? 'Campos Editables' : 'Información del Envío'}
+                                </h4>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Transportista */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Nombre de la Empresa</label>
-                                        <input
-                                            type="text"
-                                            name="carrierName"
-                                            value={formData.carrierName}
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Transportista *</label>
+                                        <select
+                                            name="carrier"
+                                            value={formData.carrier}
                                             onChange={handleChange}
                                             className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
-                                            placeholder="Ej: Chilexpress, Starken"
+                                        >
+                                            <option value="propio">Envío Propio</option>
+                                            <option value="externo">Empresa Externa</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Nombre de la Empresa (solo si es externo) */}
+                                    {formData.carrier === 'externo' && (
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">Nombre de la Empresa *</label>
+                                            <input
+                                                type="text"
+                                                name="carrierName"
+                                                value={formData.carrierName}
+                                                onChange={handleChange}
+                                                required
+                                                className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
+                                                placeholder="Ej: Chilexpress, Starken"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Estado */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Estado</label>
+                                        <select
+                                            name="status"
+                                            value={formData.status}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
+                                        >
+                                            {statusOptions.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Fecha Estimada de Entrega */}
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Fecha Estimada de Entrega</label>
+                                        <input
+                                            type="date"
+                                            name="estimatedDelivery"
+                                            value={formData.estimatedDelivery}
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
                                         />
                                     </div>
-                                )}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Estado</label>
-                                    <select
-                                        name="status"
-                                        value={formData.status}
-                                        onChange={handleChange}
-                                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
-                                    >
-                                        {statusOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
                                 </div>
+
+                                {/* Notas / Observaciones */}
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Fecha Estimada de Entrega</label>
-                                    <input
-                                        type="date"
-                                        name="estimatedDelivery"
-                                        value={formData.estimatedDelivery}
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Notas / Observaciones</label>
+                                    <textarea
+                                        name="notes"
+                                        rows="3"
+                                        value={formData.notes}
                                         onChange={handleChange}
-                                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none"
+                                        className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none resize-none"
+                                        placeholder="Instrucciones adicionales para el despacho..."
                                     />
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Notas / Observaciones</label>
-                                <textarea
-                                    name="notes"
-                                    rows="3"
-                                    value={formData.notes}
-                                    onChange={handleChange}
-                                    className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-primary outline-none resize-none"
-                                    placeholder="Instrucciones adicionales para el despacho..."
-                                />
-                            </div>
-
+                            {/* Botones de acción */}
                             <div className="flex justify-end gap-4 pt-4 border-t">
                                 <button
                                     type="button"
@@ -502,7 +525,7 @@ export default function AdminShipmentsDirectory() {
                                     disabled={submitting}
                                     className="px-6 py-2 bg-[#FC9430] text-white rounded font-bold hover:bg-[#e0852b] disabled:opacity-50"
                                 >
-                                    {submitting ? 'Guardando...' : (editingShipment ? 'Actualizar' : 'Crear')}
+                                    {submitting ? 'Guardando...' : (isEditMode ? 'Actualizar' : 'Crear')}
                                 </button>
                             </div>
                         </form>
