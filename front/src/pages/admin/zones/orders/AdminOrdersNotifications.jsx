@@ -14,7 +14,7 @@ export default function AdminOrdersNotifications() {
     const [notificationToDelete, setNotificationToDelete] = useState(null)
     const [showConfirmModal, setShowConfirmModal] = useState(false)
 
-    // Paginación
+    // ✅ Paginación
     const [unreadPage, setUnreadPage] = useState(1)
     const [readPage, setReadPage] = useState(1)
     const [unreadTotalPages, setUnreadTotalPages] = useState(1)
@@ -22,9 +22,9 @@ export default function AdminOrdersNotifications() {
     const [unreadTotal, setUnreadTotal] = useState(0)
     const [readTotal, setReadTotal] = useState(0)
 
-    const itemsPerPage = 15
+    const itemsPerPage = 10
 
-    // Cargar todas las notificaciones (sin paginación del backend para filtrar correctamente)
+    // ✅ Cargar todas las notificaciones (sin paginación del backend para filtrar correctamente)
     const loadAllNotifications = async () => {
         setLoading(true)
         try {
@@ -39,7 +39,8 @@ export default function AdminOrdersNotifications() {
                 n.title?.toLowerCase().includes('nuevo pedido') ||
                 n.title?.toLowerCase().includes('pagado') ||
                 n.title?.toLowerCase().includes('entregado') ||
-                n.title?.toLowerCase().includes('cancelado')
+                n.title?.toLowerCase().includes('cancelado') ||
+                (n.type === 'system_alert' && n.metadata?.orderId)
             )
 
             // Separar por estado
@@ -51,7 +52,7 @@ export default function AdminOrdersNotifications() {
             setUnreadTotalPages(Math.ceil(unread.length / itemsPerPage) || 1)
             setReadTotalPages(Math.ceil(read.length / itemsPerPage) || 1)
 
-            // Aplicar paginación manual
+            // ✅ Aplicar paginación manual
             const startUnread = (unreadPage - 1) * itemsPerPage
             const endUnread = startUnread + itemsPerPage
             const startRead = (readPage - 1) * itemsPerPage
@@ -67,7 +68,7 @@ export default function AdminOrdersNotifications() {
         }
     }
 
-    // Generar notificaciones automáticas de pedidos
+    // ✅ Generar notificaciones automáticas de pedidos
     const generateNotifications = async () => {
         setGenerating(true)
         setGenerateResult(null)
@@ -114,13 +115,14 @@ export default function AdminOrdersNotifications() {
                 message: result.message || 'Notificaciones generadas correctamente'
             })
 
-            // Recargar notificaciones
+            // ✅ Recargar notificaciones y resetear a página 1
+            setUnreadPage(1)
+            setReadPage(1)
             await loadAllNotifications()
 
             // Actualizar contador en el header
             updateUnreadCount()
 
-            // Limpiar mensaje después de 5 segundos
             setTimeout(() => {
                 setGenerateResult(null)
             }, 5000)
@@ -138,7 +140,7 @@ export default function AdminOrdersNotifications() {
         }
     }
 
-    // Marcar notificación como leída
+    // ✅ Marcar notificación como leída
     const markAsRead = async (id) => {
         try {
             await api.notifications.markAsRead(id)
@@ -149,7 +151,6 @@ export default function AdminOrdersNotifications() {
                 setUnreadNotifications(prev => prev.filter(n => n.id !== id))
                 setUnreadTotal(prev => prev - 1)
                 setReadTotal(prev => prev + 1)
-                // Agregar a read (al inicio)
                 setReadNotifications(prev => [movedNotification, ...prev])
                 setReadTotalPages(Math.ceil((readTotal + 1) / itemsPerPage) || 1)
             }
@@ -161,7 +162,7 @@ export default function AdminOrdersNotifications() {
         }
     }
 
-    // Marcar todas como leídas
+    // ✅ Marcar todas como leídas
     const markAllAsRead = async () => {
         if (unreadTotal === 0) {
             alert('No hay notificaciones no leídas')
@@ -187,7 +188,7 @@ export default function AdminOrdersNotifications() {
         }
     }
 
-    // Eliminar notificación
+    // ✅ Eliminar notificación
     const deleteNotification = async (id) => {
         setNotificationToDelete(id)
         setShowConfirmModal(true)
@@ -197,7 +198,6 @@ export default function AdminOrdersNotifications() {
         try {
             await api.notifications.delete(notificationToDelete)
 
-            // Eliminar de la lista correspondiente
             if (activeTab === 'unread') {
                 setUnreadNotifications(prev => prev.filter(n => n.id !== notificationToDelete))
                 setUnreadTotal(prev => prev - 1)
@@ -218,7 +218,7 @@ export default function AdminOrdersNotifications() {
         }
     }
 
-    // Actualizar contador en el header
+    // ✅ Actualizar contador en el header
     const updateUnreadCount = async () => {
         try {
             const { count } = await api.notifications.getUnreadCount()
@@ -228,7 +228,7 @@ export default function AdminOrdersNotifications() {
         }
     }
 
-    // Cambiar página
+    // ✅ Cambiar página
     const handlePageChange = (newPage) => {
         if (activeTab === 'unread') {
             setUnreadPage(newPage)
@@ -238,30 +238,30 @@ export default function AdminOrdersNotifications() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    // Filtrar notificaciones por tipo
+    // ✅ Filtrar notificaciones por tipo
     const getFilteredNotifications = (notificationsList) => {
         if (filterType === 'all') return notificationsList
 
         switch (filterType) {
             case 'new':
-                return notificationsList.filter(n => n.title?.includes('Nuevo pedido'))
+                return notificationsList.filter(n => n.title?.toLowerCase().includes('nuevo pedido') || n.title?.toLowerCase().includes('nuevo'))
             case 'paid':
-                return notificationsList.filter(n => n.title?.includes('pagado'))
+                return notificationsList.filter(n => n.title?.toLowerCase().includes('pagado') || n.title?.toLowerCase().includes('pago'))
             case 'delivered':
-                return notificationsList.filter(n => n.title?.includes('entregado'))
+                return notificationsList.filter(n => n.title?.toLowerCase().includes('entregado'))
             case 'cancelled':
-                return notificationsList.filter(n => n.title?.includes('cancelado'))
+                return notificationsList.filter(n => n.title?.toLowerCase().includes('cancelado'))
             default:
                 return notificationsList
         }
     }
 
-    // Recargar cuando cambian las páginas
+    // ✅ Recargar cuando cambian las páginas
     useEffect(() => {
         loadAllNotifications()
     }, [unreadPage, readPage])
 
-    // Cargar al inicio
+    // ✅ Cargar al inicio
     useEffect(() => {
         loadAllNotifications()
     }, [])
@@ -281,22 +281,22 @@ export default function AdminOrdersNotifications() {
     }
 
     const getStatusIcon = (title) => {
-        if (title?.includes('Nuevo pedido')) return 'receipt_long'
-        if (title?.includes('pagado')) return 'payments'
-        if (title?.includes('entregado')) return 'package_2'
-        if (title?.includes('cancelado')) return 'cancel'
+        if (title?.toLowerCase().includes('nuevo pedido')) return 'receipt_long'
+        if (title?.toLowerCase().includes('pagado')) return 'payments'
+        if (title?.toLowerCase().includes('entregado')) return 'package_2'
+        if (title?.toLowerCase().includes('cancelado')) return 'cancel'
         return 'receipt_long'
     }
 
     const getStatusColor = (title) => {
-        if (title?.includes('Nuevo pedido')) return 'bg-blue-100 text-blue-600'
-        if (title?.includes('pagado')) return 'bg-green-100 text-green-600'
-        if (title?.includes('entregado')) return 'bg-green-100 text-green-600'
-        if (title?.includes('cancelado')) return 'bg-red-100 text-red-600'
+        if (title?.toLowerCase().includes('nuevo pedido')) return 'bg-blue-100 text-blue-600'
+        if (title?.toLowerCase().includes('pagado')) return 'bg-green-100 text-green-600'
+        if (title?.toLowerCase().includes('entregado')) return 'bg-green-100 text-green-600'
+        if (title?.toLowerCase().includes('cancelado')) return 'bg-red-100 text-red-600'
         return 'bg-gray-100 text-gray-600'
     }
 
-    // Paginación UI
+    // ✅ Paginación UI
     const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         if (totalPages <= 1) return null
 
@@ -326,7 +326,7 @@ export default function AdminOrdersNotifications() {
                 {startPage > 1 && (
                     <>
                         <button onClick={() => onPageChange(1)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">1</button>
-                        {startPage > 2 && <span className="px-2">...</span>}
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
                     </>
                 )}
 
@@ -345,7 +345,7 @@ export default function AdminOrdersNotifications() {
 
                 {endPage < totalPages && (
                     <>
-                        {endPage < totalPages - 1 && <span className="px-2">...</span>}
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
                         <button onClick={() => onPageChange(totalPages)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">
                             {totalPages}
                         </button>
@@ -370,6 +370,15 @@ export default function AdminOrdersNotifications() {
     const currentTotal = activeTab === 'unread' ? unreadTotal : readTotal
     const currentPage = activeTab === 'unread' ? unreadPage : readPage
     const currentTotalPages = activeTab === 'unread' ? unreadTotalPages : readTotalPages
+
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = () => {
+        const start = (currentPage - 1) * itemsPerPage + 1
+        const end = Math.min(currentPage * itemsPerPage, currentTotal)
+        return { start, end }
+    }
+
+    const { start, end } = getDisplayRange()
 
     if (loading && unreadNotifications.length === 0 && readNotifications.length === 0) {
         return (
@@ -449,8 +458,8 @@ export default function AdminOrdersNotifications() {
                 <button
                     onClick={() => setFilterType('all')}
                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${filterType === 'all'
-                            ? 'bg-primary text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                 >
                     Todas
@@ -458,8 +467,8 @@ export default function AdminOrdersNotifications() {
                 <button
                     onClick={() => setFilterType('new')}
                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterType === 'new'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                 >
                     <Icon name="receipt_long" className="text-sm" />
@@ -468,8 +477,8 @@ export default function AdminOrdersNotifications() {
                 <button
                     onClick={() => setFilterType('paid')}
                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterType === 'paid'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                 >
                     <Icon name="payments" className="text-sm" />
@@ -478,8 +487,8 @@ export default function AdminOrdersNotifications() {
                 <button
                     onClick={() => setFilterType('delivered')}
                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterType === 'delivered'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                 >
                     <Icon name="package_2" className="text-sm" />
@@ -488,8 +497,8 @@ export default function AdminOrdersNotifications() {
                 <button
                     onClick={() => setFilterType('cancelled')}
                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterType === 'cancelled'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                 >
                     <Icon name="cancel" className="text-sm" />
@@ -502,8 +511,8 @@ export default function AdminOrdersNotifications() {
                 <button
                     onClick={() => setActiveTab('unread')}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'unread'
-                            ? 'text-primary border-b-2 border-primary'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     No leídas ({unreadTotal})
@@ -511,8 +520,8 @@ export default function AdminOrdersNotifications() {
                 <button
                     onClick={() => setActiveTab('read')}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'read'
-                            ? 'text-primary border-b-2 border-primary'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Leídas ({readTotal})
@@ -550,8 +559,8 @@ export default function AdminOrdersNotifications() {
                             <div
                                 key={notification.id}
                                 className={`bg-white rounded-xl border transition-all hover:shadow-md ${activeTab === 'unread'
-                                        ? 'border-l-4 border-l-[#FC9430] bg-gradient-to-r from-white to-orange-50/30'
-                                        : 'border-outline-variant'
+                                    ? 'border-l-4 border-l-[#FC9430] bg-gradient-to-r from-white to-orange-50/30'
+                                    : 'border-outline-variant'
                                     }`}
                             >
                                 <div className="p-4">
@@ -639,28 +648,32 @@ export default function AdminOrdersNotifications() {
                 )}
             </div>
 
-            {/* Paginación */}
+            {/* ✅ Paginación */}
             <Pagination
                 currentPage={currentPage}
                 totalPages={currentTotalPages}
                 onPageChange={handlePageChange}
             />
 
-            {/* Resumen */}
-            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600">
-                    Total de notificaciones de pedidos: <strong>{unreadTotal + readTotal}</strong>
-                    {unreadTotal > 0 && (
-                        <span className="ml-2 text-[#FC9430]">
-                            ({unreadTotal} no leídas)
-                        </span>
-                    )}
+            {/* ✅ Información de paginación */}
+            {currentTotal > 0 && (
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-600">
+                        Mostrando {start} - {end} de {currentTotal} notificaciones
+                        {filterType !== 'all' && (
+                            <span className="ml-2 text-primary">
+                                (filtrado por {filterType === 'new' ? 'Nuevos Pedidos' :
+                                    filterType === 'paid' ? 'Pagados' :
+                                        filterType === 'delivered' ? 'Entregados' :
+                                            filterType === 'cancelled' ? 'Cancelados' : 'Todos'})
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        Página {currentPage} de {currentTotalPages}
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400">
-                    Mostrando {currentNotifications.length} de {currentTotal} notificaciones
-                    {filterType !== 'all' && ` (filtrado por ${filterType})`}
-                </div>
-            </div>
+            )}
 
             {/* Modal de confirmación para eliminar */}
             {showConfirmModal && (
