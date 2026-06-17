@@ -13,8 +13,9 @@ export default function AdminShipmentsNotifications() {
     const [showConfirmModal, setShowConfirmModal] = useState(false)
     const [notificationToDelete, setNotificationToDelete] = useState(null)
     const [generateResult, setGenerateResult] = useState(null)
+    const [filterType, setFilterType] = useState('all')
 
-    // Paginación
+    // ✅ Paginación
     const [unreadPage, setUnreadPage] = useState(1)
     const [readPage, setReadPage] = useState(1)
     const [unreadTotalPages, setUnreadTotalPages] = useState(1)
@@ -24,14 +25,14 @@ export default function AdminShipmentsNotifications() {
 
     const itemsPerPage = 10
 
-    // Cargar notificaciones y envíos
-    const loadNotifications = async () => {
+    // ✅ Cargar todas las notificaciones (sin paginación del backend para filtrar correctamente)
+    const loadAllNotifications = async () => {
         setLoading(true)
         try {
             // Cargar todas las notificaciones
             const allNotifsResult = await api.notifications.getAll(null, 1, 1000)
 
-            // Filtrar SOLO notificaciones de envíos
+            // ✅ Filtrar SOLO notificaciones de envíos
             const allShipmentNotifications = allNotifsResult.data.filter(n =>
                 n.title?.toLowerCase().includes('envío') ||
                 n.title?.toLowerCase().includes('despacho') ||
@@ -45,7 +46,7 @@ export default function AdminShipmentsNotifications() {
                 (n.type === 'system_alert' && n.metadata?.trackingNumber)
             )
 
-            // Separar por estado
+            // ✅ Separar por estado
             const unread = allShipmentNotifications.filter(n => n.status === 'unread')
             const read = allShipmentNotifications.filter(n => n.status === 'read')
 
@@ -54,7 +55,7 @@ export default function AdminShipmentsNotifications() {
             setUnreadTotalPages(Math.ceil(unread.length / itemsPerPage) || 1)
             setReadTotalPages(Math.ceil(read.length / itemsPerPage) || 1)
 
-            // Aplicar paginación manual
+            // ✅ Aplicar paginación manual
             const startUnread = (unreadPage - 1) * itemsPerPage
             const endUnread = startUnread + itemsPerPage
             const startRead = (readPage - 1) * itemsPerPage
@@ -63,7 +64,7 @@ export default function AdminShipmentsNotifications() {
             setUnreadNotifications(unread.slice(startUnread, endUnread))
             setReadNotifications(read.slice(startRead, endRead))
 
-            // Cargar envíos para generar notificaciones
+            // ✅ Cargar envíos para generar notificaciones
             const shipmentsData = await api.shipments.getAll()
             setShipments(shipmentsData.data || [])
 
@@ -111,7 +112,7 @@ export default function AdminShipmentsNotifications() {
                         await api.notifications.create({
                             title: title,
                             message: `El envío #${shipment.trackingNumber} está pendiente de procesamiento. Orden: ${shipment.orderId?.slice(-8).toUpperCase()}`,
-                            type: 'system_alert', // ✅ Usar system_alert en lugar de shipment_alert
+                            type: 'system_alert',
                             metadata: {
                                 trackingNumber: shipment.trackingNumber,
                                 orderId: shipment.orderId,
@@ -143,7 +144,7 @@ export default function AdminShipmentsNotifications() {
                         await api.notifications.create({
                             title: title,
                             message: `El envío #${shipment.trackingNumber} está en camino al destino. Orden: ${shipment.orderId?.slice(-8).toUpperCase()}`,
-                            type: 'system_alert', // ✅ Usar system_alert en lugar de shipment_alert
+                            type: 'system_alert',
                             metadata: {
                                 trackingNumber: shipment.trackingNumber,
                                 orderId: shipment.orderId,
@@ -175,7 +176,7 @@ export default function AdminShipmentsNotifications() {
                         await api.notifications.create({
                             title: title,
                             message: `El envío #${shipment.trackingNumber} ha sido entregado exitosamente. Orden: ${shipment.orderId?.slice(-8).toUpperCase()}`,
-                            type: 'system_alert', // ✅ Usar system_alert en lugar de shipment_alert
+                            type: 'system_alert',
                             metadata: {
                                 trackingNumber: shipment.trackingNumber,
                                 orderId: shipment.orderId,
@@ -207,10 +208,10 @@ export default function AdminShipmentsNotifications() {
                 message: `✅ Notificaciones de envíos generadas: ${created} nuevas, ${skipped} omitidas (ya existían)`
             })
 
-            // Recargar notificaciones
-            await loadNotifications()
-
-            // Actualizar contador en el header
+            // ✅ Recargar notificaciones y resetear a página 1
+            setUnreadPage(1)
+            setReadPage(1)
+            await loadAllNotifications()
             updateUnreadCount()
 
             setTimeout(() => {
@@ -231,7 +232,7 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Marcar notificación como leída
+    // ✅ Marcar notificación como leída
     const markAsRead = async (id) => {
         try {
             await api.notifications.markAsRead(id)
@@ -252,7 +253,7 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Marcar todas como leídas
+    // ✅ Marcar todas como leídas
     const markAllAsRead = async () => {
         if (unreadTotal === 0) {
             alert('No hay notificaciones no leídas')
@@ -277,7 +278,7 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Eliminar notificación
+    // ✅ Eliminar notificación
     const deleteNotification = async (id) => {
         setNotificationToDelete(id)
         setShowConfirmModal(true)
@@ -307,7 +308,7 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Actualizar contador en el header
+    // ✅ Actualizar contador en el header
     const updateUnreadCount = async () => {
         try {
             const { count } = await api.notifications.getUnreadCount()
@@ -317,7 +318,7 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Cambiar página
+    // ✅ Cambiar página
     const handlePageChange = (newPage) => {
         if (activeTab === 'unread') {
             setUnreadPage(newPage)
@@ -327,7 +328,7 @@ export default function AdminShipmentsNotifications() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    // Filtrar notificaciones por tipo de envío
+    // ✅ Filtrar notificaciones por tipo de envío
     const getFilteredNotifications = (notificationsList, filter) => {
         if (filter === 'all') return notificationsList
 
@@ -351,14 +352,14 @@ export default function AdminShipmentsNotifications() {
         }
     }
 
-    // Recargar cuando cambian las páginas
+    // ✅ Recargar cuando cambian las páginas
     useEffect(() => {
-        loadNotifications()
+        loadAllNotifications()
     }, [unreadPage, readPage])
 
-    // Cargar al inicio
+    // ✅ Cargar al inicio
     useEffect(() => {
-        loadNotifications()
+        loadAllNotifications()
     }, [])
 
     const formatTimeAgo = (timestamp) => {
@@ -391,7 +392,7 @@ export default function AdminShipmentsNotifications() {
         return 'bg-gray-100 text-gray-600'
     }
 
-    // Paginación UI
+    // ✅ Paginación UI
     const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         if (totalPages <= 1) return null
 
@@ -421,7 +422,7 @@ export default function AdminShipmentsNotifications() {
                 {startPage > 1 && (
                     <>
                         <button onClick={() => onPageChange(1)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">1</button>
-                        {startPage > 2 && <span className="px-2">...</span>}
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
                     </>
                 )}
 
@@ -430,8 +431,8 @@ export default function AdminShipmentsNotifications() {
                         key={page}
                         onClick={() => onPageChange(page)}
                         className={`px-3 py-1.5 text-sm border rounded-lg transition-colors ${currentPage === page
-                            ? 'bg-primary text-white border-primary'
-                            : 'hover:bg-gray-50'
+                                ? 'bg-primary text-white border-primary'
+                                : 'hover:bg-gray-50'
                             }`}
                     >
                         {page}
@@ -440,7 +441,7 @@ export default function AdminShipmentsNotifications() {
 
                 {endPage < totalPages && (
                     <>
-                        {endPage < totalPages - 1 && <span className="px-2">...</span>}
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
                         <button onClick={() => onPageChange(totalPages)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">
                             {totalPages}
                         </button>
@@ -458,9 +459,14 @@ export default function AdminShipmentsNotifications() {
         )
     }
 
-    // Filtrar por tipo
-    const [filterType, setFilterType] = useState('all')
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = (total, page) => {
+        const start = (page - 1) * itemsPerPage + 1
+        const end = Math.min(page * itemsPerPage, total)
+        return { start, end }
+    }
 
+    // ✅ Obtener notificaciones filtradas
     const currentNotifications = activeTab === 'unread'
         ? getFilteredNotifications(unreadNotifications, filterType)
         : getFilteredNotifications(readNotifications, filterType)
@@ -468,6 +474,7 @@ export default function AdminShipmentsNotifications() {
     const currentTotal = activeTab === 'unread' ? unreadTotal : readTotal
     const currentPage = activeTab === 'unread' ? unreadPage : readPage
     const currentTotalPages = activeTab === 'unread' ? unreadTotalPages : readTotalPages
+    const { start, end } = getDisplayRange(currentTotal, currentPage)
 
     if (loading && unreadNotifications.length === 0 && readNotifications.length === 0) {
         return (
@@ -726,28 +733,31 @@ export default function AdminShipmentsNotifications() {
                 )}
             </div>
 
-            {/* Paginación */}
+            {/* ✅ Paginación */}
             <Pagination
                 currentPage={currentPage}
                 totalPages={currentTotalPages}
                 onPageChange={handlePageChange}
             />
 
-            {/* Resumen */}
-            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600">
-                    Total de notificaciones de envíos: <strong>{unreadTotal + readTotal}</strong>
-                    {unreadTotal > 0 && (
-                        <span className="ml-2 text-[#FC9430]">
-                            ({unreadTotal} no leídas)
-                        </span>
-                    )}
+            {/* ✅ Información de paginación */}
+            {currentTotal > 0 && (
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-600">
+                        Mostrando {start} - {end} de {currentTotal} notificaciones
+                        {filterType !== 'all' && (
+                            <span className="ml-2 text-primary">
+                                (filtrado por {filterType === 'pending' ? 'Pendientes' :
+                                    filterType === 'transit' ? 'En Tránsito' :
+                                        filterType === 'delivered' ? 'Entregados' : 'Todos'})
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        Página {currentPage} de {currentTotalPages}
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400">
-                    Mostrando {currentNotifications.length} de {currentTotal} notificaciones
-                    {filterType !== 'all' && ` (filtrado por ${filterType})`}
-                </div>
-            </div>
+            )}
 
             {/* Modal de confirmación para eliminar */}
             {showConfirmModal && (
