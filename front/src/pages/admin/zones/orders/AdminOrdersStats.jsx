@@ -8,6 +8,10 @@ export default function AdminOrdersStats() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
+    // ✅ Estado para paginación de la tabla de productos más vendidos
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(10)
+
     useEffect(() => {
         const fetchOrders = async () => {
             try {
@@ -34,6 +38,123 @@ export default function AdminOrdersStats() {
         PAID: orders.filter(o => o.status === 'PAID').length,
         CANCELLED: orders.filter(o => o.status === 'CANCELLED').length,
         DELIVERED: orders.filter(o => o.status === 'DELIVERED').length
+    }
+
+    // ✅ Calcular productos más vendidos
+    const getTopProducts = () => {
+        const productSales = {}
+        orders.forEach(order => {
+            order.items?.forEach(item => {
+                const productId = item.productId
+                const productName = item.product?.name || 'Producto'
+                const productRef = item.product?.reference || 'N/A'
+                if (!productSales[productId]) {
+                    productSales[productId] = {
+                        id: productId,
+                        name: productName,
+                        reference: productRef,
+                        quantity: 0,
+                        revenue: 0
+                    }
+                }
+                productSales[productId].quantity += item.quantity
+                productSales[productId].revenue += parseFloat(item.subtotal) || 0
+            })
+        })
+        return Object.values(productSales).sort((a, b) => b.quantity - a.quantity)
+    }
+
+    const topProducts = getTopProducts()
+    const totalTopProducts = topProducts.length
+
+    // ✅ Obtener productos paginados
+    const getPaginatedProducts = () => {
+        const startIndex = (currentPage - 1) * itemsPerPage
+        const endIndex = startIndex + itemsPerPage
+        return topProducts.slice(startIndex, endIndex)
+    }
+
+    // ✅ Calcular total de páginas
+    const totalPages = Math.ceil(totalTopProducts / itemsPerPage)
+
+    // ✅ Cambiar página
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // ✅ Componente de paginación
+    const Pagination = () => {
+        if (totalPages <= 1) return null
+
+        const pages = []
+        const maxVisible = 5
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2))
+        let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+
+        if (endPage - startPage + 1 < maxVisible) {
+            startPage = Math.max(1, endPage - maxVisible + 1)
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i)
+        }
+
+        return (
+            <div className="flex justify-center items-center gap-2 mt-4">
+                <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Anterior
+                </button>
+
+                {startPage > 1 && (
+                    <>
+                        <button onClick={() => handlePageChange(1)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">1</button>
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
+                    </>
+                )}
+
+                {pages.map(page => (
+                    <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-1.5 text-sm border rounded-lg transition-colors ${currentPage === page
+                                ? 'bg-primary text-white border-primary'
+                                : 'hover:bg-gray-50'
+                            }`}
+                    >
+                        {page}
+                    </button>
+                ))}
+
+                {endPage < totalPages && (
+                    <>
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
+                        <button onClick={() => handlePageChange(totalPages)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">
+                            {totalPages}
+                        </button>
+                    </>
+                )}
+
+                <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Siguiente
+                </button>
+            </div>
+        )
+    }
+
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = () => {
+        const start = (currentPage - 1) * itemsPerPage + 1
+        const end = Math.min(currentPage * itemsPerPage, totalTopProducts)
+        return { start, end }
     }
 
     // Órdenes por mes (últimos 6 meses)
@@ -65,6 +186,8 @@ export default function AdminOrdersStats() {
 
     const monthlyData = getOrdersByMonth()
     const maxMonthlyOrders = Math.max(...monthlyData.map(d => d.count), 1)
+    const paginatedProducts = getPaginatedProducts()
+    const { start, end } = getDisplayRange()
 
     if (loading) {
         return (
@@ -255,18 +378,22 @@ export default function AdminOrdersStats() {
                 </div>
             </div>
 
-            {/* Top productos */}
+            {/* ✅ Top productos - CON PAGINACIÓN */}
             <div className="bg-white border rounded-lg shadow-sm">
-                <div className="p-4 border-b">
+                <div className="p-4 border-b flex justify-between items-center">
                     <h3 className="font-bold text-primary flex items-center gap-2">
                         <Icon name="star" />
                         Productos Más Vendidos
                     </h3>
+                    <span className="text-sm text-gray-500">
+                        Mostrando {start} - {end} de {totalTopProducts} productos
+                    </span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
+                                <th className="px-4 py-3 text-left text-sm font-bold">#</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Producto</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Referencia</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Cantidad Vendida</th>
@@ -274,38 +401,42 @@ export default function AdminOrdersStats() {
                             </tr>
                         </thead>
                         <tbody>
-                            {(() => {
-                                const productSales = {}
-                                orders.forEach(order => {
-                                    order.items?.forEach(item => {
-                                        const productId = item.productId
-                                        const productName = item.product?.name || 'Producto'
-                                        const productRef = item.product?.reference || 'N/A'
-                                        if (!productSales[productId]) {
-                                            productSales[productId] = {
-                                                name: productName,
-                                                reference: productRef,
-                                                quantity: 0,
-                                                revenue: 0
-                                            }
-                                        }
-                                        productSales[productId].quantity += item.quantity
-                                        productSales[productId].revenue += parseFloat(item.subtotal) || 0
-                                    })
+                            {paginatedProducts.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="text-center py-8 text-gray-500">
+                                        No hay productos vendidos
+                                    </td>
+                                </tr>
+                            ) : (
+                                paginatedProducts.map((product, index) => {
+                                    const globalIndex = (currentPage - 1) * itemsPerPage + index + 1
+                                    return (
+                                        <tr key={product.id} className="border-t hover:bg-gray-50">
+                                            <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                                                {globalIndex}
+                                            </td>
+                                            <td className="px-4 py-3 font-medium">{product.name}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{product.reference}</td>
+                                            <td className="px-4 py-3 font-bold text-primary">{product.quantity} unidades</td>
+                                            <td className="px-4 py-3 text-green-600">${Math.round(product.revenue).toLocaleString()}</td>
+                                        </tr>
+                                    )
                                 })
-                                const topProducts = Object.values(productSales).sort((a, b) => b.quantity - a.quantity).slice(0, 10)
-                                return topProducts.map((product, idx) => (
-                                    <tr key={idx} className="border-t hover:bg-gray-50">
-                                        <td className="px-4 py-3 font-medium">{product.name}</td>
-                                        <td className="px-4 py-3 text-sm">{product.reference}</td>
-                                        <td className="px-4 py-3 font-bold text-primary">{product.quantity} unidades</td>
-                                        <td className="px-4 py-3 text-green-600">${Math.round(product.revenue).toLocaleString()}</td>
-                                    </tr>
-                                ))
-                            })()}
+                            )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* ✅ Paginación */}
+                <Pagination />
+
+                {/* ✅ Información de paginación */}
+                {totalTopProducts > 0 && (
+                    <div className="px-4 py-3 border-t bg-gray-50 text-center text-xs text-gray-500">
+                        Página {currentPage} de {totalPages} ·
+                        Mostrando {paginatedProducts.length} de {totalTopProducts} productos
+                    </div>
+                )}
             </div>
         </div>
     )
