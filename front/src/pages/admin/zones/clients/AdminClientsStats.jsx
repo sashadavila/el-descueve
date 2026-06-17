@@ -11,6 +11,10 @@ export default function AdminClientsStats() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
+    // ✅ Estado para paginación de la tabla de últimos clientes
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(10)
+
     useEffect(() => {
         const fetchStats = async () => {
             if (!isAdmin) return
@@ -34,10 +38,10 @@ export default function AdminClientsStats() {
         fetchStats()
     }, [isAdmin])
 
-    // Calcular porcentajes
+    // ✅ Calcular porcentajes
     const activePercentage = stats ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0
 
-    // Contar usuarios por mes (últimos 6 meses)
+    // ✅ Contar usuarios por mes (últimos 6 meses)
     const getMonthlyRegistrations = () => {
         const months = {}
         const now = new Date()
@@ -59,6 +63,104 @@ export default function AdminClientsStats() {
         return Object.entries(months).reverse()
     }
 
+    // ✅ Obtener clientes paginados
+    const getPaginatedClients = () => {
+        const startIndex = (currentPage - 1) * itemsPerPage
+        const endIndex = startIndex + itemsPerPage
+        return users.slice(startIndex, endIndex)
+    }
+
+    // ✅ Calcular total de páginas
+    const totalPages = Math.ceil(users.length / itemsPerPage)
+
+    // ✅ Cambiar página
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // ✅ Componente de paginación
+    const Pagination = () => {
+        if (totalPages <= 1) return null
+
+        const pages = []
+        const maxVisible = 5
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2))
+        let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+
+        if (endPage - startPage + 1 < maxVisible) {
+            startPage = Math.max(1, endPage - maxVisible + 1)
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i)
+        }
+
+        return (
+            <div className="flex justify-center items-center gap-2 mt-4">
+                <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Anterior
+                </button>
+
+                {startPage > 1 && (
+                    <>
+                        <button
+                            onClick={() => handlePageChange(1)}
+                            className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            1
+                        </button>
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
+                    </>
+                )}
+
+                {pages.map(page => (
+                    <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-1.5 text-sm border rounded-lg transition-colors ${currentPage === page
+                                ? 'bg-primary text-white border-primary'
+                                : 'hover:bg-gray-50'
+                            }`}
+                    >
+                        {page}
+                    </button>
+                ))}
+
+                {endPage < totalPages && (
+                    <>
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
+                        <button
+                            onClick={() => handlePageChange(totalPages)}
+                            className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            {totalPages}
+                        </button>
+                    </>
+                )}
+
+                <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Siguiente
+                </button>
+            </div>
+        )
+    }
+
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = () => {
+        const start = (currentPage - 1) * itemsPerPage + 1
+        const end = Math.min(currentPage * itemsPerPage, users.length)
+        return { start, end }
+    }
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-96">
@@ -77,6 +179,8 @@ export default function AdminClientsStats() {
 
     const monthlyData = getMonthlyRegistrations()
     const maxMonthlyRegistrations = Math.max(...monthlyData.map(([, count]) => count), 1)
+    const paginatedClients = getPaginatedClients()
+    const { start, end } = getDisplayRange()
 
     return (
         <div className="space-y-8">
@@ -217,18 +321,22 @@ export default function AdminClientsStats() {
                 </div>
             </div>
 
-            {/* Últimos clientes registrados */}
+            {/* ✅ Últimos clientes registrados - CON PAGINACIÓN */}
             <div className="bg-white border rounded-lg shadow-sm">
-                <div className="p-4 border-b">
+                <div className="p-4 border-b flex justify-between items-center">
                     <h3 className="font-bold text-primary flex items-center gap-2">
                         <Icon name="person_add" />
                         Últimos Clientes Registrados
                     </h3>
+                    <span className="text-sm text-gray-500">
+                        Mostrando {start} - {end} de {users.length} clientes
+                    </span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-slate-50">
                             <tr>
+                                <th className="px-4 py-3 text-left text-sm font-bold">#</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Cliente</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Email</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Empresa</th>
@@ -237,26 +345,72 @@ export default function AdminClientsStats() {
                             </tr>
                         </thead>
                         <tbody>
-                            {users.slice(0, 10).map(user => (
-                                <tr key={user.id} className="border-t hover:bg-slate-50">
-                                    <td className="px-4 py-3 font-medium">{user.name}</td>
-                                    <td className="px-4 py-3 text-sm">{user.email}</td>
-                                    <td className="px-4 py-3 text-sm">{user.company || '—'}</td>
-                                    <td className="px-4 py-3 text-sm">
-                                        {new Date(user.createdAt).toLocaleDateString('es-CL')}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        {user.isActive ? (
-                                            <span className="text-green-600 text-sm">Activo</span>
-                                        ) : (
-                                            <span className="text-red-600 text-sm">Inactivo</span>
-                                        )}
+                            {paginatedClients.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="text-center py-8 text-gray-500">
+                                        No hay clientes registrados
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                paginatedClients.map((user, index) => {
+                                    const globalIndex = (currentPage - 1) * itemsPerPage + index + 1
+                                    return (
+                                        <tr key={user.id} className="border-t hover:bg-slate-50">
+                                            <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                                                {globalIndex}
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-gray-800">
+                                                {user.name}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-600">
+                                                {user.email}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                {user.company || '—'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                {new Date(user.createdAt).toLocaleDateString('es-CL', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    year: 'numeric'
+                                                })}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {user.isActive ? (
+                                                    <span className="inline-flex items-center gap-1 text-green-600 text-sm font-medium">
+                                                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                        Activo
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 text-red-600 text-sm font-medium">
+                                                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                                                        Inactivo
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* ✅ Paginación */}
+                <Pagination />
+
+                {/* ✅ Información de paginación */}
+                {users.length > 0 && (
+                    <div className="px-4 py-3 border-t bg-gray-50 text-center text-xs text-gray-500">
+                        Página {currentPage} de {totalPages} ·
+                        Mostrando {paginatedClients.length} de {users.length} clientes
+                        {totalPages > 1 && (
+                            <span className="ml-2 text-primary">
+                                (Puedes navegar entre páginas usando los botones)
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )
