@@ -9,6 +9,10 @@ export default function AdminShipmentsStats() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
+    // ✅ Estado para paginación de la tabla de últimos envíos
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(10)
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -63,6 +67,103 @@ export default function AdminShipmentsStats() {
 
     const monthlyData = getShipmentsByMonth()
     const maxMonthlyShipments = Math.max(...monthlyData.map(d => d.count), 1)
+
+    // ✅ Obtener envíos paginados (ordenados por fecha descendente)
+    const getPaginatedShipments = () => {
+        // Ordenar envíos por fecha de creación (más recientes primero)
+        const sortedShipments = [...shipments].sort((a, b) =>
+            new Date(b.createdAt) - new Date(a.createdAt)
+        )
+        const startIndex = (currentPage - 1) * itemsPerPage
+        const endIndex = startIndex + itemsPerPage
+        return sortedShipments.slice(startIndex, endIndex)
+    }
+
+    // ✅ Calcular total de páginas
+    const totalPages = Math.ceil(totalShipments / itemsPerPage)
+
+    // ✅ Cambiar página
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // ✅ Componente de paginación
+    const Pagination = () => {
+        if (totalPages <= 1) return null
+
+        const pages = []
+        const maxVisible = 5
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2))
+        let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+
+        if (endPage - startPage + 1 < maxVisible) {
+            startPage = Math.max(1, endPage - maxVisible + 1)
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i)
+        }
+
+        return (
+            <div className="flex justify-center items-center gap-2 mt-4">
+                <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Anterior
+                </button>
+
+                {startPage > 1 && (
+                    <>
+                        <button onClick={() => handlePageChange(1)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">1</button>
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
+                    </>
+                )}
+
+                {pages.map(page => (
+                    <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-1.5 text-sm border rounded-lg transition-colors ${currentPage === page
+                                ? 'bg-primary text-white border-primary'
+                                : 'hover:bg-gray-50'
+                            }`}
+                    >
+                        {page}
+                    </button>
+                ))}
+
+                {endPage < totalPages && (
+                    <>
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
+                        <button onClick={() => handlePageChange(totalPages)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">
+                            {totalPages}
+                        </button>
+                    </>
+                )}
+
+                <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                    Siguiente
+                </button>
+            </div>
+        )
+    }
+
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = () => {
+        const start = (currentPage - 1) * itemsPerPage + 1
+        const end = Math.min(currentPage * itemsPerPage, totalShipments)
+        return { start, end }
+    }
+
+    const paginatedShipments = getPaginatedShipments()
+    const { start, end } = getDisplayRange()
 
     if (loading) {
         return (
@@ -273,19 +374,24 @@ export default function AdminShipmentsStats() {
                 </div>
             </div>
 
-            {/* Últimos envíos */}
+            {/* ✅ Últimos envíos - CON PAGINACIÓN */}
             <div className="bg-white border rounded-lg shadow-sm">
-                <div className="p-4 border-b">
+                <div className="p-4 border-b flex justify-between items-center">
                     <h3 className="font-bold text-primary flex items-center gap-2">
                         <Icon name="history" />
                         Últimos Envíos Realizados
                     </h3>
+                    <span className="text-sm text-gray-500">
+                        Mostrando {start} - {end} de {totalShipments} envíos
+                    </span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
+                                <th className="px-4 py-3 text-left text-sm font-bold">#</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">N° Seguimiento</th>
+                                <th className="px-4 py-3 text-left text-sm font-bold">Orden</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Estado</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Transportista</th>
                                 <th className="px-4 py-3 text-left text-sm font-bold">Fecha Creación</th>
@@ -293,33 +399,66 @@ export default function AdminShipmentsStats() {
                             </tr>
                         </thead>
                         <tbody>
-                            {shipments.slice(0, 10).map(shipment => (
-                                <tr key={shipment.id} className="border-t hover:bg-gray-50">
-                                    <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
-                                        {shipment.trackingNumber}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`px-2 py-1 text-xs font-bold uppercase rounded text-white ${shipment.status === 'Entregado' ? 'bg-green-500' :
-                                            shipment.status === 'En Tránsito' ? 'bg-orange-500' :
-                                                shipment.status === 'En Preparación' ? 'bg-blue-500' : 'bg-yellow-500'
-                                            }`}>
-                                            {shipment.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm">
-                                        {shipment.carrier === 'externo' ? shipment.carrierName || 'Externo' : 'Envío Propio'}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm">
-                                        {new Date(shipment.createdAt).toLocaleDateString('es-CL')}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm">
-                                        {shipment.estimatedDelivery ? new Date(shipment.estimatedDelivery).toLocaleDateString('es-CL') : '—'}
+                            {paginatedShipments.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="text-center py-8 text-gray-500">
+                                        No hay envíos registrados
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                paginatedShipments.map((shipment, index) => {
+                                    const globalIndex = (currentPage - 1) * itemsPerPage + index + 1
+                                    return (
+                                        <tr key={shipment.id} className="border-t hover:bg-gray-50">
+                                            <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                                                {globalIndex}
+                                            </td>
+                                            <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
+                                                {shipment.trackingNumber}
+                                            </td>
+                                            <td className="px-4 py-3 font-mono text-sm">
+                                                {shipment.orderId?.slice(-8).toUpperCase() || 'N/A'}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`px-2 py-1 text-xs font-bold uppercase rounded text-white ${shipment.status === 'Entregado' ? 'bg-green-500' :
+                                                        shipment.status === 'En Tránsito' ? 'bg-orange-500' :
+                                                            shipment.status === 'En Preparación' ? 'bg-blue-500' : 'bg-yellow-500'
+                                                    }`}>
+                                                    {shipment.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                                {shipment.carrier === 'externo' ? shipment.carrierName || 'Externo' : 'Envío Propio'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                                {new Date(shipment.createdAt).toLocaleDateString('es-CL')}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                                {shipment.estimatedDelivery ? new Date(shipment.estimatedDelivery).toLocaleDateString('es-CL') : '—'}
+                                            </td>
+                                        </tr>
+                                    )
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* ✅ Paginación */}
+                <Pagination />
+
+                {/* ✅ Información de paginación */}
+                {totalShipments > 0 && (
+                    <div className="px-4 py-3 border-t bg-gray-50 text-center text-xs text-gray-500">
+                        Página {currentPage} de {totalPages} ·
+                        Mostrando {paginatedShipments.length} de {totalShipments} envíos
+                        {totalPages > 1 && (
+                            <span className="ml-2 text-primary">
+                                (Puedes navegar entre páginas usando los botones)
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )
