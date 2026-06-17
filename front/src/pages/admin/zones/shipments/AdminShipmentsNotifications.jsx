@@ -28,13 +28,13 @@ export default function AdminShipmentsNotifications() {
     const loadNotifications = async () => {
         setLoading(true)
         try {
-            const [unreadResult, readResult, shipmentsResponse] = await Promise.all([
+            const [unreadResult, readResult] = await Promise.all([
                 api.notifications.getAll('unread', unreadPage, itemsPerPage),
-                api.notifications.getAll('read', readPage, itemsPerPage),
-                fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/shipments`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                })
+                api.notifications.getAll('read', readPage, itemsPerPage)
             ])
+
+            // Obtener envíos usando el nuevo módulo api.shipments
+            const shipmentsData = await api.shipments.getAll()
 
             // Filtrar notificaciones de envíos
             const filteredUnread = unreadResult.data.filter(n =>
@@ -57,10 +57,7 @@ export default function AdminShipmentsNotifications() {
             setUnreadTotal(filteredUnread.length)
             setReadTotal(filteredRead.length)
 
-            if (shipmentsResponse.ok) {
-                const shipmentsData = await shipmentsResponse.json()
-                setShipments(shipmentsData.data || [])
-            }
+            setShipments(shipmentsData.data || [])
         } catch (error) {
             console.error('Error loading shipment notifications:', error)
         } finally {
