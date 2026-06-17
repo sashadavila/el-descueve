@@ -14,7 +14,7 @@ export default function AdminClientsNotifications() {
     const [generateResult, setGenerateResult] = useState(null)
     const [filter, setFilter] = useState('all') // all, new_user, inactive_user, admin_user
 
-    // Paginación
+    // ✅ Paginación
     const [unreadPage, setUnreadPage] = useState(1)
     const [readPage, setReadPage] = useState(1)
     const [unreadTotalPages, setUnreadTotalPages] = useState(1)
@@ -24,27 +24,38 @@ export default function AdminClientsNotifications() {
 
     const itemsPerPage = 10
 
-    // Cargar notificaciones de clientes
-    const loadNotifications = async () => {
+    // ✅ Cargar todas las notificaciones (sin paginación del backend para filtrar correctamente)
+    const loadAllNotifications = async () => {
         setLoading(true)
         try {
-            // Cargar no leídas
-            const unreadResult = await api.notifications.getAll('unread', unreadPage, itemsPerPage)
-            const filteredUnread = unreadResult.data.filter(n =>
-                n.type === 'new_user' || n.type === 'inactive_user' || n.type === 'admin_user'
-            )
-            setUnreadNotifications(filteredUnread)
-            setUnreadTotalPages(Math.ceil(filteredUnread.length / itemsPerPage) || 1)
-            setUnreadTotal(filteredUnread.length)
+            // Cargar todas las notificaciones (sin paginación para obtener todas)
+            const allNotifsResult = await api.notifications.getAll(null, 1, 1000)
 
-            // Cargar leídas
-            const readResult = await api.notifications.getAll('read', readPage, itemsPerPage)
-            const filteredRead = readResult.data.filter(n =>
-                n.type === 'new_user' || n.type === 'inactive_user' || n.type === 'admin_user'
+            // Filtrar solo notificaciones de clientes
+            const allClientNotifications = allNotifsResult.data.filter(n =>
+                n.type === 'new_user' ||
+                n.type === 'inactive_user' ||
+                n.type === 'admin_user'
             )
-            setReadNotifications(filteredRead)
-            setReadTotalPages(Math.ceil(filteredRead.length / itemsPerPage) || 1)
-            setReadTotal(filteredRead.length)
+
+            // Separar por estado
+            const unread = allClientNotifications.filter(n => n.status === 'unread')
+            const read = allClientNotifications.filter(n => n.status === 'read')
+
+            setUnreadTotal(unread.length)
+            setReadTotal(read.length)
+            setUnreadTotalPages(Math.ceil(unread.length / itemsPerPage) || 1)
+            setReadTotalPages(Math.ceil(read.length / itemsPerPage) || 1)
+
+            // ✅ Aplicar paginación manual
+            const startUnread = (unreadPage - 1) * itemsPerPage
+            const endUnread = startUnread + itemsPerPage
+            const startRead = (readPage - 1) * itemsPerPage
+            const endRead = startRead + itemsPerPage
+
+            setUnreadNotifications(unread.slice(startUnread, endUnread))
+            setReadNotifications(read.slice(startRead, endRead))
+
         } catch (error) {
             console.error('Error loading client notifications:', error)
         } finally {
@@ -68,7 +79,11 @@ export default function AdminClientsNotifications() {
                 message: result.message
             })
 
-            await loadNotifications()
+            // ✅ Recargar notificaciones y resetear a página 1
+            setUnreadPage(1)
+            setReadPage(1)
+            await loadAllNotifications()
+            updateUnreadCount()
 
             setTimeout(() => {
                 setGenerateResult(null)
@@ -91,14 +106,18 @@ export default function AdminClientsNotifications() {
     const markAsRead = async (id) => {
         try {
             await api.notifications.markAsRead(id)
+
+            // ✅ Mover la notificación de unread a read
             const movedNotification = unreadNotifications.find(n => n.id === id)
             if (movedNotification) {
                 setUnreadNotifications(prev => prev.filter(n => n.id !== id))
-                setReadNotifications(prev => [movedNotification, ...prev])
                 setUnreadTotal(prev => prev - 1)
                 setReadTotal(prev => prev + 1)
+                // Agregar a read (al inicio)
+                setReadNotifications(prev => [movedNotification, ...prev])
+                setReadTotalPages(Math.ceil((readTotal + 1) / itemsPerPage) || 1)
             }
-            await loadNotifications()
+
             updateUnreadCount()
         } catch (error) {
             console.error('Error marking as read:', error)
@@ -108,9 +127,22 @@ export default function AdminClientsNotifications() {
 
     // Marcar todas como leídas
     const markAllAsRead = async () => {
+        if (unreadTotal === 0) {
+            alert('No hay notificaciones no leídas')
+            return
+        }
+
         try {
             await api.notifications.markAllAsRead()
-            await loadNotifications()
+
+            // ✅ Mover todas las notificaciones no leídas a leídas
+            const allRead = [...unreadNotifications, ...readNotifications]
+            setReadNotifications(allRead)
+            setUnreadNotifications([])
+            setUnreadTotal(0)
+            setReadTotal(allRead.length)
+            setReadTotalPages(Math.ceil(allRead.length / itemsPerPage) || 1)
+
             updateUnreadCount()
             alert('✅ Todas las notificaciones marcadas como leídas')
         } catch (error) {
@@ -138,9 +170,11 @@ export default function AdminClientsNotifications() {
             if (isUnread) {
                 setUnreadNotifications(prev => prev.filter(n => n.id !== id))
                 setUnreadTotal(prev => prev - 1)
+                setUnreadTotalPages(Math.ceil((unreadTotal - 1) / itemsPerPage) || 1)
             } else {
                 setReadNotifications(prev => prev.filter(n => n.id !== id))
                 setReadTotal(prev => prev - 1)
+                setReadTotalPages(Math.ceil((readTotal - 1) / itemsPerPage) || 1)
             }
             alert('✅ Notificación eliminada correctamente')
             updateUnreadCount()
@@ -163,10 +197,25 @@ export default function AdminClientsNotifications() {
         }
     }
 
-    // Recargar cuando cambian las páginas
+    // ✅ Cambiar página
+    const handlePageChange = (newPage) => {
+        if (activeTab === 'unread') {
+            setUnreadPage(newPage)
+        } else {
+            setReadPage(newPage)
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // ✅ Recargar cuando cambian las páginas
     useEffect(() => {
-        loadNotifications()
+        loadAllNotifications()
     }, [unreadPage, readPage])
+
+    // ✅ Cargar al inicio
+    useEffect(() => {
+        loadAllNotifications()
+    }, [])
 
     const formatTimeAgo = (timestamp) => {
         const date = new Date(timestamp)
@@ -220,6 +269,7 @@ export default function AdminClientsNotifications() {
         return notificationsList.filter(n => n.type === filter)
     }
 
+    // ✅ Paginación UI
     const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         if (totalPages <= 1) return null
 
@@ -249,7 +299,7 @@ export default function AdminClientsNotifications() {
                 {startPage > 1 && (
                     <>
                         <button onClick={() => onPageChange(1)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">1</button>
-                        {startPage > 2 && <span className="px-2">...</span>}
+                        {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
                     </>
                 )}
 
@@ -258,8 +308,8 @@ export default function AdminClientsNotifications() {
                         key={page}
                         onClick={() => onPageChange(page)}
                         className={`px-3 py-1.5 text-sm border rounded-lg transition-colors ${currentPage === page
-                            ? 'bg-primary text-white border-primary'
-                            : 'hover:bg-gray-50'
+                                ? 'bg-primary text-white border-primary'
+                                : 'hover:bg-gray-50'
                             }`}
                     >
                         {page}
@@ -268,7 +318,7 @@ export default function AdminClientsNotifications() {
 
                 {endPage < totalPages && (
                     <>
-                        {endPage < totalPages - 1 && <span className="px-2">...</span>}
+                        {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
                         <button onClick={() => onPageChange(totalPages)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 transition-colors">
                             {totalPages}
                         </button>
@@ -294,13 +344,14 @@ export default function AdminClientsNotifications() {
     const currentPage = activeTab === 'unread' ? unreadPage : readPage
     const currentTotalPages = activeTab === 'unread' ? unreadTotalPages : readTotalPages
 
-    const handlePageChange = (newPage) => {
-        if (activeTab === 'unread') {
-            setUnreadPage(newPage)
-        } else {
-            setReadPage(newPage)
-        }
+    // ✅ Calcular rango de registros mostrados
+    const getDisplayRange = () => {
+        const start = (currentPage - 1) * itemsPerPage + 1
+        const end = Math.min(currentPage * itemsPerPage, currentTotal)
+        return { start, end }
     }
+
+    const { start, end } = getDisplayRange()
 
     if (loading && unreadNotifications.length === 0 && readNotifications.length === 0) {
         return (
@@ -533,12 +584,31 @@ export default function AdminClientsNotifications() {
                 )}
             </div>
 
-            {/* Paginación */}
+            {/* ✅ Paginación */}
             <Pagination
                 currentPage={currentPage}
                 totalPages={currentTotalPages}
                 onPageChange={handlePageChange}
             />
+
+            {/* ✅ Información de paginación */}
+            {currentTotal > 0 && (
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-600">
+                        Mostrando {start} - {end} de {currentTotal} notificaciones
+                        {filter !== 'all' && (
+                            <span className="ml-2 text-primary">
+                                (filtrado por {filter === 'new_user' ? 'Nuevos Registros' :
+                                    filter === 'inactive_user' ? 'Cuentas Inactivas' :
+                                        filter === 'admin_user' ? 'Administradores' : 'Todos'})
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        Página {currentPage} de {currentTotalPages}
+                    </div>
+                </div>
+            )}
 
             {/* Modal de confirmación para eliminar */}
             {showConfirmModal && (
