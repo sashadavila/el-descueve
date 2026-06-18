@@ -17,6 +17,22 @@ export default function OrderTrackingPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedOrderId, setSelectedOrderId] = useState(null)
 
+    // ✅ Mapeo de estados de orden (coincide con el backend)
+    const orderStatusMap = {
+        'PENDING': { label: 'Pendiente', color: 'bg-yellow-500', icon: 'pending' },
+        'PAID': { label: 'Pagado', color: 'bg-blue-500', icon: 'payments' },
+        'CANCELLED': { label: 'Cancelado', color: 'bg-red-500', icon: 'cancel' },
+        'DELIVERED': { label: 'Entregado', color: 'bg-green-500', icon: 'check_circle' }
+    }
+
+    // ✅ Mapeo de estados de envío (coincide con el backend)
+    const shipmentStatusMap = {
+        'Pedido Recibido': { label: 'Pedido Recibido', color: 'bg-yellow-500', icon: 'task_alt' },
+        'En Preparación': { label: 'En Preparación', color: 'bg-blue-500', icon: 'inventory_2' },
+        'En Tránsito': { label: 'En Tránsito', color: 'bg-orange-500', icon: 'local_shipping' },
+        'Entregado': { label: 'Entregado', color: 'bg-green-500', icon: 'check_circle' }
+    }
+
     // Función para validar si es un UUID
     const isValidUUID = (id) => {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,6 +43,28 @@ export default function OrderTrackingPage() {
     const isValidTrackingNumber = (number) => {
         const trackingRegex = /^ELD-\d{8}-[A-Z0-9]{8}-\d{3}$/i;
         return trackingRegex.test(number);
+    }
+
+    // ✅ Obtener badge de estado de orden
+    const getOrderStatusBadge = (status) => {
+        const info = orderStatusMap[status] || { label: status || 'Desconocido', color: 'bg-gray-500' }
+        return (
+            <span className={`${info.color} text-white px-3 py-1 text-xs font-bold uppercase rounded-full flex items-center gap-1`}>
+                <Icon name={info.icon} className="text-xs" />
+                {info.label}
+            </span>
+        )
+    }
+
+    // ✅ Obtener badge de estado de envío
+    const getShipmentStatusBadge = (status) => {
+        const info = shipmentStatusMap[status] || { label: status || 'Desconocido', color: 'bg-gray-500' }
+        return (
+            <span className={`${info.color} text-white px-3 py-1 text-xs font-bold uppercase rounded-full flex items-center gap-1`}>
+                <Icon name={info.icon} className="text-xs" />
+                {info.label}
+            </span>
+        )
     }
 
     // Cargar las órdenes del usuario autenticado
@@ -44,17 +82,22 @@ export default function OrderTrackingPage() {
                 setLoading(true)
                 setError(null)
 
+                console.log('📊 [OrderTracking] Obteniendo órdenes del usuario...')
                 const allOrders = await api.orders.getAll()
+                console.log('📊 [OrderTracking] Todas las órdenes:', allOrders)
 
                 let userOrdersList = allOrders
                 if (user?.role !== 'admin') {
                     userOrdersList = allOrders.filter(order => order.userId === user?.id)
                 }
 
+                // ✅ Ordenar por fecha descendente (más recientes primero)
                 userOrdersList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
+                console.log('📊 [OrderTracking] Órdenes del usuario:', userOrdersList)
                 setUserOrders(userOrdersList)
 
+                // Si hay un orderId en la URL, seleccionar esa orden
                 if (orderId && isValidUUID(orderId)) {
                     const foundOrder = userOrdersList.find(o => o.id === orderId)
                     if (foundOrder) {
@@ -85,17 +128,21 @@ export default function OrderTrackingPage() {
 
         try {
             // Obtener la orden
+            console.log('📦 [OrderTracking] Cargando orden:', orderId)
             const orderData = await api.orders.getById(orderId)
+            console.log('📦 [OrderTracking] Datos de la orden:', orderData)
             setSelectedOrder(orderData)
 
-            // Obtener el seguimiento usando api.tracking
+            // Obtener el seguimiento
             try {
+                console.log('📦 [OrderTracking] Buscando tracking para orden:', orderId)
                 const trackingData = await api.tracking.getByOrderId(orderId)
+                console.log('📦 [OrderTracking] Tracking encontrado:', trackingData)
                 if (trackingData) {
                     setTracking(trackingData)
                 } else {
                     // Si no existe tracking, crearlo automáticamente
-                    console.log('📦 Creando tracking para la orden...')
+                    console.log('📦 [OrderTracking] Creando tracking para la orden...')
                     const newTracking = await api.shipments.createFromOrder(orderId, orderData.userId)
                     setTracking(newTracking)
                 }
@@ -103,9 +150,33 @@ export default function OrderTrackingPage() {
                 console.error('Error loading tracking:', err)
                 // Si el error es 404 o "not found", crear tracking
                 if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
-                    console.log('📦 Creando tracking para la orden (404)...')
-                    const newTracking = await api.shipments.createFromOrder(orderId, orderData.userId)
-                    setTracking(newTracking)
+                    console.log('📦 [OrderTracking] Creando tracking para la orden (404)...')
+                    try {
+                        const newTracking = await api.shipments.createFromOrder(orderId, orderData.userId)
+                        setTracking(newTracking)
+                    } catch (createErr) {
+                        console.error('Error creating tracking:', createErr)
+                        // Crear tracking temporal
+                        const tempTracking = {
+                            id: 'temp',
+                            orderId: orderId,
+                            userId: orderData.userId,
+                            trackingNumber: `PENDIENTE-${orderId.slice(-8)}`,
+                            carrier: 'propio',
+                            status: 'Pedido Recibido',
+                            trackingHistory: [
+                                {
+                                    status: 'Pedido Recibido',
+                                    location: 'Planta La Serena',
+                                    timestamp: new Date(),
+                                    description: 'Pedido recibido - Seguimiento en proceso de activación'
+                                }
+                            ],
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        }
+                        setTracking(tempTracking)
+                    }
                 } else {
                     throw err
                 }
@@ -114,7 +185,7 @@ export default function OrderTrackingPage() {
             console.error('Error loading tracking:', err)
             setError(err.message || 'Error al cargar el seguimiento del pedido')
 
-            // Si hay error, crear un tracking básico para mostrar algo
+            // Si hay error pero tenemos la orden, crear un tracking básico
             if (selectedOrder) {
                 const tempTracking = {
                     id: 'temp',
@@ -153,9 +224,6 @@ export default function OrderTrackingPage() {
         setError(null)
 
         try {
-            let orderData = null
-            let trackingData = null
-
             if (isValidUUID(searchTerm)) {
                 const orderExists = userOrders.find(o => o.id === searchTerm)
                 if (orderExists) {
@@ -169,7 +237,7 @@ export default function OrderTrackingPage() {
                 }
             } else if (isValidTrackingNumber(searchTerm)) {
                 try {
-                    trackingData = await api.tracking.getByTrackingNumber(searchTerm)
+                    const trackingData = await api.tracking.getByTrackingNumber(searchTerm)
                     const orderBelongsToUser = userOrders.find(o => o.id === trackingData.orderId)
                     if (orderBelongsToUser || user?.role === 'admin') {
                         setSelectedOrderId(trackingData.orderId)
@@ -202,13 +270,13 @@ export default function OrderTrackingPage() {
     // Calcular progreso del seguimiento
     const getProgressSteps = () => {
         const steps = [
-            { key: 'RECEIVED', label: 'Pedido Recibido', icon: 'task_alt' },
-            { key: 'PREPARING', label: 'En Preparación', icon: 'inventory_2' },
-            { key: 'TRANSIT', label: 'En Tránsito', icon: 'local_shipping' },
-            { key: 'DELIVERED', label: 'Entregado', icon: 'package_2' }
+            { key: 'Pedido Recibido', label: 'Pedido Recibido', icon: 'task_alt' },
+            { key: 'En Preparación', label: 'En Preparación', icon: 'inventory_2' },
+            { key: 'En Tránsito', label: 'En Tránsito', icon: 'local_shipping' },
+            { key: 'Entregado', label: 'Entregado', icon: 'check_circle' }
         ]
 
-        const currentStatus = tracking?.status || 'RECEIVED'
+        const currentStatus = tracking?.status || 'Pedido Recibido'
         let currentIndex = steps.findIndex(s => s.key === currentStatus)
         if (currentIndex === -1) currentIndex = 0
 
@@ -228,21 +296,6 @@ export default function OrderTrackingPage() {
             hour: '2-digit',
             minute: '2-digit'
         })
-    }
-
-    const getStatusBadge = (status) => {
-        const statusMap = {
-            'PENDING': { label: 'Pendiente', color: 'bg-yellow-500' },
-            'PAID': { label: 'Pagado', color: 'bg-blue-500' },
-            'CANCELLED': { label: 'Cancelado', color: 'bg-red-500' },
-            'DELIVERED': { label: 'Entregado', color: 'bg-green-500' }
-        }
-        const info = statusMap[status] || { label: status, color: 'bg-gray-500' }
-        return (
-            <span className={`${info.color} text-white px-2 py-1 text-xs font-bold uppercase rounded`}>
-                {info.label}
-            </span>
-        )
     }
 
     // Mostrar loading mientras verifica autenticación
@@ -313,7 +366,7 @@ export default function OrderTrackingPage() {
                         <div className="p-4 border-b bg-surface-container-low">
                             <h2 className="font-bold text-primary uppercase flex items-center gap-2">
                                 <Icon name="receipt_long" />
-                                Mis Pedidos
+                                Mis Pedidos ({userOrders.length})
                             </h2>
                         </div>
 
@@ -332,30 +385,43 @@ export default function OrderTrackingPage() {
                                     </Link>
                                 </div>
                             ) : (
-                                userOrders.map(order => (
-                                    <button
-                                        key={order.id}
-                                        onClick={() => handleSelectOrder(order)}
-                                        className={`w-full p-4 text-left border-b hover:bg-gray-50 transition-colors ${selectedOrderId === order.id ? 'bg-primary/5 border-l-4 border-primary' : ''
-                                            }`}
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="font-bold text-primary text-sm font-mono">
-                                                {order.id.slice(-8).toUpperCase()}
-                                            </span>
-                                            {getStatusBadge(order.status)}
-                                        </div>
-                                        <p className="text-xs text-gray-400 mt-1">
-                                            Fecha: {new Date(order.createdAt).toLocaleDateString('es-CL')}
-                                        </p>
-                                        <p className="text-sm font-bold text-[#FC9430] mt-2">
-                                            ${(parseFloat(order.total) || 0).toLocaleString()} CLP
-                                        </p>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {order.items?.length || 0} productos
-                                        </p>
-                                    </button>
-                                ))
+                                userOrders.map(order => {
+                                    const orderStatus = orderStatusMap[order.status] || { label: order.status || 'Desconocido', color: 'bg-gray-500' }
+                                    const total = parseFloat(order.total) || 0
+
+                                    return (
+                                        <button
+                                            key={order.id}
+                                            onClick={() => handleSelectOrder(order)}
+                                            className={`w-full p-4 text-left border-b hover:bg-gray-50 transition-colors ${selectedOrderId === order.id ? 'bg-primary/5 border-l-4 border-primary' : ''
+                                                }`}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="font-bold text-primary text-sm font-mono">
+                                                    #{order.id.slice(-8).toUpperCase()}
+                                                </span>
+                                                <span className={`${orderStatus.color} text-white px-2 py-0.5 text-[10px] font-bold uppercase rounded-full flex items-center gap-1`}>
+                                                    <Icon name={orderStatus.icon} className="text-[10px]" />
+                                                    {orderStatus.label}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-gray-400">
+                                                📅 {formatDate(order.createdAt)}
+                                            </p>
+                                            <p className="text-sm font-bold text-[#FC9430] mt-2">
+                                                ${total.toLocaleString()} CLP
+                                            </p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                📦 {order.items?.length || 0} productos · {order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0} unidades
+                                            </p>
+                                            {tracking?.trackingNumber && selectedOrderId === order.id && (
+                                                <p className="text-xs text-primary mt-1 font-mono">
+                                                    🔍 {tracking.trackingNumber}
+                                                </p>
+                                            )}
+                                        </button>
+                                    )
+                                })
                             )}
                         </div>
                     </div>
@@ -380,24 +446,22 @@ export default function OrderTrackingPage() {
                             <div className="bg-white border border-outline-variant rounded-lg p-6">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-primary mb-1 font-mono">
-                                            {selectedOrder.id.slice(-8).toUpperCase()}
+                                        <h2 className="text-2xl font-bold text-primary mb-1 flex items-center gap-2">
+                                            <span className="font-mono">#{selectedOrder.id.slice(-8).toUpperCase()}</span>
                                         </h2>
-                                        <p className="text-gray-500">
-                                            Número de seguimiento: {tracking?.trackingNumber || 'Generando...'}
+                                        <p className="text-gray-500 text-sm">
+                                            📅 {formatDate(selectedOrder.createdAt)}
                                         </p>
+                                        {tracking?.trackingNumber && (
+                                            <p className="text-sm text-primary font-mono mt-1">
+                                                🔍 N° Seguimiento: {tracking.trackingNumber}
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className={`px-4 py-2 rounded-full text-white font-bold ${tracking?.status === 'Entregado' ? 'bg-green-500' :
-                                        tracking?.status === 'En Tránsito' ? 'bg-orange-500' :
-                                            tracking?.status === 'En Preparación' ? 'bg-blue-500' : 'bg-yellow-500'
-                                        }`}>
-                                        {tracking?.status || 'Pedido Recibido'}
+                                    <div className="flex flex-col items-end gap-2">
+                                        {getOrderStatusBadge(selectedOrder.status)}
+                                        {tracking && getShipmentStatusBadge(tracking.status)}
                                     </div>
-                                </div>
-                                <div className="mt-4 pt-4 border-t">
-                                    <p className="text-sm text-gray-500">
-                                        Fecha del pedido: {new Date(selectedOrder.createdAt).toLocaleString('es-CL')}
-                                    </p>
                                 </div>
                             </div>
 
@@ -406,7 +470,7 @@ export default function OrderTrackingPage() {
                                 <div className="bg-white border border-outline-variant rounded-lg p-6">
                                     <h3 className="font-bold text-primary mb-6 flex items-center gap-2">
                                         <Icon name="timeline" />
-                                        Estado del Pedido
+                                        Estado del Envío
                                     </h3>
 
                                     <div className="relative">
@@ -428,8 +492,8 @@ export default function OrderTrackingPage() {
                                             {progressSteps.map((step, index) => (
                                                 <div key={step.key} className="flex flex-row md:flex-col items-center gap-3 md:gap-2 w-full md:w-auto">
                                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${step.completed
-                                                        ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
-                                                        : 'bg-gray-200 text-gray-400'
+                                                            ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
+                                                            : 'bg-gray-200 text-gray-400'
                                                         }`}>
                                                         <Icon name={step.icon} className="text-xl" />
                                                     </div>
@@ -520,40 +584,60 @@ export default function OrderTrackingPage() {
                                     Productos del Pedido
                                 </h3>
                                 <div className="space-y-3">
-                                    {selectedOrder.items?.map((item, index) => (
-                                        <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
-                                            <div>
-                                                <p className="font-medium">{item.product?.name || 'Producto'}</p>
-                                                <p className="text-xs text-gray-400">
-                                                    Cantidad: {item.quantity} | Ref: {item.product?.reference || 'N/A'}
-                                                </p>
+                                    {selectedOrder.items?.map((item, index) => {
+                                        const subtotal = parseFloat(item.subtotal) || 0
+                                        const unitPrice = parseFloat(item.unitPrice) || 0
+                                        return (
+                                            <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
+                                                <div>
+                                                    <p className="font-medium">{item.product?.name || 'Producto'}</p>
+                                                    <p className="text-xs text-gray-400">
+                                                        Ref: {item.product?.reference || 'N/A'} · Cantidad: {item.quantity || 0}
+                                                        {unitPrice > 0 && ` · $${unitPrice.toLocaleString()} c/u`}
+                                                    </p>
+                                                </div>
+                                                <p className="font-bold text-primary">${subtotal.toLocaleString()}</p>
                                             </div>
-                                            <p className="font-bold text-primary">${(parseFloat(item.subtotal) || 0).toLocaleString()}</p>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                                 <div className="mt-4 pt-4 border-t flex justify-between items-center">
                                     <span className="font-bold text-lg text-primary">Total</span>
-                                    <span className="font-bold text-2xl text-[#FC9430]">${(parseFloat(selectedOrder.total) || 0).toLocaleString()} CLP</span>
+                                    <span className="font-bold text-2xl text-[#FC9430]">
+                                        ${(parseFloat(selectedOrder.total) || 0).toLocaleString()} CLP
+                                    </span>
                                 </div>
                             </div>
 
                             {/* Botones de acción */}
-                            <div className="flex gap-4">
+                            <div className="flex flex-wrap gap-4">
                                 <Link
                                     to="/catalogo"
-                                    className="flex-1 bg-[#FC9430] text-white py-3 font-bold uppercase text-center rounded-lg hover:bg-[#e0852b] transition-colors"
+                                    className="flex-1 min-w-[200px] bg-[#FC9430] text-white py-3 font-bold uppercase text-center rounded-lg hover:bg-[#e0852b] transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Icon name="shopping_cart" className="text-sm inline mr-2" />
+                                    <Icon name="shopping_cart" className="text-sm" />
                                     Seguir comprando
                                 </Link>
                                 <Link
                                     to={`/factura/${selectedOrder.id}`}
-                                    className="flex-1 border-2 border-primary text-primary py-3 font-bold uppercase text-center rounded-lg hover:bg-primary/5 transition-colors"
+                                    className="flex-1 min-w-[200px] border-2 border-primary text-primary py-3 font-bold uppercase text-center rounded-lg hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Icon name="receipt" className="text-sm inline mr-2" />
+                                    <Icon name="receipt" className="text-sm" />
                                     Ver factura
                                 </Link>
+                                {tracking?.trackingNumber && (
+                                    <button
+                                        onClick={() => {
+                                            const trackingNumber = tracking.trackingNumber
+                                            navigator.clipboard.writeText(trackingNumber)
+                                            alert('✅ Número de seguimiento copiado al portapapeles')
+                                        }}
+                                        className="flex-1 min-w-[200px] border-2 border-gray-300 text-gray-700 py-3 font-bold uppercase text-center rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Icon name="content_copy" className="text-sm" />
+                                        Copiar seguimiento
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}
