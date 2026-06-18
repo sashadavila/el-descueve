@@ -607,33 +607,6 @@ export default function OrderTrackingPage() {
                                 </div>
                             )}
 
-                            {/* Historial de seguimiento */}
-                            {tracking?.trackingHistory && tracking.trackingHistory.length > 0 && (
-                                <div className="bg-white border border-outline-variant rounded-lg p-6">
-                                    <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
-                                        <Icon name="history" />
-                                        Historial de Seguimiento
-                                    </h3>
-                                    <div className="space-y-4">
-                                        {[...tracking.trackingHistory].reverse().map((event, index) => (
-                                            <div key={index} className="flex gap-3 pb-3 border-b last:border-0">
-                                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                                    <Icon name="check_circle" className="text-primary text-sm" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex flex-wrap justify-between items-start gap-2">
-                                                        <p className="font-bold text-primary">{event.status}</p>
-                                                        <p className="text-xs text-gray-400">{formatDate(event.timestamp)}</p>
-                                                    </div>
-                                                    <p className="text-sm text-gray-600">{event.description}</p>
-                                                    <p className="text-xs text-gray-400 mt-1">📍 {event.location}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
                             {/* Resumen de productos */}
                             <div className="bg-white border border-outline-variant rounded-lg p-6">
                                 <h3 className="font-bold text-primary mb-4 flex items-center gap-2">
