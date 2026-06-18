@@ -7,6 +7,7 @@ import api from '../../../../config/api'
 export default function AdminOrdersDirectory() {
     const [orders, setOrders] = useState([])
     const [users, setUsers] = useState([])
+    const [shipments, setShipments] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [searchTerm, setSearchTerm] = useState('')
@@ -17,16 +18,25 @@ export default function AdminOrdersDirectory() {
     const [newStatus, setNewStatus] = useState('')
     const [updating, setUpdating] = useState(false)
 
+    // ✅ Estados de orden (sin Entregado porque viene de envíos)
     const statusOptions = [
-        { value: 'PENDING', label: 'Pendiente', color: 'bg-yellow-500' },
+        { value: 'PENDING', label: 'No Pagado', color: 'bg-yellow-500' },
         { value: 'PAID', label: 'Pagado', color: 'bg-blue-500' },
         { value: 'CANCELLED', label: 'Cancelado', color: 'bg-red-500' },
-        { value: 'DELIVERED', label: 'Entregado', color: 'bg-green-500' }
     ]
+
+    // ✅ Mapeo de estados de envío
+    const shipmentStatusMap = {
+        'Pedido Recibido': { label: 'Pedido Recibido', color: 'bg-yellow-500', icon: 'task_alt' },
+        'En Preparación': { label: 'En Preparación', color: 'bg-blue-500', icon: 'inventory_2' },
+        'En Tránsito': { label: 'En Tránsito', color: 'bg-orange-500', icon: 'local_shipping' },
+        'Entregado': { label: 'Entregado', color: 'bg-green-500', icon: 'check_circle' }
+    }
 
     useEffect(() => {
         fetchOrders()
         fetchUsers()
+        fetchShipments()
     }, [])
 
     const fetchOrders = async () => {
@@ -45,7 +55,6 @@ export default function AdminOrdersDirectory() {
     const fetchUsers = async () => {
         try {
             const usersData = await api.admin.getAllUsers()
-            // Crear un mapa de usuarios por ID para búsqueda rápida
             const userMap = {}
             usersData.forEach(user => {
                 userMap[user.id] = user
@@ -53,6 +62,19 @@ export default function AdminOrdersDirectory() {
             setUsers(userMap)
         } catch (err) {
             console.error('Error fetching users:', err)
+        }
+    }
+
+    const fetchShipments = async () => {
+        try {
+            const shipmentsData = await api.shipments.getAll()
+            const shipmentMap = {}
+            shipmentsData.data?.forEach(shipment => {
+                shipmentMap[shipment.orderId] = shipment
+            })
+            setShipments(shipmentMap)
+        } catch (err) {
+            console.error('Error fetching shipments:', err)
         }
     }
 
@@ -86,16 +108,65 @@ export default function AdminOrdersDirectory() {
         setShowDetailModal(true)
     }
 
-    const getStatusBadge = (status) => {
+    // ✅ Obtener badge de estado de orden
+    const getOrderStatusBadge = (status) => {
         const option = statusOptions.find(opt => opt.value === status)
+        if (option) {
+            return (
+                <span className={`${option.color} text-white px-2 py-1 text-xs font-bold uppercase rounded`}>
+                    {option.label}
+                </span>
+            )
+        }
+        // Si no está en las opciones, mostrar el estado original
         return (
-            <span className={`${option?.color || 'bg-gray-500'} text-white px-2 py-1 text-xs font-bold uppercase rounded`}>
-                {option?.label || status}
+            <span className="bg-gray-500 text-white px-2 py-1 text-xs font-bold uppercase rounded">
+                {status}
             </span>
         )
     }
 
-    // Obtener nombre del cliente por ID
+    // ✅ Obtener badge de estado de envío
+    const getShipmentStatusBadge = (shipmentStatus) => {
+        if (!shipmentStatus) {
+            return (
+                <span className="bg-gray-400 text-white px-2 py-1 text-xs font-bold uppercase rounded">
+                    Sin envío
+                </span>
+            )
+        }
+        const info = shipmentStatusMap[shipmentStatus] || {
+            label: shipmentStatus,
+            color: 'bg-gray-500',
+            icon: 'help'
+        }
+        return (
+            <span className={`${info.color} text-white px-2 py-1 text-xs font-bold uppercase rounded flex items-center gap-1`}>
+                <Icon name={info.icon} className="text-[10px]" />
+                {info.label}
+            </span>
+        )
+    }
+
+    // ✅ Obtener el estado del envío para una orden
+    const getShipmentStatusForOrder = (orderId) => {
+        const shipment = shipments[orderId]
+        return shipment?.status || null
+    }
+
+    // ✅ Obtener el tracking number para una orden
+    const getTrackingNumberForOrder = (orderId) => {
+        const shipment = shipments[orderId]
+        return shipment?.trackingNumber || null
+    }
+
+    // ✅ Obtener el carrier para una orden
+    const getCarrierForOrder = (orderId) => {
+        const shipment = shipments[orderId]
+        if (!shipment) return null
+        return shipment.carrier === 'externo' ? shipment.carrierName || 'Externo' : 'Envío Propio'
+    }
+
     const getClientName = (userId) => {
         if (users[userId]) {
             return users[userId].name
@@ -103,7 +174,6 @@ export default function AdminOrdersDirectory() {
         return userId?.slice(-8) || 'N/A'
     }
 
-    // Obtener email del cliente por ID
     const getClientEmail = (userId) => {
         if (users[userId]) {
             return users[userId].email
@@ -111,7 +181,6 @@ export default function AdminOrdersDirectory() {
         return ''
     }
 
-    // Obtener empresa del cliente por ID
     const getClientCompany = (userId) => {
         if (users[userId]) {
             return users[userId].company
@@ -119,7 +188,6 @@ export default function AdminOrdersDirectory() {
         return null
     }
 
-    // Obtener teléfono del cliente por ID
     const getClientPhone = (userId) => {
         if (users[userId]) {
             return users[userId].phone
@@ -127,6 +195,7 @@ export default function AdminOrdersDirectory() {
         return null
     }
 
+    // ✅ Filtrado de órdenes
     const filteredOrders = orders.filter(order => {
         const clientName = getClientName(order.userId).toLowerCase()
         const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -139,13 +208,12 @@ export default function AdminOrdersDirectory() {
         return orders.filter(o => o.status === status).length
     }
 
-    // Calcular valores para el modal de detalle
     const calculateOrderDetails = () => {
         if (!selectedOrder) return { subtotal: 0, iva: 0, total: 0 }
 
         const subtotal = selectedOrder.items?.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0) || parseFloat(selectedOrder.total) || 0
         const iva = subtotal * 0.19
-        const total = subtotal + 4500 + iva // 4500 es el envío
+        const total = subtotal + 4500 + iva
 
         return { subtotal, iva, total }
     }
@@ -188,6 +256,18 @@ export default function AdminOrdersDirectory() {
                             </div>
                         </div>
                     ))}
+                    {/* ✅ Tarjeta de estado de envío */}
+                    <div
+                        className="bg-green-500 bg-opacity-10 rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-all"
+                        onClick={() => setFilterStatus('DELIVERED')}
+                    >
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-bold text-gray-700">Estado Envío</span>
+                            <span className="bg-green-500 text-white text-sm font-bold px-2 py-0.5 rounded-full">
+                                {orders.filter(o => getShipmentStatusForOrder(o.id) === 'Entregado').length}
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Filtros */}
@@ -213,6 +293,7 @@ export default function AdminOrdersDirectory() {
                         {statusOptions.map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
+                        <option value="DELIVERED">Entregado (Envío)</option>
                     </select>
                     <button
                         onClick={() => {
@@ -244,90 +325,118 @@ export default function AdminOrdersDirectory() {
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Productos</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Total</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Estado</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">Envío</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredOrders.length === 0 ? (
                                     <tr>
-                                        <td colSpan="8" className="text-center py-8 text-gray-500">
+                                        <td colSpan="9" className="text-center py-8 text-gray-500">
                                             No se encontraron pedidos
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredOrders.map(order => (
-                                        <tr key={order.id} className="border-t hover:bg-gray-50">
-                                            <td className="px-4 py-3">
-                                                <div className="font-mono text-sm font-bold text-primary">
-                                                    {order.id.slice(-8).toUpperCase()}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="font-medium text-gray-800">
-                                                    {getClientName(order.userId)}
-                                                </div>
-                                                {getClientCompany(order.userId) && (
-                                                    <div className="text-xs text-gray-500">
-                                                        {getClientCompany(order.userId)}
+                                    filteredOrders.map(order => {
+                                        const shipmentStatus = getShipmentStatusForOrder(order.id)
+                                        const trackingNumber = getTrackingNumberForOrder(order.id)
+                                        const carrier = getCarrierForOrder(order.id)
+
+                                        return (
+                                            <tr key={order.id} className="border-t hover:bg-gray-50">
+                                                <td className="px-4 py-3">
+                                                    <div className="font-mono text-sm font-bold text-primary">
+                                                        {order.id.slice(-8).toUpperCase()}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="text-sm text-gray-600">
-                                                    {getClientEmail(order.userId)}
-                                                </div>
-                                                {getClientPhone(order.userId) && (
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="font-medium text-gray-800">
+                                                        {getClientName(order.userId)}
+                                                    </div>
+                                                    {getClientCompany(order.userId) && (
+                                                        <div className="text-xs text-gray-500">
+                                                            {getClientCompany(order.userId)}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="text-sm text-gray-600">
+                                                        {getClientEmail(order.userId)}
+                                                    </div>
+                                                    {getClientPhone(order.userId) && (
+                                                        <div className="text-xs text-gray-400">
+                                                            {getClientPhone(order.userId)}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm">
+                                                    {new Date(order.createdAt).toLocaleDateString('es-CL')}
                                                     <div className="text-xs text-gray-400">
-                                                        {getClientPhone(order.userId)}
+                                                        {new Date(order.createdAt).toLocaleTimeString('es-CL')}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm">
-                                                {new Date(order.createdAt).toLocaleDateString('es-CL')}
-                                                <div className="text-xs text-gray-400">
-                                                    {new Date(order.createdAt).toLocaleTimeString('es-CL')}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="text-sm">{order.items?.length || 0} productos</div>
-                                                <div className="text-xs text-gray-500">
-                                                    {order.items?.reduce((sum, item) => sum + item.quantity, 0)} unidades
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 font-bold text-primary">
-                                                ${(parseFloat(order.total) || 0).toLocaleString()}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {getStatusBadge(order.status)}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => openDetailModal(order)}
-                                                        className="text-primary hover:text-[#FC9430] transition-colors"
-                                                        title="Ver detalles"
-                                                    >
-                                                        <Icon name="visibility" className="text-sm" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => openStatusModal(order)}
-                                                        className="text-[#FC9430] hover:text-primary transition-colors"
-                                                        title="Cambiar estado"
-                                                    >
-                                                        <Icon name="edit" className="text-sm" />
-                                                    </button>
-                                                    <Link
-                                                        to={`/factura/${order.id}`}
-                                                        target="_blank"
-                                                        className="text-green-600 hover:text-green-800 transition-colors"
-                                                        title="Ver factura"
-                                                    >
-                                                        <Icon name="receipt" className="text-sm" />
-                                                    </Link>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="text-sm">{order.items?.length || 0} productos</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {order.items?.reduce((sum, item) => sum + item.quantity, 0)} unidades
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 font-bold text-primary">
+                                                    ${(parseFloat(order.total) || 0).toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {getOrderStatusBadge(order.status)}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col gap-1">
+                                                        {shipmentStatus ? (
+                                                            <>
+                                                                {getShipmentStatusBadge(shipmentStatus)}
+                                                                {trackingNumber && (
+                                                                    <span className="text-[10px] text-gray-400 font-mono">
+                                                                        {trackingNumber}
+                                                                    </span>
+                                                                )}
+                                                                {carrier && (
+                                                                    <span className="text-[10px] text-gray-400">
+                                                                        {carrier}
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-400">Sin envío</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => openDetailModal(order)}
+                                                            className="text-primary hover:text-[#FC9430] transition-colors"
+                                                            title="Ver detalles"
+                                                        >
+                                                            <Icon name="visibility" className="text-sm" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => openStatusModal(order)}
+                                                            className="text-[#FC9430] hover:text-primary transition-colors"
+                                                            title="Cambiar estado"
+                                                        >
+                                                            <Icon name="edit" className="text-sm" />
+                                                        </button>
+                                                        <Link
+                                                            to={`/factura/${order.id}`}
+                                                            target="_blank"
+                                                            className="text-green-600 hover:text-green-800 transition-colors"
+                                                            title="Ver factura"
+                                                        >
+                                                            <Icon name="receipt" className="text-sm" />
+                                                        </Link>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
                                 )}
                             </tbody>
                         </table>
@@ -367,6 +476,31 @@ export default function AdminOrdersDirectory() {
                                 <p className="font-bold text-[#FC9430]">${(parseFloat(selectedOrder.total) || 0).toLocaleString()}</p>
                             </div>
 
+                            {/* ✅ Estado actual del envío (solo lectura) */}
+                            {(() => {
+                                const shipmentStatus = getShipmentStatusForOrder(selectedOrder.id)
+                                const trackingNumber = getTrackingNumberForOrder(selectedOrder.id)
+                                if (shipmentStatus) {
+                                    return (
+                                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                            <p className="text-xs text-gray-500 uppercase font-bold">Estado del Envío</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {getShipmentStatusBadge(shipmentStatus)}
+                                                {trackingNumber && (
+                                                    <span className="text-xs text-gray-400 font-mono">
+                                                        {trackingNumber}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                ⚠️ El estado del envío se gestiona desde la zona de envíos
+                                            </p>
+                                        </div>
+                                    )
+                                }
+                                return null
+                            })()}
+
                             <div className="mb-6">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">
                                     Nuevo Estado
@@ -380,11 +514,14 @@ export default function AdminOrdersDirectory() {
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
                                 </select>
+                                <p className="text-xs text-gray-400 mt-2">
+                                    * El estado "Entregado" se gestiona automáticamente desde el envío
+                                </p>
                             </div>
 
                             <div className="bg-blue-50 p-3 rounded-lg mb-4">
                                 <p className="text-xs text-blue-700">
-                                    <strong>Nota:</strong> Al cambiar el estado de la orden, se actualizará automáticamente el estado del envío asociado (si existe).
+                                    <strong>Nota:</strong> Al cambiar el estado de la orden, se actualizará el estado del envío asociado (si existe).
                                 </p>
                             </div>
 
@@ -438,13 +575,49 @@ export default function AdminOrdersDirectory() {
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-400 uppercase font-bold">Estado</p>
-                                    {getStatusBadge(selectedOrder.status)}
+                                    {getOrderStatusBadge(selectedOrder.status)}
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-400 uppercase font-bold">Última actualización</p>
                                     <p className="font-medium">{new Date(selectedOrder.updatedAt).toLocaleString('es-CL')}</p>
                                 </div>
                             </div>
+
+                            {/* Información del envío */}
+                            {(() => {
+                                const shipmentStatus = getShipmentStatusForOrder(selectedOrder.id)
+                                const trackingNumber = getTrackingNumberForOrder(selectedOrder.id)
+                                const carrier = getCarrierForOrder(selectedOrder.id)
+                                if (shipmentStatus || trackingNumber) {
+                                    return (
+                                        <div className="pb-4 border-b">
+                                            <h4 className="font-bold text-primary mb-3 flex items-center gap-2">
+                                                <Icon name="local_shipping" className="text-sm" />
+                                                Información del Envío
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <div>
+                                                    <p className="text-xs text-gray-400">Estado del Envío</p>
+                                                    {getShipmentStatusBadge(shipmentStatus)}
+                                                </div>
+                                                {trackingNumber && (
+                                                    <div>
+                                                        <p className="text-xs text-gray-400">N° Seguimiento</p>
+                                                        <p className="font-mono font-medium">{trackingNumber}</p>
+                                                    </div>
+                                                )}
+                                                {carrier && (
+                                                    <div>
+                                                        <p className="text-xs text-gray-400">Transportista</p>
+                                                        <p className="font-medium">{carrier}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                }
+                                return null
+                            })()}
 
                             {/* Información del cliente */}
                             <div className="pb-4 border-b">
