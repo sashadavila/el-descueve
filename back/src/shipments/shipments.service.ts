@@ -43,10 +43,7 @@ export class ShipmentsService {
             throw new ConflictException(`El número de seguimiento ${createShipmentDto.trackingNumber} ya existe`);
         }
 
-        // ✅ Asegurar que el estado inicial sea siempre 'Pedido Recibido'
         const initialStatus = createShipmentDto.status || ShipmentStatus.RECEIVED;
-
-        // ✅ Si el estado es 'Entregado' desde el principio, forzarlo a 'Pedido Recibido'
         const finalStatus = initialStatus === ShipmentStatus.DELIVERED
             ? ShipmentStatus.RECEIVED
             : initialStatus;
@@ -68,13 +65,13 @@ export class ShipmentsService {
 
         const saved = await this.shipmentsRepository.save(shipment);
 
-        // ✅ Actualizar la orden al estado correspondiente
         const orderStatus = this.mapShipmentStatusToOrderStatus(finalStatus);
         await this.ordersService.update(createShipmentDto.orderId, {
             status: orderStatus,
         });
 
         this.logger.log(`✅ Envío creado: ${saved.trackingNumber} para orden ${saved.orderId} - Estado: ${finalStatus}`);
+        this.logger.log(`📦 Orden ${saved.orderId} actualizada a estado: ${orderStatus}`);
 
         return saved;
     }
@@ -240,27 +237,23 @@ export class ShipmentsService {
         const oldStatus = shipment.status;
         const newStatus = updateStatusDto.status;
 
+        this.logger.log(`🔄 Actualizando estado de envío: ${oldStatus} → ${newStatus}`);
+
         if (oldStatus === newStatus) {
             throw new BadRequestException(`El envío ya está en estado ${newStatus}`);
         }
 
-        // ✅ Validar que no se pueda pasar de DELIVERED a otro estado
         if (oldStatus === ShipmentStatus.DELIVERED) {
             throw new BadRequestException('No se puede cambiar el estado de un envío ya entregado');
         }
 
-        // ✅ Validar que el estado sea uno de los permitidos
         if (!Object.values(ShipmentStatus).includes(newStatus)) {
             throw new BadRequestException(`Estado de envío inválido: ${newStatus}`);
         }
 
-        // Obtener ubicación según el nuevo estado
         const location = this.getLocationForStatus(newStatus);
-
-        // Obtener descripción según el cambio de estado
         const description = this.getDescriptionForStatusChange(oldStatus, newStatus);
 
-        // Agregar al historial
         const historyEntry = {
             status: newStatus,
             location: location,
@@ -283,13 +276,15 @@ export class ShipmentsService {
             shipment.deliveredAt = new Date();
         }
 
-        // ✅ Actualizar el estado de la orden relacionada
+        // ✅ ACTUALIZAR EL ESTADO DE LA ORDEN
         const orderStatus = this.mapShipmentStatusToOrderStatus(newStatus);
+        this.logger.log(`📦 Mapeo: ${newStatus} → ${orderStatus}`);
+
         await this.ordersService.update(shipment.orderId, {
             status: orderStatus,
         });
 
-        this.logger.log(`📦 Orden ${shipment.orderId} actualizada a estado: ${orderStatus} (por cambio de envío a ${newStatus})`);
+        this.logger.log(`📦 Orden ${shipment.orderId} actualizada a estado: ${orderStatus}`);
 
         const updated = await this.shipmentsRepository.save(shipment);
 
@@ -318,15 +313,17 @@ export class ShipmentsService {
         return descriptions[newStatus] || `Estado cambiado de ${oldStatus} a ${newStatus}`;
     }
 
-    // ✅ MAPEO CORREGIDO DE ESTADOS
+    // ✅ MAPEO CORREGIDO CON LOGS
     private mapShipmentStatusToOrderStatus(shipmentStatus: ShipmentStatus): string {
         const map = {
-            [ShipmentStatus.RECEIVED]: 'PENDING',      // Pedido Recibido → Pendiente
-            [ShipmentStatus.PREPARING]: 'PAID',         // En Preparación → Pagado
-            [ShipmentStatus.TRANSIT]: 'PAID',           // En Tránsito → Pagado
-            [ShipmentStatus.DELIVERED]: 'DELIVERED',    // Entregado → Entregado
+            [ShipmentStatus.RECEIVED]: 'PENDING',
+            [ShipmentStatus.PREPARING]: 'PAID',
+            [ShipmentStatus.TRANSIT]: 'PAID',
+            [ShipmentStatus.DELIVERED]: 'DELIVERED',
         };
-        return map[shipmentStatus] || 'PENDING';
+        const result = map[shipmentStatus] || 'PENDING';
+        this.logger.log(`📦 mapShipmentStatusToOrderStatus: ${shipmentStatus} → ${result}`);
+        return result;
     }
 
     async remove(id: string): Promise<{ message: string }> {
@@ -435,7 +432,6 @@ export class ShipmentsService {
 
         const trackingNumber = this.generateTrackingNumber(orderId);
 
-        // ✅ Asegurar que el estado inicial sea siempre 'Pedido Recibido'
         const initialHistory = [
             {
                 status: ShipmentStatus.RECEIVED,
@@ -456,13 +452,13 @@ export class ShipmentsService {
 
         const saved = await this.shipmentsRepository.save(shipment);
 
-        // ✅ Actualizar la orden al estado correspondiente
         const orderStatus = this.mapShipmentStatusToOrderStatus(ShipmentStatus.RECEIVED);
         await this.ordersService.update(orderId, {
             status: orderStatus,
         });
 
-        this.logger.log(`✅ Envío automático creado: ${saved.trackingNumber} para orden ${orderId} - Estado: Pedido Recibido`);
+        this.logger.log(`✅ Envío automático creado: ${saved.trackingNumber} para orden ${orderId} - Estado: ${ShipmentStatus.RECEIVED}`);
+        this.logger.log(`📦 Orden ${orderId} actualizada a estado: ${orderStatus}`);
 
         return saved;
     }
@@ -475,7 +471,6 @@ export class ShipmentsService {
     ): Promise<Shipment> {
         const shipment = await this.findOne(shipmentId);
 
-        // ✅ Validar que no se pueda agregar eventos a un envío entregado
         if (shipment.status === ShipmentStatus.DELIVERED) {
             throw new BadRequestException('No se pueden agregar eventos a un envío ya entregado');
         }
@@ -501,7 +496,6 @@ export class ShipmentsService {
             shipment.deliveredAt = new Date();
         }
 
-        // ✅ Actualizar la orden al estado correspondiente
         const orderStatus = this.mapShipmentStatusToOrderStatus(status);
         await this.ordersService.update(shipment.orderId, {
             status: orderStatus,
