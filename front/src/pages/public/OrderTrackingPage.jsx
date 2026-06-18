@@ -25,7 +25,7 @@ export default function OrderTrackingPage() {
         'DELIVERED': { label: 'Entregado', color: 'bg-green-500', icon: 'check_circle' }
     }
 
-    // ✅ Mapeo de estados de envío (coincide con el backend)
+    // ✅ Mapeo de estados de envío (coincide EXACTAMENTE con el backend)
     const shipmentStatusMap = {
         'Pedido Recibido': { label: 'Pedido Recibido', color: 'bg-yellow-500', icon: 'task_alt' },
         'En Preparación': { label: 'En Preparación', color: 'bg-blue-500', icon: 'inventory_2' },
@@ -33,16 +33,28 @@ export default function OrderTrackingPage() {
         'Entregado': { label: 'Entregado', color: 'bg-green-500', icon: 'check_circle' }
     }
 
-    // Función para validar si es un UUID
-    const isValidUUID = (id) => {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        return uuidRegex.test(id);
-    }
+    // ✅ Función para obtener el estado correcto del envío (normalizado)
+    const getNormalizedShipmentStatus = (status) => {
+        if (!status) return 'Pedido Recibido'
 
-    // Función para validar si es un número de seguimiento
-    const isValidTrackingNumber = (number) => {
-        const trackingRegex = /^ELD-\d{8}-[A-Z0-9]{8}-\d{3}$/i;
-        return trackingRegex.test(number);
+        // Normalizar: quitar espacios extra, convertir primera letra mayúscula
+        const normalized = status.trim()
+
+        // Buscar en el mapa
+        if (shipmentStatusMap[normalized]) {
+            return normalized
+        }
+
+        // Buscar por coincidencia parcial (case insensitive)
+        const statusLower = normalized.toLowerCase()
+        for (const key of Object.keys(shipmentStatusMap)) {
+            if (key.toLowerCase() === statusLower) {
+                return key
+            }
+        }
+
+        // Si no coincide, devolver el original
+        return normalized
     }
 
     // ✅ Obtener badge de estado de orden
@@ -56,15 +68,45 @@ export default function OrderTrackingPage() {
         )
     }
 
-    // ✅ Obtener badge de estado de envío
+    // ✅ Obtener badge de estado de envío con normalización
     const getShipmentStatusBadge = (status) => {
-        const info = shipmentStatusMap[status] || { label: status || 'Desconocido', color: 'bg-gray-500' }
+        const normalizedStatus = getNormalizedShipmentStatus(status)
+        const info = shipmentStatusMap[normalizedStatus] || {
+            label: normalizedStatus || 'Desconocido',
+            color: 'bg-gray-500',
+            icon: 'help'
+        }
         return (
             <span className={`${info.color} text-white px-3 py-1 text-xs font-bold uppercase rounded-full flex items-center gap-1`}>
                 <Icon name={info.icon} className="text-xs" />
                 {info.label}
             </span>
         )
+    }
+
+    // ✅ Obtener el estado de envío normalizado para el timeline
+    const getNormalizedStatusForKey = (status) => {
+        const normalized = getNormalizedShipmentStatus(status)
+        // Mapear a las claves del timeline
+        const keyMap = {
+            'Pedido Recibido': 'Pedido Recibido',
+            'En Preparación': 'En Preparación',
+            'En Tránsito': 'En Tránsito',
+            'Entregado': 'Entregado'
+        }
+        return keyMap[normalized] || normalized
+    }
+
+    // Función para validar si es un UUID
+    const isValidUUID = (id) => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(id);
+    }
+
+    // Función para validar si es un número de seguimiento
+    const isValidTrackingNumber = (number) => {
+        const trackingRegex = /^ELD-\d{8}-[A-Z0-9]{8}-\d{3}$/i;
+        return trackingRegex.test(number);
     }
 
     // Cargar las órdenes del usuario autenticado
@@ -91,13 +133,11 @@ export default function OrderTrackingPage() {
                     userOrdersList = allOrders.filter(order => order.userId === user?.id)
                 }
 
-                // ✅ Ordenar por fecha descendente (más recientes primero)
                 userOrdersList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
                 console.log('📊 [OrderTracking] Órdenes del usuario:', userOrdersList)
                 setUserOrders(userOrdersList)
 
-                // Si hay un orderId en la URL, seleccionar esa orden
                 if (orderId && isValidUUID(orderId)) {
                     const foundOrder = userOrdersList.find(o => o.id === orderId)
                     if (foundOrder) {
@@ -127,36 +167,43 @@ export default function OrderTrackingPage() {
         setError(null)
 
         try {
-            // Obtener la orden
             console.log('📦 [OrderTracking] Cargando orden:', orderId)
             const orderData = await api.orders.getById(orderId)
             console.log('📦 [OrderTracking] Datos de la orden:', orderData)
             setSelectedOrder(orderData)
 
-            // Obtener el seguimiento
             try {
                 console.log('📦 [OrderTracking] Buscando tracking para orden:', orderId)
                 const trackingData = await api.tracking.getByOrderId(orderId)
                 console.log('📦 [OrderTracking] Tracking encontrado:', trackingData)
                 if (trackingData) {
+                    // ✅ Normalizar el estado del envío
+                    if (trackingData.status) {
+                        const normalizedStatus = getNormalizedShipmentStatus(trackingData.status)
+                        trackingData.status = normalizedStatus
+                        console.log('📦 [OrderTracking] Estado normalizado:', normalizedStatus)
+                    }
                     setTracking(trackingData)
                 } else {
-                    // Si no existe tracking, crearlo automáticamente
                     console.log('📦 [OrderTracking] Creando tracking para la orden...')
                     const newTracking = await api.shipments.createFromOrder(orderId, orderData.userId)
+                    if (newTracking.status) {
+                        newTracking.status = getNormalizedShipmentStatus(newTracking.status)
+                    }
                     setTracking(newTracking)
                 }
             } catch (err) {
                 console.error('Error loading tracking:', err)
-                // Si el error es 404 o "not found", crear tracking
                 if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
                     console.log('📦 [OrderTracking] Creando tracking para la orden (404)...')
                     try {
                         const newTracking = await api.shipments.createFromOrder(orderId, orderData.userId)
+                        if (newTracking.status) {
+                            newTracking.status = getNormalizedShipmentStatus(newTracking.status)
+                        }
                         setTracking(newTracking)
                     } catch (createErr) {
                         console.error('Error creating tracking:', createErr)
-                        // Crear tracking temporal
                         const tempTracking = {
                             id: 'temp',
                             orderId: orderId,
@@ -185,7 +232,6 @@ export default function OrderTrackingPage() {
             console.error('Error loading tracking:', err)
             setError(err.message || 'Error al cargar el seguimiento del pedido')
 
-            // Si hay error pero tenemos la orden, crear un tracking básico
             if (selectedOrder) {
                 const tempTracking = {
                     id: 'temp',
@@ -267,7 +313,7 @@ export default function OrderTrackingPage() {
         loadOrderTracking(order.id)
     }
 
-    // Calcular progreso del seguimiento
+    // ✅ Calcular progreso del seguimiento con normalización
     const getProgressSteps = () => {
         const steps = [
             { key: 'Pedido Recibido', label: 'Pedido Recibido', icon: 'task_alt' },
@@ -276,7 +322,10 @@ export default function OrderTrackingPage() {
             { key: 'Entregado', label: 'Entregado', icon: 'check_circle' }
         ]
 
-        const currentStatus = tracking?.status || 'Pedido Recibido'
+        // ✅ Normalizar el estado actual
+        const currentStatus = tracking?.status ? getNormalizedShipmentStatus(tracking.status) : 'Pedido Recibido'
+        console.log('📦 [OrderTracking] Estado actual normalizado:', currentStatus)
+
         let currentIndex = steps.findIndex(s => s.key === currentStatus)
         if (currentIndex === -1) currentIndex = 0
 
@@ -316,6 +365,9 @@ export default function OrderTrackingPage() {
 
     const progressSteps = getProgressSteps()
     const currentStepIndex = progressSteps.findIndex(s => s.active)
+
+    // ✅ Obtener el estado de envío normalizado para mostrar
+    const displayShipmentStatus = tracking?.status ? getNormalizedShipmentStatus(tracking.status) : 'Pedido Recibido'
 
     return (
         <div className="max-w-[1280px] mx-auto px-8 py-12">
@@ -388,6 +440,11 @@ export default function OrderTrackingPage() {
                                 userOrders.map(order => {
                                     const orderStatus = orderStatusMap[order.status] || { label: order.status || 'Desconocido', color: 'bg-gray-500' }
                                     const total = parseFloat(order.total) || 0
+
+                                    // ✅ Obtener el estado de envío normalizado para mostrar en la lista
+                                    const shipmentStatusForOrder = tracking && selectedOrderId === order.id
+                                        ? getNormalizedShipmentStatus(tracking.status)
+                                        : null
 
                                     return (
                                         <button
