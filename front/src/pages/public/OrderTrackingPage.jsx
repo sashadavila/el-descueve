@@ -549,8 +549,8 @@ export default function OrderTrackingPage() {
                                             {progressSteps.map((step, index) => (
                                                 <div key={step.key} className="flex flex-row md:flex-col items-center gap-3 md:gap-2 w-full md:w-auto">
                                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${step.completed
-                                                            ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
-                                                            : 'bg-gray-200 text-gray-400'
+                                                        ? 'bg-[#FC9430] text-white ring-4 ring-[#FC9430]/30'
+                                                        : 'bg-gray-200 text-gray-400'
                                                         }`}>
                                                         <Icon name={step.icon} className="text-xl" />
                                                     </div>
