@@ -16,10 +16,11 @@ export default function OrderTrackingPage() {
     const [error, setError] = useState(null)
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedOrderId, setSelectedOrderId] = useState(null)
+    const [orderUser, setOrderUser] = useState(null)
 
     // ✅ Mapeo de estados de orden (coincide con el backend)
     const orderStatusMap = {
-        'PENDING': { label: 'Pendiente', color: 'bg-yellow-500', icon: 'pending' },
+        'PENDING': { label: 'No Pagado', color: 'bg-yellow-500', icon: 'pending' },
         'PAID': { label: 'Pagado', color: 'bg-blue-500', icon: 'payments' },
         'CANCELLED': { label: 'Cancelado', color: 'bg-red-500', icon: 'cancel' },
         'DELIVERED': { label: 'Entregado', color: 'bg-green-500', icon: 'check_circle' }
@@ -37,15 +38,12 @@ export default function OrderTrackingPage() {
     const getNormalizedShipmentStatus = (status) => {
         if (!status) return 'Pedido Recibido'
 
-        // Normalizar: quitar espacios extra, convertir primera letra mayúscula
         const normalized = status.trim()
 
-        // Buscar en el mapa
         if (shipmentStatusMap[normalized]) {
             return normalized
         }
 
-        // Buscar por coincidencia parcial (case insensitive)
         const statusLower = normalized.toLowerCase()
         for (const key of Object.keys(shipmentStatusMap)) {
             if (key.toLowerCase() === statusLower) {
@@ -53,7 +51,6 @@ export default function OrderTrackingPage() {
             }
         }
 
-        // Si no coincide, devolver el original
         return normalized
     }
 
@@ -82,19 +79,6 @@ export default function OrderTrackingPage() {
                 {info.label}
             </span>
         )
-    }
-
-    // ✅ Obtener el estado de envío normalizado para el timeline
-    const getNormalizedStatusForKey = (status) => {
-        const normalized = getNormalizedShipmentStatus(status)
-        // Mapear a las claves del timeline
-        const keyMap = {
-            'Pedido Recibido': 'Pedido Recibido',
-            'En Preparación': 'En Preparación',
-            'En Tránsito': 'En Tránsito',
-            'Entregado': 'Entregado'
-        }
-        return keyMap[normalized] || normalized
     }
 
     // Función para validar si es un UUID
@@ -172,12 +156,20 @@ export default function OrderTrackingPage() {
             console.log('📦 [OrderTracking] Datos de la orden:', orderData)
             setSelectedOrder(orderData)
 
+            // ✅ Obtener el usuario de la orden para la dirección
+            try {
+                const userData = await api.admin.getUserById(orderData.userId)
+                setOrderUser(userData)
+            } catch (err) {
+                console.error('Error fetching user data:', err)
+                setOrderUser(null)
+            }
+
             try {
                 console.log('📦 [OrderTracking] Buscando tracking para orden:', orderId)
                 const trackingData = await api.tracking.getByOrderId(orderId)
                 console.log('📦 [OrderTracking] Tracking encontrado:', trackingData)
                 if (trackingData) {
-                    // ✅ Normalizar el estado del envío
                     if (trackingData.status) {
                         const normalizedStatus = getNormalizedShipmentStatus(trackingData.status)
                         trackingData.status = normalizedStatus
@@ -322,7 +314,6 @@ export default function OrderTrackingPage() {
             { key: 'Entregado', label: 'Entregado', icon: 'check_circle' }
         ]
 
-        // ✅ Normalizar el estado actual
         const currentStatus = tracking?.status ? getNormalizedShipmentStatus(tracking.status) : 'Pedido Recibido'
         console.log('📦 [OrderTracking] Estado actual normalizado:', currentStatus)
 
@@ -347,6 +338,44 @@ export default function OrderTrackingPage() {
         })
     }
 
+    // ✅ Obtener la dirección de entrega
+    const getDeliveryAddress = () => {
+        // Prioridad: datos del usuario de la orden
+        if (orderUser) {
+            const parts = []
+            if (orderUser.address) parts.push(orderUser.address)
+            if (orderUser.city) parts.push(orderUser.city)
+            if (orderUser.region) parts.push(orderUser.region)
+            if (parts.length > 0) return parts.join(', ')
+        }
+
+        // Si no hay dirección en el usuario, intentar obtener de selectedOrder
+        if (selectedOrder?.address) {
+            return selectedOrder.address
+        }
+
+        if (selectedOrder?.shippingAddress) {
+            return selectedOrder.shippingAddress
+        }
+
+        // Si no hay dirección, mostrar mensaje por defecto
+        return 'Dirección no especificada'
+    }
+
+    // ✅ Obtener el nombre del cliente
+    const getClientName = () => {
+        if (orderUser?.name) return orderUser.name
+        if (selectedOrder?.user?.name) return selectedOrder.user.name
+        return 'Cliente'
+    }
+
+    // ✅ Obtener el teléfono del cliente
+    const getClientPhone = () => {
+        if (orderUser?.phone) return orderUser.phone
+        if (selectedOrder?.user?.phone) return selectedOrder.user.phone
+        return null
+    }
+
     // Mostrar loading mientras verifica autenticación
     if (authLoading) {
         return (
@@ -365,9 +394,9 @@ export default function OrderTrackingPage() {
 
     const progressSteps = getProgressSteps()
     const currentStepIndex = progressSteps.findIndex(s => s.active)
-
-    // ✅ Obtener el estado de envío normalizado para mostrar
-    const displayShipmentStatus = tracking?.status ? getNormalizedShipmentStatus(tracking.status) : 'Pedido Recibido'
+    const deliveryAddress = getDeliveryAddress()
+    const clientName = getClientName()
+    const clientPhone = getClientPhone()
 
     return (
         <div className="max-w-[1280px] mx-auto px-8 py-12">
@@ -440,11 +469,6 @@ export default function OrderTrackingPage() {
                                 userOrders.map(order => {
                                     const orderStatus = orderStatusMap[order.status] || { label: order.status || 'Desconocido', color: 'bg-gray-500' }
                                     const total = parseFloat(order.total) || 0
-
-                                    // ✅ Obtener el estado de envío normalizado para mostrar en la lista
-                                    const shipmentStatusForOrder = tracking && selectedOrderId === order.id
-                                        ? getNormalizedShipmentStatus(tracking.status)
-                                        : null
 
                                     return (
                                         <button
@@ -597,11 +621,16 @@ export default function OrderTrackingPage() {
                                                 {tracking.estimatedDelivery ? new Date(tracking.estimatedDelivery).toLocaleDateString('es-CL') : 'Por confirmar'}
                                             </p>
                                         </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase font-bold">Ubicación actual</p>
-                                            <p className="font-semibold">
-                                                {tracking.trackingHistory?.slice(-1)[0]?.location || 'En proceso'}
+                                        <div className="md:col-span-2">
+                                            <p className="text-xs text-gray-500 uppercase font-bold">📍 Ubicación de Entrega</p>
+                                            <p className="font-semibold text-gray-800">
+                                                {deliveryAddress}
                                             </p>
+                                            {clientName && (
+                                                <p className="text-sm text-gray-600 mt-1">
+                                                    👤 {clientName} {clientPhone && `· 📞 ${clientPhone}`}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
