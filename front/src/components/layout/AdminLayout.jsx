@@ -259,7 +259,7 @@ export default function AdminLayout() {
                             <span className="material-symbols-outlined text-white text-2xl">token</span>
                         </div>
                         <div>
-                            <h1 className="text-xl font-black text-white tracking-tighter">EL DESCUVEE</h1>
+                            <h1 className="text-xl font-black text-white tracking-tighter">EL DESCUEVEE</h1>
                             <p className="text-[10px] text-[#FC9430] uppercase tracking-wider font-bold">Panel de Control</p>
                         </div>
                     </div>
