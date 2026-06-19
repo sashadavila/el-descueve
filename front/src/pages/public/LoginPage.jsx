@@ -106,7 +106,7 @@ export default function LoginPage() {
         <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-white">
             <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-2xl border-t-4 border-[#FC9430]">
                 <div className="text-center">
-                    <div className="text-3xl font-black text-[#163C7A] mb-4">EL DESCUVEE</div>
+                    <div className="text-3xl font-black text-[#163C7A] mb-4">EL DESCUEVEE</div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Iniciar Sesión</h2>
                     <p className="text-sm text-gray-600">Accede a tu cuenta corporativa</p>
                 </div>
