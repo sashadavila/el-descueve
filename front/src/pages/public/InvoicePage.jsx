@@ -201,7 +201,7 @@ export default function InvoicePage() {
                     <div style={{ backgroundColor: '#00265b', color: '#ffffff', padding: '24px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0 }}>EL DESCUVEE</h1>
+                                <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0 }}>EL DESCUEVEE</h1>
                                 <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginTop: '4px' }}>Ropa Corporativa y Bordado Profesional</p>
                             </div>
                             <div style={{ textAlign: 'right' }}>
