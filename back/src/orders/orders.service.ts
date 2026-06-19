@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
@@ -16,6 +17,8 @@ import { Shipment, ShipmentStatus, CarrierType } from '../shipments/entities/shi
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectRepository(Order)
     private readonly ordersRepository: Repository<Order>,
@@ -28,19 +31,28 @@ export class OrdersService {
 
     @InjectRepository(Shipment)
     private readonly shipmentRepository: Repository<Shipment>,
-
   ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     let total = 0;
 
-    const order = this.ordersRepository.create({
-      userId: createOrderDto.userId,
-      status: 'PENDING',
-      total: 0,
-    });
+    // ✅ Crear la orden
+    const order = new Order();
+    order.userId = createOrderDto.userId;
+    order.status = 'PENDING';
+    order.total = 0;
 
+    // ✅ Asignar dirección solo si existe, de lo contrario dejar como null
+    order.address = createOrderDto.address || null;
+    order.city = createOrderDto.city || null;
+    order.region = createOrderDto.region || null;
+    order.postalCode = createOrderDto.postalCode || null;
+    order.notes = createOrderDto.notes || null;
+
+    // ✅ Guardar la orden
     const savedOrder = await this.ordersRepository.save(order);
+    this.logger.log(`✅ Orden creada: ${savedOrder.id}`);
+
     const orderItems: OrderItem[] = [];
 
     for (const item of createOrderDto.items) {
@@ -76,39 +88,42 @@ export class OrdersService {
       product.stock -= quantity;
       await this.productsRepository.save(product);
 
-      const orderItem = this.orderItemsRepository.create({
-        orderId: savedOrder.id,
-        productId: product.id,
-        quantity: quantity,
-        unitPrice,
-        subtotal,
-      });
+      const orderItem = new OrderItem();
+      orderItem.orderId = savedOrder.id;
+      orderItem.productId = product.id;
+      orderItem.quantity = quantity;
+      orderItem.unitPrice = unitPrice;
+      orderItem.subtotal = subtotal;
 
       orderItems.push(await this.orderItemsRepository.save(orderItem));
     }
 
+    // ✅ Actualizar la orden con el total y los items
     savedOrder.total = total;
     savedOrder.items = orderItems;
     const finalOrder = await this.ordersRepository.save(savedOrder);
 
+    this.logger.log(`💰 Orden ${finalOrder.id} - Total: ${total}`);
+
     // ✅ CREAR ENVÍO AUTOMÁTICAMENTE PARA LA ORDEN
     const trackingNumber = this.generateTrackingNumber(finalOrder.id);
-    const shipment = this.shipmentRepository.create({
-      orderId: finalOrder.id,
-      userId: createOrderDto.userId,
-      trackingNumber: trackingNumber,
-      carrier: CarrierType.OWN,
-      status: ShipmentStatus.RECEIVED,
-      trackingHistory: [
-        {
-          status: ShipmentStatus.RECEIVED,
-          location: 'Planta La Serena',
-          timestamp: new Date(),
-          description: 'Pedido recibido y en proceso de preparación'
-        }
-      ]
-    });
+    const shipment = new Shipment();
+    shipment.orderId = finalOrder.id;
+    shipment.userId = createOrderDto.userId;
+    shipment.trackingNumber = trackingNumber;
+    shipment.carrier = CarrierType.OWN;
+    shipment.status = ShipmentStatus.RECEIVED;
+    shipment.trackingHistory = [
+      {
+        status: ShipmentStatus.RECEIVED,
+        location: 'Planta La Serena',
+        timestamp: new Date(),
+        description: 'Pedido recibido y en proceso de preparación',
+      },
+    ];
     await this.shipmentRepository.save(shipment);
+
+    this.logger.log(`📦 Envío creado: ${trackingNumber} para orden ${finalOrder.id}`);
 
     return finalOrder;
   }
@@ -126,7 +141,9 @@ export class OrdersService {
   async findAll(): Promise<Order[]> {
     return this.ordersRepository.find({
       relations: {
-        items: true,
+        items: {
+          product: true,
+        },
       },
       order: {
         createdAt: 'DESC',
@@ -138,7 +155,9 @@ export class OrdersService {
     const order = await this.ordersRepository.findOne({
       where: { id },
       relations: {
-        items: true,
+        items: {
+          product: true,
+        },
       },
     });
 
