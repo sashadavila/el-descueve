@@ -1,9 +1,11 @@
 // src/orders/dto/create-order.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     ArrayMinSize,
     IsArray,
     IsNotEmpty,
+    IsOptional,
+    IsString,
     IsUUID,
     ValidateNested,
 } from 'class-validator';
@@ -25,7 +27,7 @@ export class CreateOrderDto {
         example: [
             {
                 productId: 'b7d5f4b2-1e7a-4a12-9a41-123456789abc',
-                quantity: 2,  // ← quantity es opcional ahora
+                quantity: 2,
             },
         ],
     })
@@ -34,4 +36,45 @@ export class CreateOrderDto {
     @ValidateNested({ each: true })
     @Type(() => CreateOrderItemDto)
     items: CreateOrderItemDto[];
+
+    // ✅ NUEVOS CAMPOS DE DIRECCIÓN
+    @ApiPropertyOptional({
+        example: 'Av. Los Pioneros 1234',
+        description: 'Dirección de envío',
+    })
+    @IsOptional()
+    @IsString()
+    address?: string;
+
+    @ApiPropertyOptional({
+        example: 'La Serena',
+        description: 'Ciudad de envío',
+    })
+    @IsOptional()
+    @IsString()
+    city?: string;
+
+    @ApiPropertyOptional({
+        example: 'Coquimbo',
+        description: 'Región de envío',
+    })
+    @IsOptional()
+    @IsString()
+    region?: string;
+
+    @ApiPropertyOptional({
+        example: '1700000',
+        description: 'Código postal',
+    })
+    @IsOptional()
+    @IsString()
+    postalCode?: string;
+
+    @ApiPropertyOptional({
+        example: 'Entregar en la recepción',
+        description: 'Notas adicionales para el envío',
+    })
+    @IsOptional()
+    @IsString()
+    notes?: string;
 }
