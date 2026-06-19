@@ -102,7 +102,7 @@ export default function SignupPage() {
                 <div className="bg-white p-8 rounded-xl shadow-2xl border-t-4 border-[#FC9430]">
                     {/* Logo y título */}
                     <div className="text-center mb-8">
-                        <div className="text-3xl font-black text-[#163C7A] mb-4">EL DESCUVEE</div>
+                        <div className="text-3xl font-black text-[#163C7A] mb-4">EL DESCUEVEE</div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Crear Cuenta Corporativa</h2>
                         <p className="text-sm text-gray-600">Regístrate para cotizar y comprar ropa corporativa</p>
                     </div>
