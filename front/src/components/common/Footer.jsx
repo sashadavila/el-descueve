@@ -3,7 +3,7 @@ export default function Footer() {
         <footer className="bg-slate-100 border-t-8 border-[#163C7A] mt-12">
             <div className="max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 py-12 px-8">
                 <div>
-                    <div className="text-xl font-black text-[#163C7A] uppercase mb-4">EL DESCUVEE</div>
+                    <div className="text-xl font-black text-[#163C7A] uppercase mb-4">EL DESCUEVEE</div>
                     <p className="text-xs font-semibold text-slate-500">
                         Ropa corporativa y bordado profesional. Potenciamos la imagen de tu equipo con prendas que duran.
                     </p>
