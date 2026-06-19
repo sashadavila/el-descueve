@@ -340,8 +340,17 @@ export default function OrderTrackingPage() {
 
     // ✅ Obtener la dirección de entrega
     const getDeliveryAddress = () => {
-        // Prioridad: datos del usuario de la orden
-        if (orderUser) {
+        // ✅ PRIORIDAD 1: Usar los datos de dirección de la orden
+        if (selectedOrder) {
+            const parts = []
+            if (selectedOrder.address) parts.push(selectedOrder.address)
+            if (selectedOrder.city) parts.push(selectedOrder.city)
+            if (selectedOrder.region) parts.push(selectedOrder.region)
+            if (parts.length > 0) return parts.join(', ')
+        }
+
+        // ✅ PRIORIDAD 2: Intentar obtener del usuario (por si tiene dirección)
+        if (orderUser?.address) {
             const parts = []
             if (orderUser.address) parts.push(orderUser.address)
             if (orderUser.city) parts.push(orderUser.city)
@@ -349,16 +358,12 @@ export default function OrderTrackingPage() {
             if (parts.length > 0) return parts.join(', ')
         }
 
-        // Si no hay dirección en el usuario, intentar obtener de selectedOrder
-        if (selectedOrder?.address) {
-            return selectedOrder.address
-        }
-
+        // ✅ PRIORIDAD 3: Shipping address de la orden (backup)
         if (selectedOrder?.shippingAddress) {
             return selectedOrder.shippingAddress
         }
 
-        // Si no hay dirección, mostrar mensaje por defecto
+        // ✅ Si no hay dirección, mostrar mensaje
         return 'Dirección no especificada'
     }
 
@@ -684,19 +689,6 @@ export default function OrderTrackingPage() {
                                     <Icon name="receipt" className="text-sm" />
                                     Ver factura
                                 </Link>
-                                {tracking?.trackingNumber && (
-                                    <button
-                                        onClick={() => {
-                                            const trackingNumber = tracking.trackingNumber
-                                            navigator.clipboard.writeText(trackingNumber)
-                                            alert('✅ Número de seguimiento copiado al portapapeles')
-                                        }}
-                                        className="flex-1 min-w-[200px] border-2 border-gray-300 text-gray-700 py-3 font-bold uppercase text-center rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Icon name="content_copy" className="text-sm" />
-                                        Copiar seguimiento
-                                    </button>
-                                )}
                             </div>
                         </div>
                     )}
