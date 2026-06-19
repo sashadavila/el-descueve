@@ -39,8 +39,6 @@ export default function Header() {
     // Opciones del menú de administrador
     const adminMenuItems = [
         { path: '/admin', label: 'Dashboard', icon: 'dashboard' },
-        { path: '/admin/clientes', label: 'Clientes', icon: 'groups' },
-        { path: '/admin/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
     ]
 
     return (
@@ -48,7 +46,7 @@ export default function Header() {
             <div className="max-w-[1280px] mx-auto flex justify-between items-center px-4 sm:px-6 md:px-8 py-3 md:py-4">
                 {/* Logo */}
                 <Link to="/" className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter">
-                    EL DESCUVEE
+                    EL DESCUEVEE
                 </Link>
 
                 {/* Navegación Desktop */}
