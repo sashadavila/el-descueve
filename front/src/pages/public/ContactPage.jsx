@@ -212,26 +212,6 @@ export default function ContactPage() {
                                     <Icon name="work" className="text-3xl mx-auto mb-2" />
                                     <p className="text-xs font-bold uppercase">LinkedIn</p>
                                 </a>
-
-                                <a
-                                    href={contactInfo.social.twitter}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="bg-white/10 hover:bg-white/20 rounded-lg p-4 text-center transition-all transform hover:scale-105"
-                                >
-                                    <Icon name="alternate_email" className="text-3xl mx-auto mb-2" />
-                                    <p className="text-xs font-bold uppercase">Twitter/X</p>
-                                </a>
-
-                                <a
-                                    href={contactInfo.social.youtube}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="bg-white/10 hover:bg-white/20 rounded-lg p-4 text-center transition-all transform hover:scale-105"
-                                >
-                                    <Icon name="smart_display" className="text-3xl mx-auto mb-2" />
-                                    <p className="text-xs font-bold uppercase">YouTube</p>
-                                </a>
                             </div>
                         </div>
 
