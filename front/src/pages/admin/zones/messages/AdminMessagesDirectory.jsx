@@ -22,9 +22,12 @@ export default function AdminMessagesDirectory() {
     const [showDetailModal, setShowDetailModal] = useState(false)
     const [selectedMessage, setSelectedMessage] = useState(null)
     const [showStatusModal, setShowStatusModal] = useState(false)
+    const [showResponseModal, setShowResponseModal] = useState(false)
     const [newStatus, setNewStatus] = useState('')
     const [adminNotes, setAdminNotes] = useState('')
+    const [responseText, setResponseText] = useState('')
     const [updating, setUpdating] = useState(false)
+    const [sendingResponse, setSendingResponse] = useState(false)
     const [deletingId, setDeletingId] = useState(null)
 
     const itemsPerPage = 15
@@ -88,6 +91,37 @@ export default function AdminMessagesDirectory() {
         setNewStatus(message.status)
         setAdminNotes(message.adminNotes || '')
         setShowStatusModal(true)
+    }
+
+    // ✅ NUEVO: Abrir modal de respuesta
+    const openResponseModal = (message) => {
+        setSelectedMessage(message)
+        setResponseText('')
+        setShowResponseModal(true)
+    }
+
+    // ✅ NUEVO: Enviar respuesta
+    const handleSendResponse = async () => {
+        if (!selectedMessage) return
+        if (!responseText.trim()) {
+            alert('Por favor, escribe una respuesta antes de enviar')
+            return
+        }
+
+        setSendingResponse(true)
+        try {
+            await api.contact.respond(selectedMessage.id, responseText)
+            await loadMessages()
+            setShowResponseModal(false)
+            setSelectedMessage(null)
+            setResponseText('')
+            alert('✅ Respuesta enviada correctamente. El cliente recibirá un email con tu respuesta.')
+        } catch (err) {
+            console.error('Error sending response:', err)
+            alert('❌ Error al enviar la respuesta: ' + err.message)
+        } finally {
+            setSendingResponse(false)
+        }
     }
 
     const handleUpdateStatus = async () => {
@@ -320,6 +354,16 @@ export default function AdminMessagesDirectory() {
                                                     >
                                                         <Icon name="visibility" className="text-sm" />
                                                     </button>
+                                                    {/* ✅ Botón de Responder - Solo visible si no está respondido */}
+                                                    {message.status !== 'responded' && (
+                                                        <button
+                                                            onClick={() => openResponseModal(message)}
+                                                            className="text-green-600 hover:text-green-800 transition-colors"
+                                                            title="Responder mensaje"
+                                                        >
+                                                            <Icon name="reply" className="text-sm" />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => openStatusModal(message)}
                                                         className="text-[#FC9430] hover:text-primary transition-colors"
@@ -410,6 +454,17 @@ export default function AdminMessagesDirectory() {
                                 </div>
                             </div>
 
+                            {/* ✅ Mostrar respuesta si existe */}
+                            {selectedMessage.adminResponse && (
+                                <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                                    <p className="text-xs text-gray-400 uppercase font-bold">Respuesta del Administrador</p>
+                                    <p className="text-sm text-green-700 mt-1 whitespace-pre-wrap">{selectedMessage.adminResponse}</p>
+                                    {selectedMessage.respondedAt && (
+                                        <p className="text-xs text-gray-400 mt-2">Respondido el: {formatDate(selectedMessage.respondedAt)}</p>
+                                    )}
+                                </div>
+                            )}
+
                             {selectedMessage.adminNotes && (
                                 <div className="bg-blue-50 p-4 rounded-lg">
                                     <p className="text-xs text-gray-400 uppercase font-bold">Notas del Administrador</p>
@@ -417,14 +472,19 @@ export default function AdminMessagesDirectory() {
                                 </div>
                             )}
 
-                            {selectedMessage.respondedAt && (
-                                <div className="bg-green-50 p-4 rounded-lg">
-                                    <p className="text-xs text-gray-400 uppercase font-bold">Fecha de Respuesta</p>
-                                    <p className="text-sm text-green-700 mt-1">{formatDate(selectedMessage.respondedAt)}</p>
-                                </div>
-                            )}
-
                             <div className="flex gap-3 pt-4 border-t">
+                                {selectedMessage.status !== 'responded' && (
+                                    <button
+                                        onClick={() => {
+                                            setShowDetailModal(false)
+                                            openResponseModal(selectedMessage)
+                                        }}
+                                        className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Icon name="reply" className="text-sm" />
+                                        Responder
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => {
                                         setShowDetailModal(false)
@@ -514,6 +574,107 @@ export default function AdminMessagesDirectory() {
                                         </>
                                     ) : (
                                         'Actualizar Estado'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ✅ NUEVO: Modal de Respuesta */}
+            {showResponseModal && selectedMessage && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-primary flex items-center gap-2">
+                                <Icon name="reply" className="text-green-600" />
+                                Responder Mensaje
+                            </h3>
+                            <button onClick={() => setShowResponseModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <Icon name="close" className="text-2xl" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            {/* Información del mensaje original */}
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-xs text-gray-400 uppercase font-bold">Mensaje original</p>
+                                <p className="text-sm font-medium mt-1">
+                                    <span className="text-gray-500">De:</span> {selectedMessage.name} ({selectedMessage.email})
+                                </p>
+                                <p className="text-sm">
+                                    <span className="text-gray-500">Asunto:</span> {selectedMessage.subject}
+                                </p>
+                                <div className="mt-2 p-3 bg-white rounded border border-gray-200">
+                                    <p className="text-sm whitespace-pre-wrap text-gray-600">{selectedMessage.message}</p>
+                                </div>
+                                {selectedMessage.phone && (
+                                    <p className="text-sm text-gray-500 mt-2">📞 {selectedMessage.phone}</p>
+                                )}
+                                {selectedMessage.company && (
+                                    <p className="text-sm text-gray-500">🏢 {selectedMessage.company}</p>
+                                )}
+                            </div>
+
+                            {/* Campo de respuesta */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">
+                                    Tu respuesta *
+                                </label>
+                                <div className="bg-green-50 p-3 rounded-lg mb-2">
+                                    <p className="text-xs text-green-700">
+                                        <Icon name="info" className="text-xs inline" />
+                                        Esta respuesta será enviada por email al cliente
+                                    </p>
+                                </div>
+                                <textarea
+                                    rows="6"
+                                    value={responseText}
+                                    onChange={(e) => setResponseText(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition resize-none"
+                                    placeholder="Escribe tu respuesta aquí... El cliente recibirá este mensaje por email."
+                                />
+                                <p className="text-xs text-gray-400 mt-1">
+                                    <span className="text-green-600 font-bold">Consejo:</span> Sé claro y profesional. El cliente recibirá este mensaje como respuesta oficial.
+                                </p>
+                            </div>
+
+                            {/* Previsualización del email */}
+                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <p className="text-xs text-blue-700 font-bold uppercase flex items-center gap-2">
+                                    <Icon name="mail" className="text-sm" />
+                                    El cliente recibirá este email
+                                </p>
+                                <p className="text-xs text-blue-600 mt-1">
+                                    <strong>Para:</strong> {selectedMessage.email}
+                                </p>
+                                <p className="text-xs text-blue-600">
+                                    <strong>Asunto:</strong> 📨 Respuesta a tu mensaje: {selectedMessage.subject}
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3 pt-4 border-t">
+                                <button
+                                    onClick={() => setShowResponseModal(false)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-bold hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleSendResponse}
+                                    disabled={sendingResponse || !responseText.trim()}
+                                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {sendingResponse ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                            Enviando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icon name="send" className="text-sm" />
+                                            Enviar Respuesta
+                                        </>
                                     )}
                                 </button>
                             </div>
