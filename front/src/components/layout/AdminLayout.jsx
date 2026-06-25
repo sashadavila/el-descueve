@@ -10,7 +10,7 @@ const menuItems = [
         title: 'Clientes',
         icon: 'groups',
         basePath: '/admin/clientes',
-        notificationType: 'client', // ✅ Identificador para notificaciones de clientes
+        notificationType: 'client',
         subItems: [
             { path: '/admin/clientes/directorio', label: 'Directorio', icon: 'contact_page' },
             { path: '/admin/clientes/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
@@ -21,7 +21,7 @@ const menuItems = [
         title: 'Inventarios',
         icon: 'inventory_2',
         basePath: '/admin/inventarios',
-        notificationType: 'inventory', // ✅ Identificador para notificaciones de inventario
+        notificationType: 'inventory',
         subItems: [
             { path: '/admin/inventarios/directorio', label: 'Directorio', icon: 'inventory' },
             { path: '/admin/inventarios/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
@@ -32,7 +32,7 @@ const menuItems = [
         title: 'Pedidos',
         icon: 'receipt_long',
         basePath: '/admin/pedidos',
-        notificationType: 'order', // ✅ Identificador para notificaciones de pedidos
+        notificationType: 'order',
         subItems: [
             { path: '/admin/pedidos/directorio', label: 'Directorio', icon: 'list_alt' },
             { path: '/admin/pedidos/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
@@ -43,11 +43,22 @@ const menuItems = [
         title: 'Envíos',
         icon: 'local_shipping',
         basePath: '/admin/envios',
-        notificationType: 'shipment', // ✅ Identificador para notificaciones de envíos
+        notificationType: 'shipment',
         subItems: [
             { path: '/admin/envios/directorio', label: 'Directorio', icon: 'local_shipping' },
             { path: '/admin/envios/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
             { path: '/admin/envios/notificaciones', label: 'Notificaciones', icon: 'notifications' },
+        ]
+    },
+    {
+        title: 'Mensajes',
+        icon: 'mail',
+        basePath: '/admin/mensajes',
+        notificationType: 'message',
+        subItems: [
+            { path: '/admin/mensajes/directorio', label: 'Directorio', icon: 'mail' },
+            { path: '/admin/mensajes/estadisticas', label: 'Estadísticas', icon: 'bar_chart' },
+            { path: '/admin/mensajes/notificaciones', label: 'Notificaciones', icon: 'notifications' },
         ]
     },
     {
@@ -74,6 +85,7 @@ export default function AdminLayout() {
     const [inventoryUnreadCount, setInventoryUnreadCount] = useState(0)
     const [orderUnreadCount, setOrderUnreadCount] = useState(0)
     const [shipmentUnreadCount, setShipmentUnreadCount] = useState(0)
+    const [messageUnreadCount, setMessageUnreadCount] = useState(0)
 
     // Determinar qué menú está expandido basado en la ruta actual
     useEffect(() => {
@@ -93,7 +105,6 @@ export default function AdminLayout() {
             const allNotifsResult = await api.notifications.getAll('unread', 1, 1000)
             const unreadNotifications = allNotifsResult.data || []
 
-            // Contar por zona usando filtros específicos
             // 1. CLIENTES: new_user, inactive_user, admin_user
             const clientNotifications = unreadNotifications.filter(n =>
                 n.type === 'new_user' ||
@@ -133,11 +144,21 @@ export default function AdminLayout() {
             )
             setShipmentUnreadCount(shipmentNotifications.length)
 
+            // 5. MENSAJES: system_alert con messageId o títulos de mensajes
+            const messageNotifications = unreadNotifications.filter(n =>
+                (n.type === 'system_alert' && n.metadata?.messageId) ||
+                n.title?.toLowerCase().includes('mensaje') ||
+                n.title?.toLowerCase().includes('contacto') ||
+                n.title?.toLowerCase().includes('nuevo mensaje')
+            )
+            setMessageUnreadCount(messageNotifications.length)
+
             console.log('📊 Contadores de notificaciones:')
             console.log('  Clientes:', clientNotifications.length)
             console.log('  Inventarios:', inventoryNotifications.length)
             console.log('  Pedidos:', orderNotifications.length)
             console.log('  Envíos:', shipmentNotifications.length)
+            console.log('  Mensajes:', messageNotifications.length)
 
         } catch (error) {
             console.error('Error fetching notification counts:', error)
@@ -205,6 +226,8 @@ export default function AdminLayout() {
                 return orderUnreadCount
             case 'shipment':
                 return shipmentUnreadCount
+            case 'message':
+                return messageUnreadCount
             default:
                 return 0
         }
