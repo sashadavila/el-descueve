@@ -384,7 +384,7 @@ export const api = {
         },
     },
 
-    // ✅ NUEVO MÓDULO SHIPMENTS
+    // NUEVO MÓDULO SHIPMENTS
     shipments: {
         // Obtener todos los envíos (admin)
         getAll: async (status = null, carrier = null, page = 1, limit = 10) => {
@@ -485,6 +485,64 @@ export const api = {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Error al crear envío desde orden');
+            return data;
+        },
+    },
+
+    // NUEVO MÓDULO MENSAJES
+    contact: {
+        // Obtener todos los mensajes (admin)
+        getAll: async (status = null, page = 1, limit = 20) => {
+            let url = `${API_BASE_URL}/contact?page=${page}&limit=${limit}`;
+            if (status) url += `&status=${encodeURIComponent(status)}`;
+            const response = await fetch(url, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener mensajes');
+            return data;
+        },
+
+        // Obtener un mensaje por ID
+        getById: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/contact/${id}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener el mensaje');
+            return data;
+        },
+
+        // Actualizar estado de un mensaje (admin)
+        updateStatus: async (id, status, adminNotes = '') => {
+            const response = await fetch(`${API_BASE_URL}/contact/${id}/status`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ status, adminNotes }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al actualizar el estado');
+            return data;
+        },
+
+        // Eliminar un mensaje (admin)
+        delete: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/contact/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al eliminar el mensaje');
+            return data;
+        },
+
+        // Obtener estadísticas (admin)
+        getStats: async () => {
+            const response = await fetch(`${API_BASE_URL}/contact/stats/summary`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error al obtener estadísticas');
             return data;
         },
     },
