@@ -28,24 +28,11 @@ export default function Footer() {
                     </div>
                 </div>
 
-                <div>
-                    <h4 className="text-sm font-bold uppercase text-[#163C7A] mb-6">Newsletter</h4>
-                    <div className="flex flex-col gap-4">
-                        <input
-                            type="email"
-                            placeholder="Correo corporativo"
-                            className="w-full bg-white border border-slate-300 px-4 py-2 text-xs focus:ring-1 focus:ring-primary outline-none"
-                        />
-                        <button className="bg-[#163C7A] text-white py-2 text-xs font-bold uppercase tracking-widest hover:bg-[#FC9430] transition-colors">
-                            Suscribirse
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <div className="max-w-[1280px] mx-auto px-8 py-8 border-t border-slate-200 text-center">
                 <p className="text-xs font-semibold text-slate-400">
-                    © 2025 El Descuevee - Ropa Corporativa y Bordado Profesional. Atención desde La Serena hasta Calbuco.
+                    © 2026 El Descuevee - Ropa Corporativa y Bordado Profesional. Atención desde La Serena hasta Calbuco.
                 </p>
             </div>
         </footer>
