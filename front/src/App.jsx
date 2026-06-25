@@ -46,6 +46,11 @@ import AdminShipmentsDirectory from './pages/admin/zones/shipments/AdminShipment
 import AdminShipmentsStats from './pages/admin/zones/shipments/AdminShipmentsStats'
 import AdminShipmentsNotifications from './pages/admin/zones/shipments/AdminShipmentsNotifications'
 
+// Admin - Zona Mensajes
+import AdminMessagesDirectory from './pages/admin/zones/messages/AdminMessagesDirectory'
+import AdminMessagesStats from './pages/admin/zones/messages/AdminMessagesStats'
+import AdminMessagesNotifications from './pages/admin/zones/messages/AdminMessagesNotifications'
+
 // Admin - Ayuda
 import AdminHelp from './pages/admin/AdminHelp'  // ← Agregar esta línea
 
@@ -126,6 +131,11 @@ function App() {
           <Route path="envios/directorio" element={<AdminShipmentsDirectory />} />
           <Route path="envios/estadisticas" element={<AdminShipmentsStats />} />
           <Route path="envios/notificaciones" element={<AdminShipmentsNotifications />} />
+
+          {/* Zona Mensajes */}
+          <Route path="mensajes/directorio" element={<AdminMessagesDirectory />} />
+          <Route path="mensajes/estadisticas" element={<AdminMessagesStats />} />
+          <Route path="mensajes/notificaciones" element={<AdminMessagesNotifications />} />
 
           {/* Ayuda */}
           <Route path="ayuda" element={<AdminHelp />} />
