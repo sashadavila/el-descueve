@@ -1,7 +1,12 @@
+// src/pages/public/ContactPage.jsx
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
+import ContactWizard from '../../components/ui/ContactWizard'
 
 export default function ContactPage() {
+    const [isModalOpen, setIsModalOpen] = useState(false)
+
     // Información de contacto
     const contactInfo = {
         address: {
@@ -44,6 +49,9 @@ export default function ContactPage() {
         alert(`${label} copiado al portapapeles`)
     }
 
+    const handleOpenModal = () => setIsModalOpen(true)
+    const handleCloseModal = () => setIsModalOpen(false)
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
             {/* Hero Section */}
@@ -63,38 +71,6 @@ export default function ContactPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Información de contacto - Sidebar */}
                     <div className="lg:col-span-1 space-y-6">
-                        {/* Tarjeta de Dirección */}
-                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                                    <Icon name="location_on" className="text-2xl text-primary" />
-                                </div>
-                                <h3 className="text-lg font-bold text-primary uppercase">Dirección</h3>
-                            </div>
-                            <div className="space-y-2 text-gray-600">
-                                <p>{contactInfo.address.street}</p>
-                                <p>{contactInfo.address.city}, {contactInfo.address.region}</p>
-                                <p>{contactInfo.address.country} - {contactInfo.address.zipCode}</p>
-                                <button
-                                    onClick={() => handleCopyText(`${contactInfo.address.street}, ${contactInfo.address.city}`, 'Dirección')}
-                                    className="text-xs text-[#FC9430] hover:underline mt-2 flex items-center gap-1"
-                                >
-                                    <Icon name="content_copy" className="text-sm" />
-                                    Copiar dirección
-                                </button>
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-gray-100">
-                                <a
-                                    href="https://maps.google.com/?q=La+Serena+Chile"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-primary hover:text-[#FC9430] transition-colors flex items-center gap-1"
-                                >
-                                    <Icon name="map" className="text-sm" />
-                                    Ver en Google Maps
-                                </a>
-                            </div>
-                        </div>
 
                         {/* Tarjeta de Teléfono */}
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
@@ -166,25 +142,10 @@ export default function ContactPage() {
                         </div>
                     </div>
 
-                    {/* Formulario de contacto y mapa */}
+                    {/* Formulario de contacto */}
                     <div className="lg:col-span-2 space-y-8">
-                        {/* Mapa */}
-                        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-                            <div className="h-64 md:h-80 w-full bg-gray-200 relative">
-                                <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d11181.628279311753!2d-71.256287!3d-29.908538!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x968ea0c8b9c6c8f7%3A0x8b3b7e4e5c3b2a1!2sLa%20Serena%2C%20Chile!5e0!3m2!1ses!2scl!4v1699999999999!5m2!1ses!2scl"
-                                    width="100%"
-                                    height="100%"
-                                    style={{ border: 0 }}
-                                    allowFullScreen
-                                    loading="lazy"
-                                    referrerPolicy="no-referrer-when-downgrade"
-                                    title="Ubicación de El Descuevee"
-                                ></iframe>
-                            </div>
-                        </div>
 
-                        {/* Formulario de contacto */}
+                        {/* Formulario de contacto - AHORA CON MODAL */}
                         <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 border border-gray-100">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
@@ -193,78 +154,23 @@ export default function ContactPage() {
                                 <h3 className="text-xl font-bold text-primary uppercase">Envíanos un Mensaje</h3>
                             </div>
 
-                            <form className="space-y-5" onSubmit={(e) => {
-                                e.preventDefault()
-                                alert('Mensaje enviado. Te contactaremos pronto.')
-                                e.target.reset()
-                            }}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Nombre Completo *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                            placeholder="Juan Pérez"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Email *</label>
-                                        <input
-                                            type="email"
-                                            required
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                            placeholder="juan@empresa.cl"
-                                        />
-                                    </div>
+                            <div className="text-center py-8">
+                                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Icon name="send" className="text-3xl text-primary" />
                                 </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Teléfono</label>
-                                        <input
-                                            type="tel"
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                            placeholder="+56 9 1234 5678"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Empresa</label>
-                                        <input
-                                            type="text"
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                            placeholder="Nombre de tu empresa"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Asunto *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                        placeholder="¿En qué podemos ayudarte?"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Mensaje *</label>
-                                    <textarea
-                                        rows="5"
-                                        required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition resize-none"
-                                        placeholder="Cuéntanos detalladamente tu consulta..."
-                                    ></textarea>
-                                </div>
-
+                                <h4 className="text-lg font-bold text-primary mb-2">¿Listo para contactarnos?</h4>
+                                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                                    Haz clic en el botón para completar nuestro formulario de contacto.
+                                    Recibirás un ID de seguimiento para darle seguimiento a tu mensaje.
+                                </p>
                                 <button
-                                    type="submit"
-                                    className="w-full bg-[#FC9430] text-white py-3 px-6 font-bold uppercase tracking-wider rounded-lg hover:bg-[#e0852b] transition-all transform hover:scale-[1.02]"
+                                    onClick={handleOpenModal}
+                                    className="inline-flex items-center gap-2 bg-[#FC9430] text-white px-8 py-4 font-bold uppercase rounded-lg hover:bg-[#e0852b] transition-all transform hover:scale-105"
                                 >
-                                    Enviar Mensaje
+                                    <Icon name="edit_note" />
+                                    Escribir Mensaje
                                 </button>
-                            </form>
+                            </div>
                         </div>
 
                         {/* Redes Sociales */}
@@ -368,15 +274,22 @@ export default function ContactPage() {
                 </div>
             </div>
 
-            <style jsx>{`
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-bounce-slow {
-          animation: bounce-slow 2s ease-in-out infinite;
-        }
-      `}</style>
+            {/* Modal del Wizard de Contacto */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <ContactWizard onClose={handleCloseModal} />
+                </div>
+            )}
+
+            <style>{`
+                @keyframes bounce-slow {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+                .animate-bounce-slow {
+                    animation: bounce-slow 2s ease-in-out infinite;
+                }
+            `}</style>
         </div>
     )
 }
