@@ -545,6 +545,18 @@ export const api = {
             if (!response.ok) throw new Error(data.message || 'Error al obtener estadísticas');
             return data;
         },
+
+        // Responder mensaje
+        respond: async (id, response) => {
+            const responseData = await fetch(`${API_BASE_URL}/contact/${id}/respond`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ response }),
+            });
+            const data = await responseData.json();
+            if (!responseData.ok) throw new Error(data.message || 'Error al enviar la respuesta');
+            return data;
+        },
     },
 };
 
