@@ -78,7 +78,7 @@ export class EmailService {
         }
     }
 
-    private async sendEmail(options: EmailOptions): Promise<boolean> {
+    public async sendEmail(options: EmailOptions): Promise<boolean> {
         const from = this.configService.get<string>('EMAIL_FROM') || 'El Descuevee <noreply@eldescuevee.cl>';
 
         // Modo desarrollo: mostrar en consola Y también intentar enviar si hay transporter
