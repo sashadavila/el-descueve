@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { EmbroideryModule } from './embroidery/embroidery.module';
 import { ShipmentsModule } from './shipments/shipments.module';
+import { ContactMessagesModule } from './contact-messages/contact-messages.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ShipmentsModule } from './shipments/shipments.module';
     NotificationsModule,
     EmbroideryModule,
     ShipmentsModule,
+    ContactMessagesModule,
   ],
   controllers: [AppController],
   providers: [
