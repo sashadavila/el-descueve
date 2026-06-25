@@ -21,6 +21,7 @@ import {
 import { ContactMessagesService } from './contact-messages.service';
 import { CreateContactMessageDto } from './dto/create-contact-message.dto';
 import { UpdateContactMessageDto } from './dto/update-contact-message.dto';
+import { RespondMessageDto } from './dto/respond-message.dto';
 import { ContactMessage, ContactMessageStatus } from './entities/contact-message.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -82,6 +83,19 @@ export class ContactMessagesController {
     @ApiResponse({ status: 200, description: 'Estadísticas obtenidas correctamente' })
     async getStats() {
         return this.contactService.getStats();
+    }
+
+    @Post(':id/respond')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Responder a un mensaje de contacto (admin)' })
+    @ApiResponse({ status: 200, description: 'Mensaje respondido correctamente', type: ContactMessage })
+    async respond(
+        @Param('id', ParseUUIDPipe) id: string,
+        @Body() respondDto: RespondMessageDto,
+    ): Promise<ContactMessage> {
+        return this.contactService.respond(id, respondDto);
     }
 
     @Put(':id/status')
