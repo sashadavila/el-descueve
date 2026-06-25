@@ -536,16 +536,6 @@ export default function AdminMessagesNotifications() {
                     <Icon name="visibility" className="text-sm" />
                     Leídos
                 </button>
-                <button
-                    onClick={() => setFilterStatus('responded')}
-                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${filterStatus === 'responded'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                >
-                    <Icon name="check_circle" className="text-sm" />
-                    Respondidos
-                </button>
             </div>
 
             {/* Tabs */}
