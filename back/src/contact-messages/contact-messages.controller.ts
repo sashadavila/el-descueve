@@ -33,6 +33,8 @@ import { Public } from '../common/decorators/public.decorator';
 export class ContactMessagesController {
     constructor(private readonly contactService: ContactMessagesService) { }
 
+    // ============ ENDPOINTS PÚBLICOS ============
+
     @Post()
     @Public()
     @ApiOperation({ summary: 'Enviar un mensaje de contacto' })
@@ -49,6 +51,8 @@ export class ContactMessagesController {
     async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ContactMessage> {
         return this.contactService.findOne(id);
     }
+
+    // ============ ENDPOINTS DE ADMIN (PROTEGIDOS) ============
 
     @Get()
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -75,6 +79,7 @@ export class ContactMessagesController {
     @Roles(UserRole.ADMIN)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Obtener estadísticas de mensajes (admin)' })
+    @ApiResponse({ status: 200, description: 'Estadísticas obtenidas correctamente' })
     async getStats() {
         return this.contactService.getStats();
     }
