@@ -47,6 +47,9 @@ export class ContactMessage {
     @Column({ type: 'text', nullable: true })
     adminNotes: string;
 
+    @Column({ type: 'text', nullable: true })
+    adminResponse: string;
+
     @Column({ type: 'timestamp', nullable: true })
     respondedAt: Date;
 
